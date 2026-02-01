@@ -1,0 +1,75 @@
+// backend/prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  ADMIN
+  EDITOR
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  SHIPPED
+  COMPLETED
+  CANCELLED
+}
+
+model Profile {
+  id        String   @id  // = auth.users.id
+  role      Role     @default(ADMIN)
+  createdAt DateTime @default(now())
+  email     String?  // ✅ nullable болго
+  @@map("profiles")
+}
+
+
+model Category {
+  id        String    @id @default(uuid())
+  name      String
+  slug      String    @unique
+  products  Product[]
+  createdAt DateTime  @default(now())
+
+  @@index([slug])
+  @@map("categories")
+}
+
+model Product {
+  id          String   @id @default(uuid())
+  title       String
+  slug        String   @unique
+  description String?
+  price       Decimal
+  stock       Int      @default(0)
+  images      String[] // Array of R2 URLs
+  categoryId  String
+  category    Category @relation(fields: [categoryId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([slug])
+  @@index([createdAt])
+  @@map("products")
+}
+
+model Order {
+  id        String      @id @default(uuid())
+  total     Decimal
+  status    OrderStatus @default(PENDING)
+  items     Json        // Order items (snapshot)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  @@index([status])
+  @@index([createdAt])
+  @@map("orders")
+}
