@@ -1,0 +1,55 @@
+// src/stores/index.ts
+export {
+  useConfiguratorStore,
+  // State selectors
+  useScene,
+  useCamera,
+  useRenderer,
+  useControls,
+  useModelLoaded,
+  useModelBounds,
+  useWorldZoneW,
+  useBaseColor,
+  useProduct,
+  useZones,
+  useActiveZoneKey,
+  usePrintZone,
+  usePrintZoneCM,
+  useCurrentImage,
+  useCurrentPlacement,
+  useZoneDrafts,
+  useDecalMesh,
+  useDecalPose,
+  useTheme,
+  useLanguage,
+  useSnapSettings,
+  useIsDragging,
+  useIsResizing,
+  useShowGrid,
+  useShowSafeZone,
+  useCanvasZoom,
+  useIsExporting,
+  useExportProgress,
+  useExportResults,
+  // Action hooks
+  useSceneActions,
+  useZoneActions,
+  useArtworkActions,
+  useDecalActions,
+  useUIActions,
+  useExportActions,
+} from './useConfiguratorStore';
+
+export type { ConfiguratorStore } from './types';
+
+export type {
+  SceneSlice,
+  ZoneSlice,
+  ArtworkSlice,
+  DecalSlice,
+  UISlice,
+  ExportSlice,
+  ThemeMode,
+  Language,
+  ExportResult,
+} from './slices';

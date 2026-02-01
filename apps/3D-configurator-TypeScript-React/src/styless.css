@@ -1,0 +1,47 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom Scrollbar for elegant look */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 99px; }
+.dark ::-webkit-scrollbar-thumb { background: #334155; }
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+/* Canvas specific overlays - Tailwind-аар хийхэд хэт урт болох тул энд үлдээв */
+#overlayBox { pointer-events: none; }
+#overlayBox .handle,
+#overlayBox .tl, #overlayBox .tr, #overlayBox .bl, #overlayBox .br {
+  pointer-events: auto;
+}
+
+/* 3D Viewer Container */
+#viewer3d canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  outline: none;
+}
+#viewer3d {
+  position: absolute; /* Энэ маш чухал! */
+  inset: 0;           /* top, right, bottom, left = 0 */
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+/* Range Slider Customization */
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  height: 16px; width: 16px;
+  border-radius: 50%;
+  background: #14b8a6; /* Teal-500 */
+  margin-top: -6px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+input[type=range]::-webkit-slider-runnable-track {
+  width: 100%; height: 4px;
+  background: #e2e8f0;
+  border-radius: 2px;
+}
+.dark input[type=range]::-webkit-slider-runnable-track { background: #334155; }

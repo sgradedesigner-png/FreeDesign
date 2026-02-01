@@ -1,0 +1,93 @@
+// src/i18n/mn.ts
+import type { TranslationKeys } from './en';
+
+export const mn: TranslationKeys = {
+  app: {
+    title: '3D Тохируулагч',
+  },
+  header: {
+    darkMode: 'Харанхуй горим',
+    lightMode: 'Гэрэлтэй горим',
+  },
+  zones: {
+    front: 'Урд тал',
+    back: 'Ар тал',
+    left_arm: 'Зүүн гар',
+    right_arm: 'Баруун гар',
+    all: 'Бүх бүс',
+  },
+  tools: {
+    upload: 'Зураг оруулах',
+    selectZoneToUpload: 'Зураг оруулахын тулд тодорхой бүс сонгоно уу',
+    color: 'Футболкны өнгө',
+    width: 'Өргөн (см)',
+    snap: 'Snap тохиргоо',
+    centerSnap: 'Төв рүү snap',
+    gridSnap: 'Grid рүү snap',
+    gridSize: 'Grid хэмжээ (см)',
+    safeZone: 'Аюулгүй бүс харуулах',
+  },
+  actions: {
+    submit: 'Батлах',
+    lock: 'Түгжих',
+    unlock: 'Тайлах',
+    export: 'Экспорт',
+    exportAll: 'Бүгдийг экспорт',
+    reset: 'Дахин тохируулах',
+    center: 'Голлуулах',
+    autoPlace: 'Авто байршил',
+  },
+  canvas: {
+    zoomIn: 'Томруулах',
+    zoomOut: 'Жижигрүүлэх',
+    resetZoom: 'Анхны хэмжээ',
+    dragToMove: 'Чирж зөөх',
+    scrollToZoom: 'Scroll-ээр томруулах',
+  },
+  viewer: {
+    loading: 'Модел ачааллаж байна...',
+    clickToPlace: 'Зураг байршуулахын тулд модел дээр дарна уу',
+  },
+  editor: {
+    uploadHint: 'Дизайн эхлүүлэхийн тулд зураг оруулна уу',
+    placeHint: '3D модел дээр дарж зураг байршуулна уу',
+    dragHint: 'Чирч зөөх, хуруугаар томруулах',
+  },
+  controls: {
+    zoomIn: 'Томруулах',
+    zoomOut: 'Жижигрүүлэх',
+    rotateLeft: 'Зүүн тийш эргүүлэх',
+    rotateRight: 'Баруун тийш эргүүлэх',
+  },
+  export: {
+    exporting: 'Экспортлож байна...',
+    success: 'Экспорт амжилттай',
+    failed: 'Экспорт амжилтгүй',
+    button: 'Дизайн татах',
+    complete: 'Татаж дууслаа',
+    noDesigns: 'Экспортлохын тулд зураг нэмнэ үү',
+    summary: 'Экспортын дүгнэлт',
+    zonesExported: 'Экспортлосон бүс',
+    zones: 'Бүсүүд',
+    color: 'Өнгө',
+  },
+  keyboard: {
+    rotate: 'R - 15° эргүүлэх',
+    scale: 'Scroll - Хэмжээ',
+    delete: 'Del - Устгах',
+  },
+  presets: {
+    title: 'Түргэн байршил',
+    uploadFirst: 'Эхлээд зураг оруулна уу',
+    leftChest: 'Зүүн цээж',
+    centerChest: 'Төв цээж',
+    fullFront: 'Бүтэн урд',
+    oversizeFront: 'Том хэмжээ',
+    backCollar: 'Ар захаас',
+    upperBack: 'Дээд ар',
+    fullBack: 'Бүтэн ар',
+    sleeveSmall: 'Жижиг',
+    sleeveMedium: 'Дунд',
+    sleeveLarge: 'Том',
+  },
+};

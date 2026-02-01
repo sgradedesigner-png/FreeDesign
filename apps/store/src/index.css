@@ -1,0 +1,282 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Montserrat:wght@500;600;700;800;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* =========================================================
+   BASE
+========================================================= */
+@layer base {
+  :root {
+    /* Design tokens */
+    --color-background: #FEFEFE;
+    --color-foreground: #1F2937;
+
+    --color-card: #FFFFFF;
+    --color-card-foreground: #1F2937;
+
+    --color-primary: #059669;
+    --color-primary-foreground: #FFFFFF;
+
+    --color-secondary: #374151;
+    --color-secondary-foreground: #FFFFFF;
+
+    --color-muted: #F3F4F6;
+    --color-muted-foreground: #6B7280;
+
+    --color-border: rgba(0, 0, 0, 0.08);
+    --color-input: rgba(0, 0, 0, 0.06);
+    --color-ring: #059669;
+
+    /* ✅ Tailwind class-ууд ажиллах mapping (bg-background гэх мэт) */
+    --background: 0 0% 100%;
+    --foreground: 0 0% 3.9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 3.9%;
+
+    --primary: 160 84% 39%;
+    /* emerald-ish */
+    --primary-foreground: 0 0% 98%;
+    /* white text */
+
+    --secondary: 0 0% 96.1%;
+    --secondary-foreground: 0 0% 9%;
+
+    --muted: 0 0% 96.1%;
+    --muted-foreground: 0 0% 45.1%;
+
+    --border: 0 0% 89.8%;
+    --input: 0 0% 89.8%;
+    --ring: 0 0% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 3.9%;
+    --accent: 0 0% 96.1%;
+    --accent-foreground: 0 0% 9%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --chart-1: 12 76% 61%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --color-background: #0F0F0F;
+    --color-foreground: #EBEBEB;
+
+    --color-card: #1A1A1A;
+    --color-card-foreground: #EBEBEB;
+
+    --color-primary: #10B981;
+    --color-primary-foreground: #FFFFFF;
+
+    --color-secondary: #4B5563;
+    --color-secondary-foreground: #FFFFFF;
+
+    --color-muted: #262626;
+    --color-muted-foreground: #B3B3B3;
+
+    --color-border: rgba(255, 255, 255, 0.08);
+    --color-input: rgba(255, 255, 255, 0.12);
+    --color-ring: #10B981;
+
+    /* mapping */
+    --background: 0 0% 3.9%;
+    --foreground: 0 0% 98%;
+
+    --card: 0 0% 3.9%;
+    --card-foreground: 0 0% 98%;
+
+    --primary: 160 84% 39%;
+    --primary-foreground: 0 0% 98%;
+
+
+    --secondary: 0 0% 14.9%;
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 0 0% 14.9%;
+    --muted-foreground: 0 0% 63.9%;
+
+    --border: 0 0% 14.9%;
+    --input: 0 0% 14.9%;
+    --ring: 0 0% 83.1%;
+    --popover: 0 0% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --accent: 0 0% 14.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+  }
+
+  /* ✅ React/Three layout-д хэрэгтэй: өндөр 100% */
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: 'Inter', sans-serif;
+    font-feature-settings: "cv11", "ss01";
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  .font-heading {
+    font-family: 'Montserrat', sans-serif;
+    letter-spacing: -0.02em;
+  }
+
+  /* Firefox scrollbar base */
+  html {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+  }
+
+  .dark html {
+    scrollbar-color: #334155 transparent;
+  }
+}
+
+/* =========================================================
+   UTILITIES
+========================================================= */
+@layer utilities {
+
+  /* Webkit scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: #cbd5e1;
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: #94a3b8;
+  }
+
+  .dark ::-webkit-scrollbar-thumb {
+    background-color: #334155;
+  }
+
+  .dark ::-webkit-scrollbar-thumb:hover {
+    background-color: #475569;
+  }
+
+  /* Dual Range Slider Fix */
+  .dual-range-slider {
+    pointer-events: none;
+  }
+
+  .dual-range-slider::-webkit-slider-thumb {
+    pointer-events: auto;
+    cursor: pointer;
+  }
+
+  .dual-range-slider::-moz-range-thumb {
+    pointer-events: auto;
+    cursor: pointer;
+  }
+
+  /* Green fire */
+  .green-fire {
+    position: relative;
+    color: #fff;
+    animation: greenBurn 1s ease-in-out infinite alternate;
+  }
+}
+
+/* keyframes can be outside layer */
+@keyframes greenBurn {
+  from {
+    text-shadow:
+      0 0 4px #fff,
+      0 -4px 6px #4ade80,
+      0 -8px 10px #10b981,
+      0 -12px 15px #065f46,
+      0 0 4px #fff,
+      0 4px 6px #4ade80,
+      0 8px 10px #10b981,
+      0 12px 15px #065f46;
+  }
+
+  to {
+    text-shadow:
+      0 0 2px #fff,
+      -2px -6px 8px #86efac,
+      2px -10px 14px #22c55e,
+      -1px -16px 20px #14532d,
+      0 0 2px #fff,
+      2px 6px 8px #86efac,
+      -2px 10px 14px #22c55e,
+      1px 16px 20px #14532d;
+  }
+}
+
+/* =========================================================
+   CONFIGURATOR FIXES
+========================================================= */
+#overlayBox {
+  pointer-events: none;
+}
+
+#overlayBox .handle,
+#overlayBox .tl,
+#overlayBox .tr,
+#overlayBox .bl,
+#overlayBox .br {
+  pointer-events: auto;
+}
+
+#viewer3d canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  outline: none;
+}
+
+/* ✅ IMPORTANT:
+   #viewer3d absolute байвал parent нь "position: relative" байх ёстой!
+   (React JSX дээр viewer3d-ийн гаднах wrapper дээр className="relative" тавина.)
+*/
+#viewer3d {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
