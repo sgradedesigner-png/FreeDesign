@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -85,12 +86,9 @@ type SortConfig = {
 
 export default function ProductsPage() {
   const navigate = useNavigate();
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [total, setTotal] = useState(0);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -118,78 +116,57 @@ export default function ProductsPage() {
     }
   };
 
-  const fetchProducts = async () => {
-    try {
-      setLoading(true);
-      const params: Record<string, string | number> = { page, limit: 10 };
+  // React Query for products with caching and prefetching
+  const {
+    data: productsData,
+    isLoading: loading,
+    isFetching,
+  } = useQuery({
+    queryKey: ['products', page, debouncedSearch, selectedCategory, stockFilter, sortConfig],
+    queryFn: async () => {
+      const params: Record<string, string | number> = {
+        page,
+        limit: 20,
+      };
       if (debouncedSearch) params.q = debouncedSearch;
+      if (selectedCategory !== 'all') params.categoryId = selectedCategory;
+      if (stockFilter !== 'all') params.stock = stockFilter;
+      if (sortConfig) {
+        params.sortBy = sortConfig.key === 'category' ? 'category' : sortConfig.key;
+        params.sortOrder = sortConfig.direction;
+      }
 
       const { data } = await api.get<ProductsResponse>('/admin/products', { params });
+      return data;
+    },
+    placeholderData: (prev) => prev, // Keep previous data while fetching
+  });
 
-      let filteredProducts = data.items;
+  const products = productsData?.items ?? [];
+  const totalPages = productsData?.pages ?? 1;
+  const total = productsData?.total ?? 0;
 
-      // Client-side filtering by category
-      if (selectedCategory !== 'all') {
-        filteredProducts = filteredProducts.filter(p => p.categoryId === selectedCategory);
-      }
-
-      // Client-side filtering by stock (sum of all variants)
-      if (stockFilter === 'in-stock') {
-        filteredProducts = filteredProducts.filter(p => {
-          const totalStock = p.variants.reduce((sum, v) => sum + v.stock, 0);
-          return totalStock > 0;
-        });
-      } else if (stockFilter === 'out-of-stock') {
-        filteredProducts = filteredProducts.filter(p => {
-          const totalStock = p.variants.reduce((sum, v) => sum + v.stock, 0);
-          return totalStock === 0;
-        });
-      } else if (stockFilter === 'low-stock') {
-        filteredProducts = filteredProducts.filter(p => {
-          const totalStock = p.variants.reduce((sum, v) => sum + v.stock, 0);
-          return totalStock > 0 && totalStock < 10;
-        });
-      }
-
-      // Client-side sorting
-      if (sortConfig) {
-        filteredProducts.sort((a, b) => {
-          let aValue: any;
-          let bValue: any;
-
-          if (sortConfig.key === 'category') {
-            aValue = a.category.name.toLowerCase();
-            bValue = b.category.name.toLowerCase();
-          } else if (sortConfig.key === 'price') {
-            aValue = parseFloat(a.variants[0]?.price ?? a.basePrice);
-            bValue = parseFloat(b.variants[0]?.price ?? b.basePrice);
-          } else if (sortConfig.key === 'stock') {
-            aValue = a.variants.reduce((sum, v) => sum + v.stock, 0);
-            bValue = b.variants.reduce((sum, v) => sum + v.stock, 0);
-          } else {
-            aValue = a[sortConfig.key];
-            bValue = b[sortConfig.key];
-          }
-
-          if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
-          if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
-          return 0;
-        });
-      }
-
-      setProducts(filteredProducts);
-      setTotalPages(data.pages);
-      setTotal(data.total);
-    } catch (error) {
-      console.error('Failed to fetch products:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // Prefetch next page
   useEffect(() => {
-    fetchProducts();
-  }, [page, debouncedSearch, selectedCategory, stockFilter, sortConfig]);
+    if (page < totalPages) {
+      const nextParams: Record<string, string | number> = {
+        page: page + 1,
+        limit: 20,
+      };
+      if (debouncedSearch) nextParams.q = debouncedSearch;
+      if (selectedCategory !== 'all') nextParams.categoryId = selectedCategory;
+      if (stockFilter !== 'all') nextParams.stock = stockFilter;
+      if (sortConfig) {
+        nextParams.sortBy = sortConfig.key === 'category' ? 'category' : sortConfig.key;
+        nextParams.sortOrder = sortConfig.direction;
+      }
+
+      queryClient.prefetchQuery({
+        queryKey: ['products', page + 1, debouncedSearch, selectedCategory, stockFilter, sortConfig],
+        queryFn: () => api.get<ProductsResponse>('/admin/products', { params: nextParams }).then(r => r.data),
+      });
+    }
+  }, [page, totalPages, debouncedSearch, selectedCategory, stockFilter, sortConfig, queryClient]);
 
   const handleSort = (key: keyof Product | 'category') => {
     setSortConfig(current => {
@@ -227,8 +204,8 @@ export default function ProductsPage() {
     try {
       setDeleting(true);
       await api.delete(`/admin/products/${deleteDialog.product.id}`);
+      queryClient.invalidateQueries({ queryKey: ['products'] });
       setDeleteDialog({ open: false, product: null });
-      fetchProducts();
     } catch (error) {
       console.error('Failed to delete product:', error);
     } finally {
@@ -242,9 +219,9 @@ export default function ProductsPage() {
       await Promise.all(
         Array.from(selectedIds).map(id => api.delete(`/admin/products/${id}`))
       );
+      queryClient.invalidateQueries({ queryKey: ['products'] });
       setSelectedIds(new Set());
       setBulkDeleteDialog(false);
-      fetchProducts();
     } catch (error) {
       console.error('Failed to delete products:', error);
     } finally {
@@ -255,14 +232,14 @@ export default function ProductsPage() {
   const exportToCSV = () => {
     const headers = ['Title', 'Slug', 'Category', 'Price', 'Stock', 'Created'];
     const rows = products.map(p => {
-      const totalStock = p.variants.reduce((sum, v) => sum + v.stock, 0);
-      const price = p.variants[0]?.price ?? p.basePrice;
+      const stock = p.variants[0]?.stock ?? 0;
+      const price = p.variants[0]?.price ?? 0;
       return [
         p.title,
         p.slug,
         p.category.name,
-        price,
-        totalStock.toString(),
+        price.toString(),
+        stock.toString(),
         new Date(p.createdAt).toLocaleDateString(),
       ];
     });
@@ -357,6 +334,7 @@ export default function ProductsPage() {
         </Select>
 
         <p className="text-sm text-muted-foreground ml-auto">
+          {isFetching && <span className="animate-spin mr-1">⟳</span>}
           {total} {total === 1 ? 'product' : 'products'}
         </p>
       </div>
@@ -400,12 +378,28 @@ export default function ProductsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                  Loading...
-                </TableCell>
-              </TableRow>
+            {loading && !productsData ? (
+              // Skeleton rows
+              Array.from({ length: 5 }).map((_, i) => (
+                <TableRow key={i}>
+                  <TableCell><div className="h-4 w-4 bg-muted animate-pulse rounded" /></TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <div className="h-12 w-12 bg-muted animate-pulse rounded" />
+                      <div className="space-y-2">
+                        <div className="h-4 w-32 bg-muted animate-pulse rounded" />
+                        <div className="h-3 w-24 bg-muted animate-pulse rounded" />
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell><div className="h-6 w-20 bg-muted animate-pulse rounded" /></TableCell>
+                  <TableCell><div className="h-6 w-16 bg-muted animate-pulse rounded" /></TableCell>
+                  <TableCell><div className="h-6 w-12 bg-muted animate-pulse rounded" /></TableCell>
+                  <TableCell className="text-right">
+                    <div className="h-8 w-20 bg-muted animate-pulse rounded ml-auto" />
+                  </TableCell>
+                </TableRow>
+              ))
             ) : products.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
@@ -428,6 +422,7 @@ export default function ProductsPage() {
                           src={product.variants[0].imagePath}
                           alt={product.title}
                           className="w-12 h-12 rounded object-cover"
+                          loading="lazy"
                         />
                       ) : (
                         <div className="w-12 h-12 rounded bg-muted flex items-center justify-center text-muted-foreground text-xs">
@@ -444,17 +439,12 @@ export default function ProductsPage() {
                     <Badge variant="secondary">{product.category.name}</Badge>
                   </TableCell>
                   <TableCell className="font-medium">
-                    ${parseFloat(product.variants[0]?.price ?? product.basePrice).toFixed(2)}
+                    ${parseFloat(String(product.variants[0]?.price ?? 0)).toFixed(2)}
                   </TableCell>
                   <TableCell>
-                    {(() => {
-                      const totalStock = product.variants.reduce((sum, v) => sum + v.stock, 0);
-                      return (
-                        <Badge variant={totalStock > 0 ? 'default' : 'destructive'}>
-                          {totalStock}
-                        </Badge>
-                      );
-                    })()}
+                    <Badge variant={(product.variants[0]?.stock ?? 0) > 0 ? 'default' : 'destructive'}>
+                      {product.variants[0]?.stock ?? 0}
+                    </Badge>
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-2">

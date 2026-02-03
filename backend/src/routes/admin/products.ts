@@ -96,35 +96,74 @@ export async function adminProductRoutes(app: FastifyInstance) {
     return product;
   });
 
-  // 📄 LIST products (pagination + search) with variants
+  // 📄 LIST products (pagination + search + filters + sorting) - OPTIMIZED
   app.get('/', async (request) => {
     const schema = z.object({
       q: z.string().optional(),
       page: z.coerce.number().int().min(1).optional().default(1),
       limit: z.coerce.number().int().min(1).max(1000).optional().default(20),
+      categoryId: z.string().uuid().optional(),
+      stock: z.enum(['all', 'in-stock', 'low-stock', 'out-of-stock']).optional().default('all'),
+      sortBy: z.enum(['title', 'createdAt', 'category']).optional().default('createdAt'),
+      sortOrder: z.enum(['asc', 'desc']).optional().default('desc'),
     });
 
-    const { q, page, limit } = schema.parse(request.query);
+    const { q, page, limit, categoryId, stock, sortBy, sortOrder } = schema.parse(request.query);
     const skip = (page - 1) * limit;
 
-    const where: Prisma.ProductWhereInput = q
-      ? {
-          OR: [
-            { title: { contains: q, mode: Prisma.QueryMode.insensitive } },
-            { slug: { contains: q, mode: Prisma.QueryMode.insensitive } },
-          ],
-        }
-      : {};
+    const where: Prisma.ProductWhereInput = {
+      ...(q && {
+        OR: [
+          { title: { contains: q, mode: Prisma.QueryMode.insensitive } },
+          { slug: { contains: q, mode: Prisma.QueryMode.insensitive } },
+        ],
+      }),
+      ...(categoryId && { categoryId }),
+      ...(stock !== 'all' && {
+        variants: {
+          some: {
+            stock: stock === 'in-stock'
+              ? { gt: 0 }
+              : stock === 'low-stock'
+              ? { gt: 0, lt: 10 }
+              : { equals: 0 },
+          },
+        },
+      }),
+    };
+
+    const orderBy: Prisma.ProductOrderByWithRelationInput =
+      sortBy === 'category'
+        ? { category: { name: sortOrder } }
+        : { [sortBy]: sortOrder };
 
     const [items, total] = await Promise.all([
       prisma.product.findMany({
         where,
-        orderBy: { createdAt: 'desc' },
+        orderBy,
         skip,
         take: limit,
-        include: {
-          category: true,
-          variants: { orderBy: { sortOrder: 'asc' } },
+        select: {
+          id: true,
+          title: true,
+          slug: true,
+          categoryId: true,
+          createdAt: true,
+          updatedAt: true,
+          category: {
+            select: { id: true, name: true, slug: true },
+          },
+          variants: {
+            select: {
+              id: true,
+              name: true,
+              price: true,
+              stock: true,
+              imagePath: true,
+            },
+            orderBy: { sortOrder: 'asc' },
+            take: 1, // Only first variant for list view
+          },
         },
       }),
       prisma.product.count({ where }),
