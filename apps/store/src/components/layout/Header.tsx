@@ -27,23 +27,23 @@ export default function Header() {
   type NavItem = { label: Label; href: string; icon: IconName };
 
   const navItems: NavItem[] = [
-    { label: menuLabels.products, href: '/', icon: 'ShoppingBagIcon' },
-    { label: menuLabels.new, href: '/?filter=new', icon: 'SparklesIcon' },
-    { label: menuLabels.collections, href: '/?filter=collections', icon: 'RectangleStackIcon' },
+    { label: menuLabels.products, href: '/products', icon: 'ShoppingBagIcon' },
+    { label: menuLabels.new, href: '/products?filter=new', icon: 'SparklesIcon' },
+    { label: menuLabels.collections, href: '/products?filter=collections', icon: 'RectangleStackIcon' },
     { label: menuLabels.about, href: '/about', icon: 'InformationCircleIcon' },
   ];
 
   const handleSearch = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      navigate(`/?search=${encodeURIComponent(searchQuery)}`);
+      navigate(`/products?search=${encodeURIComponent(searchQuery)}`);
       setIsSearchOpen(false);
     }
   };
 
   const clearSearch = () => {
     setSearchQuery('');
-    navigate('/');
+    navigate('/products');
     setIsSearchOpen(false);
   };
 

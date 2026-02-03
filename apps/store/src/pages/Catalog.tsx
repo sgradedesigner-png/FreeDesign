@@ -1,14 +1,10 @@
 // src/pages/Catalog.tsx
 import { useCallback, useMemo, useState } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
-import { useQueryClient } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
 import FilterSidebar from '../components/layout/FilterSidebar';
-import type { Product } from '../data/products';
-import { prefetchProduct, seedProductCache, useProductsQuery } from '../data/products.queries';
-import { useCart } from '../context/CartContext'; // ✅ useCart нэмсэн
+import ProductCard from '../components/product/ProductCard';
+import { useProductsQuery } from '../data/products.queries';
 import { useTheme } from '../context/ThemeContext';
-import { r2Url } from "@/lib/r2";
-import { Eye, ShoppingBag } from 'lucide-react'; // ✅ Иконууд нэмсэн
 
 import {
   Select,
@@ -24,12 +20,8 @@ type Filters = {
   categories: string[];
 };
 
-const PLACEHOLDER_IMG = 'https://placehold.co/800x1000/png?text=No+Image';
-
 export default function Catalog() {
-  const { addItem, setIsCartOpen } = useCart(); // ✅ Сагсанд нэмэх функц авсан
   const { language } = useTheme();
-  const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const searchQuery = searchParams.get('search')?.toLowerCase() || '';
 
@@ -44,15 +36,6 @@ export default function Catalog() {
   });
 
   const [sortBy, setSortBy] = useState<'newest' | 'price-low' | 'price-high'>('newest');
-
-  const handlePrefetch = useCallback(
-    (product: Product) => {
-      if (!product.slug) return;
-      seedProductCache(queryClient, product);
-      prefetchProduct(queryClient, product.slug);
-    },
-    [queryClient]
-  );
 
   const filteredProducts = useMemo(() => {
     let result = products.filter((product) => {
@@ -125,86 +108,9 @@ export default function Catalog() {
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-              {filteredProducts.map((product) => {
-                const imgSrc = r2Url(product.image_path ?? product.gallery_paths?.[0] ?? "") || PLACEHOLDER_IMG;
-
-                return (
-                  <div
-                    key={product.id}
-                    className="group relative rounded-3xl overflow-hidden flex flex-col transition-all duration-500
-                 bg-card text-card-foreground border border-border/40
-                 hover:shadow-2xl hover:shadow-primary/10"
-                  >
-
-                    {/* Зургийн хэсэг */}
-                    <div className="relative aspect-[4/5] overflow-hidden bg-muted/20">
-                      <Link
-                        to={`/product/${product.slug}`}
-                        state={{ product }}
-                        className="block w-full h-full cursor-pointer"
-                        onMouseEnter={() => handlePrefetch(product)}
-                        onFocus={() => handlePrefetch(product)}
-                      >
-                        <img
-                          src={imgSrc}
-                          alt={product.name}
-                          loading="lazy"
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
-                          onError={(e) => { e.currentTarget.src = PLACEHOLDER_IMG; }}
-                        />
-                      </Link>
-
-                      {/* 1-Р ЗУРАГ ШИГ ХӨВЖ БУЙ ТОВЧНУУДУУД (Overlay) */}
-                      <div className="absolute inset-x-4 bottom-4 flex gap-2 opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 ease-out z-20">
-
-                        {/* Дэлгэрэнгүй товч */}
-                        <Link
-                          to={`/product/${product.slug}`}
-                          state={{ product }}
-                          className="flex-1 h-12 bg-white text-slate-900 rounded-xl flex items-center justify-center font-bold text-[11px] tracking-wider shadow-lg hover:bg-slate-100 transition-colors"
-                          onMouseEnter={() => handlePrefetch(product)}
-                          onFocus={() => handlePrefetch(product)}
-                        >
-                          {language === 'mn' ? 'ДЭЛГЭРЭНГҮЙ' : 'VIEW DETAILS'}
-                        </Link>
-
-                        {/* Сагсанд нэмэх товч */}
-                        <button
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            addItem(product, product.colors?.[0] ?? null, product.sizes?.[0] ?? null);
-                            //setIsCartOpen(true); // хүсвэл нэмэхэд сагсаа нээ
-
-                          }}
-                          className="w-12 h-12 bg-white text-slate-900 rounded-xl flex items-center justify-center shadow-lg hover:bg-primary hover:text-white transition-all duration-300"
-                          title="Сагсанд нэмэх"
-                        >
-                          <ShoppingBag size={20} />
-                        </button>
-                      </div>
-
-                      {/* Dark overlay on hover (Зургийг бага зэрэг бараантуулж товчийг тодруулна) */}
-                      <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
-                    </div>
-
-                    {/* Барааны мэдээлэл хэсэг */}
-                    <div className="p-5 flex-1 flex flex-col justify-between bg-card">
-                      <div>
-                        <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">
-                          {product.category}
-                        </p>
-                        <h3 className="font-bold text-base truncate mb-2 text-foreground group-hover:text-primary transition-colors">
-                          {product.name}
-                        </h3>
-                        <p className="text-foreground font-bold text-lg">
-                          ${product.price.toLocaleString()}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+              {filteredProducts.map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
             </div>
           )}
         </div>

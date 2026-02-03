@@ -6,6 +6,7 @@ import { Toaster } from 'sonner';
 import Header from './components/layout/Header';
 import CartSidebar from './components/layout/CartSidebar';
 
+import HomePage from './pages/HomePage';
 import Catalog from './pages/Catalog';
 import ProductDetails from './pages/ProductDetails';
 import CartPage from './pages/CartPage';
@@ -15,7 +16,7 @@ import ScrollToTop from './components/layout/ScrollToTop';
 // Layout компонент: Хуудас бүрийн байршлыг зохицуулна
 function Layout() {
   const location = useLocation();
-  
+
   // Хэрэв бид '/customize' хуудас дээр байгаа бол тусгай горим (Full Screen)
   const isConfigurator = location.pathname === '/customize';
 
@@ -26,10 +27,11 @@ function Layout() {
       {/* Configurator дээр үндсэн Header болон Сагсыг НУУНА */}
       {!isConfigurator && <Header />}
       {!isConfigurator && <CartSidebar />}
-      
+
       <main>
         <Routes>
-          <Route path="/" element={<Catalog />} />
+          <Route path="/" element={<HomePage />} />
+          <Route path="/products" element={<Catalog />} />
           <Route path="/product/:id" element={<ProductDetails />} />
           <Route path="/cart" element={<CartPage />} />
           <Route path="/wishlist" element={<WishlistPage />} />
