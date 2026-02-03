@@ -44,23 +44,45 @@ model Category {
 }
 
 model Product {
-  id          String   @id @default(uuid())
+  id          String           @id @default(uuid())
   title       String
-  slug        String   @unique
+  slug        String           @unique
   description String?
-  price       Decimal
-  stock       Int      @default(0)
-  images      String[] // Array of R2 URLs
-  colors      String[] @default([]) // Available colors (hex codes or names)
-  sizes       String[] @default([]) // Available sizes (S, M, L, XL, etc.)
+  basePrice   Decimal          @default(0) // Base price (variants can override)
   categoryId  String
-  category    Category @relation(fields: [categoryId], references: [id])
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  category    Category         @relation(fields: [categoryId], references: [id])
+  variants    ProductVariant[] // Product variants
+  rating      Float            @default(0)
+  reviews     Int              @default(0)
+  features    String[]         @default([])
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
 
   @@index([slug])
   @@index([createdAt])
   @@map("products")
+}
+
+model ProductVariant {
+  id            String   @id @default(uuid())
+  productId     String
+  product       Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  name          String   // Variant name (e.g., "Black/Red", "Ocean Blue")
+  sku           String   @unique // Unique SKU for this variant
+  price         Decimal  // Variant-specific price
+  originalPrice Decimal? // Original price if on sale
+  sizes         String[] @default([]) // Available sizes for this variant
+  imagePath     String   // Main thumbnail image
+  galleryPaths  String[] @default([]) // Additional gallery images
+  stock         Int      @default(0) // Variant stock
+  isAvailable   Boolean  @default(true) // Availability flag
+  sortOrder     Int      @default(0) // Display order
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([productId])
+  @@index([sku])
+  @@map("product_variants")
 }
 
 model Order {
