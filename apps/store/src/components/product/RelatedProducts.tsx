@@ -1,34 +1,22 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Link } from "react-router-dom";
-import { fetchProducts } from "../../data/products.api";
 import type { Product } from "../../data/products";
+import { useQueryClient } from "@tanstack/react-query";
+import { prefetchProduct, seedProductCache, useProductsQuery } from "../../data/products.queries";
 import { r2Url } from "@/lib/r2";
 
 const PLACEHOLDER_IMG = "https://placehold.co/800x1000/png?text=No+Image";
 
 export default function RelatedProducts({ currentSlug }: { currentSlug?: string }) {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const { data, isLoading, error } = useProductsQuery();
+  const products = error ? [] : data ?? [];
 
-  useEffect(() => {
-    let isMounted = true;
-
-    (async () => {
-      setIsLoading(true);
-      try {
-        const data = await fetchProducts();
-        if (isMounted) setProducts(data);
-      } catch {
-        if (isMounted) setProducts([]);
-      } finally {
-        if (isMounted) setIsLoading(false);
-      }
-    })();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  const handlePrefetch = (product: Product) => {
+    if (!product.slug) return;
+    seedProductCache(queryClient, product);
+    prefetchProduct(queryClient, product.slug);
+  };
 
   const related = useMemo(() => {
     const filtered = currentSlug ? products.filter((p) => p.slug !== currentSlug) : products;
@@ -56,6 +44,8 @@ export default function RelatedProducts({ currentSlug }: { currentSlug?: string 
               to={`/product/${product.slug}`}
               state={{ product }}
               className="group block"
+              onMouseEnter={() => handlePrefetch(product)}
+              onFocus={() => handlePrefetch(product)}
             >
               <div className="relative aspect-[3/4] rounded-xl overflow-hidden bg-muted mb-3">
                 <img

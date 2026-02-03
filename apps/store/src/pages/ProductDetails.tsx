@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
 import { useLocation, useParams, Link } from 'react-router-dom';
-import { fetchProductBySlug } from '../data/products.api';
+import { useQueryClient } from '@tanstack/react-query';
 import type { Product } from '../data/products';
+import { PRODUCTS_QUERY_KEY, useProductQuery } from '../data/products.queries';
 
 import ProductGallery from '../components/product/ProductGallery';
 import ProductInfo from '../components/product/ProductInfo';
@@ -15,58 +15,23 @@ type LocationState = { product?: Product } | null;
 
 export default function ProductDetails() {
   // 👉 URL: /product/:slug
-  const { slug } = useParams<{ slug: string }>();
+  const params = useParams<{ slug?: string; id?: string }>();
+  const slugParam = params.slug ?? params.id ?? null;
   const location = useLocation();
   const { language } = useTheme();
 
   // Catalog / RelatedProducts-оос дамжсан product
   const initialProduct = (location.state as LocationState)?.product ?? null;
 
-  const [product, setProduct] = useState<Product | null>(initialProduct);
-  const [isLoading, setIsLoading] = useState<boolean>(!initialProduct);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const slug = slugParam ?? initialProduct?.slug ?? null;
+  const queryClient = useQueryClient();
+  const cachedList = queryClient.getQueryData<Product[]>(PRODUCTS_QUERY_KEY);
+  const cachedProduct = slug ? cachedList?.find((p) => p.slug === slug) ?? null : null;
+  const seedProduct = initialProduct?.slug === slug ? initialProduct : cachedProduct;
 
-  useEffect(() => {
-    let isMounted = true;
-
-    // ✅ slug байхгүй бол fetch хийхгүй
-    if (!slug) {
-      setIsLoading(false);
-      return () => {
-        isMounted = false;
-      };
-    }
-
-    // Catalog-оос state-ээр ирсэн бол дахиж fetch хийх шаардлагагүй
-    if (initialProduct?.slug === slug) {
-      setIsLoading(false);
-      return () => {
-        isMounted = false;
-      };
-    }
-
-    setIsLoading(true);
-    setLoadError(null);
-
-    fetchProductBySlug(slug)
-      .then((data) => {
-        if (!isMounted) return;
-        setProduct(data);
-      })
-      .catch((error) => {
-        if (!isMounted) return;
-        setLoadError(error instanceof Error ? error.message : 'Failed to load product.');
-        setProduct(null);
-      })
-      .finally(() => {
-        if (!isMounted) return;
-        setIsLoading(false);
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [slug, initialProduct]);
+  const { data: product, isLoading, error } = useProductQuery(slug, seedProduct);
+  const loadError =
+    error instanceof Error ? error.message : error ? 'Failed to load product.' : null;
 
   if (loadError) {
     return (
@@ -110,7 +75,7 @@ export default function ProductDetails() {
 
       <ProductTabs />
 
-      <RelatedProducts />
+      <RelatedProducts currentSlug={product.slug ?? slug ?? undefined} />
 
       <CustomerReviews
         reviews={[]}

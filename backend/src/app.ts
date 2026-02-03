@@ -1,10 +1,13 @@
 import fastify from 'fastify';
 import cors from '@fastify/cors';
+import multipart from '@fastify/multipart';
 import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
 
 import { adminCategoryRoutes } from './routes/admin/categories';
 import { adminProductRoutes } from './routes/admin/products';
+import { adminUploadRoutes } from './routes/admin/upload';
+import { adminUploadPresignedRoutes } from './routes/admin/upload-presigned';
 import { adminGuard } from './supabaseauth';
 
 dotenv.config();
@@ -16,6 +19,15 @@ const prisma = new PrismaClient();
 app.register(cors, {
   origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Explicitly allow all methods
+  allowedHeaders: ['Content-Type', 'Authorization'], // Allow required headers
+});
+
+// Register multipart for file uploads
+app.register(multipart, {
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB
+  },
 });
 
 // 2) Public routes
@@ -39,6 +51,8 @@ app.get('/admin/ping', { preHandler: adminGuard }, async (req) => {
 // 4) Admin routes
 app.register(adminCategoryRoutes, { prefix: '/admin/categories' });
 app.register(adminProductRoutes, { prefix: '/admin/products' });
+app.register(adminUploadRoutes, { prefix: '/admin/upload' });
+app.register(adminUploadPresignedRoutes, { prefix: '/admin/upload' });
 
 // 5) Start Server
 const start = async () => {

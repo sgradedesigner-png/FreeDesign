@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { Prisma } from '@prisma/client';
 import { adminGuard } from '../../supabaseauth';
 import { prisma } from '../../lib/prisma';
+import { deleteProductImages } from '../../lib/r2';
 
 // price Decimal-д зориулж number/string аль алиныг зөвшөөрнө
 const priceSchema = z.union([
@@ -56,7 +57,7 @@ app.addHook('preHandler', adminGuard);
     const schema = z.object({
       q: z.string().optional(),
       page: z.coerce.number().int().min(1).optional().default(1),
-      limit: z.coerce.number().int().min(1).max(100).optional().default(20),
+      limit: z.coerce.number().int().min(1).max(1000).optional().default(20), // Increased to 1000 for dashboard stats
     });
 
     const { q, page, limit } = schema.parse(request.query);
@@ -152,14 +153,52 @@ app.addHook('preHandler', adminGuard);
     const schema = z.object({ id: z.string().uuid() });
     const { id } = schema.parse(request.params);
 
-    // ✅ Check if product exists before deleting
-    const product = await prisma.product.findUnique({ where: { id } });
+    console.log('\n[Delete Product] ========== DELETE PRODUCT REQUEST ==========');
+    console.log('[Delete Product] Product ID:', id);
 
-    if (!product) {
-      return reply.status(404).send({ message: 'Product not found' });
+    try {
+      // Step 1: Check if product exists
+      const product = await prisma.product.findUnique({ where: { id } });
+
+      if (!product) {
+        console.log('[Delete Product] ❌ Product not found');
+        return reply.status(404).send({ message: 'Product not found' });
+      }
+
+      console.log('[Delete Product] ✅ Product found:', product.title);
+      console.log('[Delete Product] Images:', product.images?.length || 0);
+
+      // Step 2: Delete all images from R2 storage
+      if (product.images && product.images.length > 0) {
+        console.log('[Delete Product] Step 1: Deleting images from R2...');
+        try {
+          const deletedCount = await deleteProductImages(id);
+          console.log('[Delete Product] ✅ Deleted', deletedCount, 'files from R2');
+        } catch (r2Error) {
+          console.error('[Delete Product] ⚠️ R2 deletion failed, but continuing...', r2Error);
+          // Continue even if R2 deletion fails - don't block product deletion
+        }
+      } else {
+        console.log('[Delete Product] No images to delete from R2');
+      }
+
+      // Step 3: Delete product from database
+      console.log('[Delete Product] Step 2: Deleting product from database...');
+      await prisma.product.delete({ where: { id } });
+      console.log('[Delete Product] ✅ Product deleted from database');
+
+      console.log('[Delete Product] ========== DELETE COMPLETE ==========\n');
+      return {
+        ok: true,
+        message: 'Product and all associated images deleted successfully'
+      };
+    } catch (error) {
+      console.error('[Delete Product] ❌ Delete failed');
+      console.error('[Delete Product] Error:', error);
+      return reply.status(500).send({
+        message: 'Failed to delete product',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
-
-    await prisma.product.delete({ where: { id } });
-    return { ok: true };
   });
 }

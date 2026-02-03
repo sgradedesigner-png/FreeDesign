@@ -1,6 +1,6 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
-import { toast } from 'sonner'; // Гоё мэдэгдэл харуулах
+import { toast } from 'sonner';
 import type { Product } from '../data/products';
 
 type CartItem = Product & {
@@ -12,95 +12,133 @@ type CartItem = Product & {
 
 type CartContextValue = {
   cart: CartItem[];
-  addToCart: (product: Product, quantity?: number, selectedColor?: string | null, selectedSize?: string | null) => void;
-  removeFromCart: (cartKey: string) => void;
+
+  // ✅ New: add item (initial add)
+  addItem: (product: Product, selectedColor?: string | null, selectedSize?: string | null) => void;
+
+  // ✅ New: quantity controls by cartKey
+  increaseQty: (cartKey: string) => void;
+  decreaseQty: (cartKey: string) => void;
+
+  // ✅ New: remove item
+  removeItem: (cartKey: string) => void;
+
   cartCount: number;
   cartTotal: number;
+
   isCartOpen: boolean;
   setIsCartOpen: (open: boolean) => void;
 };
 
 const CartContext = createContext<CartContextValue | undefined>(undefined);
+
 const makeCartKey = (id: string, color: string | null, size: string | null) =>
-  `${id}__${color ?? "none"}__${size ?? "none"}`;
+  `${id}__${color ?? 'none'}__${size ?? 'none'}`;
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
 
-  // LocalStorage-оос сагсаа сэргээх
+  // LocalStorage-оос сэргээх
   useEffect(() => {
     const savedCart = localStorage.getItem('shopping-cart');
-    if (savedCart) {
-      const parsed = JSON.parse(savedCart) as any[];
+    if (!savedCart) return;
 
-  const normalized: CartItem[] = parsed.map((i) => {
-    const color = i.color ?? null;
-    const size = i.size ?? null;
+    const parsed = JSON.parse(savedCart) as any[];
 
-    return {
-      ...i,
-      color,
-      size,
-      cartKey: i.cartKey ?? makeCartKey(i.id, color, size),
-    };
-  });
+    const normalized: CartItem[] = parsed.map((i) => {
+      const color = i.color ?? null;
+      const size = i.size ?? null;
+      return {
+        ...i,
+        color,
+        size,
+        cartKey: i.cartKey ?? makeCartKey(i.id, color, size),
+      };
+    });
 
-  setCart(normalized);
-    }
+    setCart(normalized);
   }, []);
 
-  // Сагс өөрчлөгдөх бүрт хадгалах
+  // LocalStorage-д хадгалах
   useEffect(() => {
     localStorage.setItem('shopping-cart', JSON.stringify(cart));
   }, [cart]);
 
-  const addToCart = (
-    product: Product, 
-    quantity = 1, 
-    selectedColor: string | null = null,
-    selectedSize: string | null =null
-  ) => {
-     const cartKey = makeCartKey(product.id, selectedColor, selectedSize);
-    //console.log("ADD_TO_CART size =", selectedSize);
+  // ✅ Add new item (or increase if exists)
+  const addItem = (product: Product, selectedColor: string | null = null, selectedSize: string | null = null) => {
+    const cartKey = makeCartKey(product.id, selectedColor, selectedSize);
+
     setCart((prev) => {
-     const existing = prev.find((i) => i.cartKey === cartKey);
+      const existing = prev.find((i) => i.cartKey === cartKey);
 
       if (existing) {
-        return prev.map((i) =>
-       i.cartKey === cartKey ? {...i, quantity: i.quantity + quantity} : i
-      );
+        return prev.map((i) => (i.cartKey === cartKey ? { ...i, quantity: i.quantity + 1 } : i));
       }
-     
-    const newItem: CartItem = {
-      ...product,
-      cartKey,
-      quantity,
-      color: selectedColor,
-      size: selectedSize,
-    };
-      return [...prev, newItem];
-      
 
+      const newItem: CartItem = {
+        ...product,
+        cartKey,
+        quantity: 1,
+        color: selectedColor,
+        size: selectedSize,
+      };
+
+      return [...prev, newItem];
     });
-    //console.log("ADD_TO_CART size =", selectedSize);
+
     toast.success(`${product.name} сагсанд нэмэгдлээ!`);
   };
 
-  const removeFromCart = (cartKey: string) => {
-    setCart((prev) => prev.filter((item) => item.cartKey !== cartKey));
+  // ✅ Increase qty (no “added” toast, optional: message)
+  const increaseQty = (cartKey: string) => {
+    setCart((prev) =>
+      prev.map((i) => (i.cartKey === cartKey ? { ...i, quantity: i.quantity + 1 } : i))
+    );
+    // хүсвэл: toast.message('Тоо нэмэгдлээ');
+  };
+
+  // ✅ Decrease qty (if becomes 0 -> remove)
+ const decreaseQty = (cartKey: string) => {
+  setCart((prev) => {
+    const item = prev.find((i) => i.cartKey === cartKey);
+    if (!item) return prev;
+
+    // 1 байхад → устгана + toast
+    if (item.quantity === 1) {
+      toast.error(`${item.name} сагснаас хасагдлаа`);
+      return prev.filter((i) => i.cartKey !== cartKey);
+    }
+
+    // 2+ байхад → тоо буурна + message
+    toast.message(`${item.name} тоо буурлаа`);
+
+    return prev.map((i) =>
+      i.cartKey === cartKey
+        ? { ...i, quantity: i.quantity - 1 }
+        : i
+    );
+  });
+};
+
+
+  // ✅ Remove item
+  const removeItem = (cartKey: string) => {
+    setCart((prev) => prev.filter((i) => i.cartKey !== cartKey));
     toast.error('Бараа сагснаас хасагдлаа');
   };
 
-  const cartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
-  const cartTotal = cart.reduce((acc, item) => acc + item.price * item.quantity, 0);
+  const cartCount = useMemo(() => cart.reduce((acc, item) => acc + item.quantity, 0), [cart]);
+  const cartTotal = useMemo(() => cart.reduce((acc, item) => acc + item.price * item.quantity, 0), [cart]);
 
   return (
     <CartContext.Provider
       value={{
         cart,
-        addToCart,
-        removeFromCart,
+        addItem,
+        increaseQty,
+        decreaseQty,
+        removeItem,
         cartCount,
         cartTotal,
         isCartOpen,
@@ -114,8 +152,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
 export const useCart = () => {
   const context = useContext(CartContext);
-  if (!context) {
-    throw new Error('useCart must be used within a CartProvider');
-  }
+  if (!context) throw new Error('useCart must be used within a CartProvider');
   return context;
 };

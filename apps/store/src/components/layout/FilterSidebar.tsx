@@ -2,7 +2,8 @@
 import { useState, useEffect } from 'react';
 import type { ChangeEvent } from 'react';
 import { ChevronDown, Check, Filter } from 'lucide-react';
-import { useTheme } from '../../context/ThemeContext'; // ✅ ThemeContext-ийг нэмсэн
+import { useTheme } from '../../context/ThemeContext';
+import { useCategoriesQuery } from '../../data/categories.queries'; // ✅ Categories query
 
 type Filters = {
   priceRange: [number, number];
@@ -21,8 +22,8 @@ type FilterSidebarProps = {
 };
 
 export default function FilterSidebar({ onFilterChange }: FilterSidebarProps) {
-  const { language } = useTheme(); // ✅ Хэлний тохиргоог авах
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, 500]);
+  const { language } = useTheme();
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 2000]); // ✅ 500 → 2000
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
 
@@ -31,6 +32,9 @@ export default function FilterSidebar({ onFilterChange }: FilterSidebarProps) {
     price: true,
     sizes: true
   });
+
+  // ✅ Fetch categories from database
+  const { data: categoriesData = [] } = useCategoriesQuery();
 
   // ✅ Орчуулгын объект
   const t = {
@@ -41,21 +45,18 @@ export default function FilterSidebar({ onFilterChange }: FilterSidebarProps) {
   };
 
   useEffect(() => {
-    onFilterChange({ 
-      priceRange, 
+    onFilterChange({
+      priceRange,
       sizes: selectedSizes,
-      categories: selectedCategories 
+      categories: selectedCategories
     });
   }, [priceRange, selectedSizes, selectedCategories, onFilterChange]);
 
-  // ✅ Ангилалуудыг хэлнээс хамаарч харуулна, харин ID нь хэвээр үлдэнэ
-  const categories = [
-    { name: language === 'mn' ? 'Эрэгтэй' : 'Men', id: 'Эрэгтэй' },
-    { name: language === 'mn' ? 'Эмэгтэй' : 'Women', id: 'Эмэгтэй' },
-    { name: language === 'mn' ? 'Хүүхэд' : 'Kids', id: 'Хүүхэд' },
-    { name: language === 'mn' ? 'Аксессуар' : 'Accessories', id: 'Аксессуар' },
-    { name: language === 'mn' ? 'Гутал' : 'Shoes', id: 'Гутал' },
-  ];
+  // ✅ Use categories from database
+  const categories = categoriesData.map(cat => ({
+    name: cat.name,
+    id: cat.name, // Use name for filtering (matches product.category)
+  }));
 
   const sizeGroups = [
     ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
@@ -167,19 +168,19 @@ export default function FilterSidebar({ onFilterChange }: FilterSidebarProps) {
                  </div>
                  
                  <div className="relative h-1.5 rounded-full bg-muted/80 mx-1">
-                    <div 
-                        className="absolute h-full bg-primary rounded-full shadow-[0_0_10px_rgba(16,185,129,0.5)]" 
-                        style={{ 
-                            left: `${(priceRange[0] / 500) * 100}%`, 
-                            right: `${100 - (priceRange[1] / 500) * 100}%` 
+                    <div
+                        className="absolute h-full bg-primary rounded-full shadow-[0_0_10px_rgba(16,185,129,0.5)]"
+                        style={{
+                            left: `${(priceRange[0] / 2000) * 100}%`,
+                            right: `${100 - (priceRange[1] / 2000) * 100}%`
                         }}
                     ></div>
 
-                    <input type="range" min="0" max="500" value={priceRange[0]} onChange={handleMinPrice} className="dual-range-slider absolute w-full h-full opacity-0 z-20 appearance-none" />
-                    <input type="range" min="0" max="500" value={priceRange[1]} onChange={handleMaxPrice} className="dual-range-slider absolute w-full h-full opacity-0 z-20 appearance-none" />
-                    
-                    <div className="absolute w-5 h-5 bg-background border-[3px] border-primary rounded-full shadow-md top-1/2 -translate-y-1/2 -translate-x-1/2 pointer-events-none z-10" style={{ left: `${(priceRange[0] / 500) * 100}%` }}></div>
-                    <div className="absolute w-5 h-5 bg-background border-[3px] border-primary rounded-full shadow-md top-1/2 -translate-y-1/2 -translate-x-1/2 pointer-events-none z-10" style={{ left: `${(priceRange[1] / 500) * 100}%` }}></div>
+                    <input type="range" min="0" max="2000" value={priceRange[0]} onChange={handleMinPrice} className="dual-range-slider absolute w-full h-full opacity-0 z-20 appearance-none" />
+                    <input type="range" min="0" max="2000" value={priceRange[1]} onChange={handleMaxPrice} className="dual-range-slider absolute w-full h-full opacity-0 z-20 appearance-none" />
+
+                    <div className="absolute w-5 h-5 bg-background border-[3px] border-primary rounded-full shadow-md top-1/2 -translate-y-1/2 -translate-x-1/2 pointer-events-none z-10" style={{ left: `${(priceRange[0] / 2000) * 100}%` }}></div>
+                    <div className="absolute w-5 h-5 bg-background border-[3px] border-primary rounded-full shadow-md top-1/2 -translate-y-1/2 -translate-x-1/2 pointer-events-none z-10" style={{ left: `${(priceRange[1] / 2000) * 100}%` }}></div>
                  </div>
              </div>
         </div>

@@ -17,7 +17,7 @@ const colorLabel = (color: string | null) => {
 };
 
 export default function CartSidebar() {
-  const { cart, isCartOpen, setIsCartOpen, removeFromCart, addToCart, cartTotal } = useCart();
+  const { cart, isCartOpen, setIsCartOpen, increaseQty, decreaseQty, removeItem, cartTotal } = useCart();
   const { language } = useTheme();
 
   const groupedCart = useMemo(() => {
@@ -149,9 +149,17 @@ export default function CartSidebar() {
                                       <span className="text-[11px] font-bold text-foreground">
                                         {sizeKey === 'none' ? '-' : sizeKey} ({item.quantity})
                                       </span>
-                                      <button onClick={() => addToCart(item, -1, item.color, item.size)} disabled={item.quantity <= 1} className="ml-1"><Minus size={12} /></button>
-                                      <button onClick={() => addToCart(item, 1, item.color, item.size)}><Plus size={12} /></button>
-                                      <button onClick={() => removeFromCart(item.cartKey)} className="ml-1 text-muted-foreground hover:text-destructive"><Trash2 size={14} /></button>
+                                      <button onClick={() => decreaseQty(item.cartKey)} className="ml-1">
+                                        <Minus size={12} />
+                                      </button>
+
+                                      <button onClick={() => increaseQty(item.cartKey)}>
+                                        <Plus size={12} />
+                                      </button>
+
+                                      <button onClick={() => removeItem(item.cartKey)} className="ml-1 text-muted-foreground hover:text-destructive">
+                                        <Trash2 size={14} />
+                                      </button>
                                     </div>
                                   ))}
                                 </div>

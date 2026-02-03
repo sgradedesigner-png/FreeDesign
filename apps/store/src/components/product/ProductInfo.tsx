@@ -9,7 +9,7 @@ type ProductInfoProps = {
 };
 
 export default function ProductInfo({ product }: ProductInfoProps) {
-  const { addToCart } = useCart();
+  const { addItem, setIsCartOpen } = useCart();
   const [selectedSize, setSelectedSize] = useState(product.sizes?.[0] ?? '');
   const [selectedColor, setSelectedColor] = useState(product.colors?.[0] ?? '');
 
@@ -117,7 +117,10 @@ export default function ProductInfo({ product }: ProductInfoProps) {
         {/* Add to Cart */}
         <button
           id="add-to-cart-button"
-          onClick={() => addToCart(product, 1, selectedColor || null, selectedSize || null)}
+          onClick={() => {
+            addItem(product, selectedColor || null, selectedSize || null);
+            setIsCartOpen(true); // хүсвэл нэмэхэд сагсаа нээ
+          }}
           className="flex items-center justify-center gap-2 h-13 rounded-2xl font-bold
                      border border-border bg-background text-foreground
                      hover:bg-muted hover:border-muted-foreground/30 transition-all active:scale-95 shadow-sm"
