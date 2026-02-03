@@ -1,7 +1,6 @@
 import { useState } from 'react';
-import { Star, Truck, ShieldCheck, ArrowRight, Paintbrush } from 'lucide-react';
+import { Star, Truck, ShieldCheck, ArrowRight } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
-import { Link } from 'react-router-dom';
 import type { Product } from '../../data/products';
 
 type ProductInfoProps = {
@@ -104,16 +103,7 @@ export default function ProductInfo({ product }: ProductInfoProps) {
       </div>
 
       {/* Buttons */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-4">
-        {/* Customize */}
-        <Link
-          to="/customize"
-          className="flex items-center justify-center gap-2 bg-gradient-to-r from-primary to-emerald-500 text-white h-13 rounded-2xl font-bold hover:shadow-lg hover:shadow-primary/25 transition-all active:scale-95"
-        >
-          <Paintbrush size={18} />
-          Загварчлах
-        </Link>
-
+      <div className="pt-4">
         {/* Add to Cart */}
         <button
           id="add-to-cart-button"
@@ -121,9 +111,9 @@ export default function ProductInfo({ product }: ProductInfoProps) {
             addItem(product, selectedColor || null, selectedSize || null);
             setIsCartOpen(true); // хүсвэл нэмэхэд сагсаа нээ
           }}
-          className="flex items-center justify-center gap-2 h-13 rounded-2xl font-bold
-                     border border-border bg-background text-foreground
-                     hover:bg-muted hover:border-muted-foreground/30 transition-all active:scale-95 shadow-sm"
+          className="w-full flex items-center justify-center gap-2 h-13 rounded-2xl font-bold
+                     bg-primary text-primary-foreground
+                     hover:bg-primary/90 transition-all active:scale-95 shadow-md"
         >
           Сагсанд нэмэх
         </button>
