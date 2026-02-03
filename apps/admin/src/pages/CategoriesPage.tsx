@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -39,8 +40,7 @@ const categorySchema = z.object({
 type CategoryFormData = z.infer<typeof categorySchema>;
 
 export default function CategoriesPage() {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [formDialog, setFormDialog] = useState<{
     open: boolean;
     category: Category | null;
@@ -72,21 +72,16 @@ export default function CategoriesPage() {
     },
   });
 
-  const fetchCategories = async () => {
-    try {
-      setLoading(true);
+  // Fetch categories with React Query (cached)
+  const { data: categories = [], isLoading: loading } = useQuery({
+    queryKey: ['categories'],
+    queryFn: async () => {
       const { data } = await api.get<Category[]>('/admin/categories');
-      setCategories(data);
-    } catch (error) {
-      console.error('Failed to fetch categories:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchCategories();
-  }, []);
+      return data;
+    },
+    staleTime: 60000, // 1 min
+    gcTime: 300000, // 5 min
+  });
 
   const openCreateDialog = () => {
     reset({ name: '', slug: '' });
@@ -118,8 +113,8 @@ export default function CategoriesPage() {
         await api.post('/admin/categories', data);
       }
 
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
       closeFormDialog();
-      fetchCategories();
     } catch (error: any) {
       console.error('Failed to save category:', error);
       alert(error?.response?.data?.message || 'Failed to save category');
@@ -134,8 +129,8 @@ export default function CategoriesPage() {
     try {
       setDeleting(true);
       await api.delete(`/admin/categories/${deleteDialog.category.id}`);
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
       setDeleteDialog({ open: false, category: null });
-      fetchCategories();
     } catch (error: any) {
       console.error('Failed to delete category:', error);
       alert(error?.response?.data?.message || 'Failed to delete category');
@@ -182,11 +177,20 @@ export default function CategoriesPage() {
           </TableHeader>
           <TableBody>
             {loading ? (
-              <TableRow>
-                <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">
-                  Loading...
-                </TableCell>
-              </TableRow>
+              // Skeleton rows
+              Array.from({ length: 3 }).map((_, i) => (
+                <TableRow key={i}>
+                  <TableCell>
+                    <div className="h-5 w-32 bg-muted animate-pulse rounded" />
+                  </TableCell>
+                  <TableCell>
+                    <div className="h-5 w-40 bg-muted animate-pulse rounded" />
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="h-8 w-20 bg-muted animate-pulse rounded ml-auto" />
+                  </TableCell>
+                </TableRow>
+              ))
             ) : categories.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">
