@@ -1,18 +1,28 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useTheme } from '../context/ThemeContext';
+import { useCheckoutGate } from '@/hooks/useCheckoutGate';
 import { Trash2, Plus, Minus, ArrowLeft, ShoppingBag } from 'lucide-react';
 import { r2Url } from "@/lib/r2";
+import AuthModal from '@/components/auth/AuthModal';
 
 const PLACEHOLDER_IMG = 'https://placehold.co/800x1000/png?text=No+Image';
 
 export default function CartPage() {
   const { cart, increaseQty, decreaseQty, removeItem, cartTotal } = useCart();
   const { language } = useTheme();
+  const navigate = useNavigate();
+  const { checkAuthAndProceed, showAuthModal, setShowAuthModal, onAuthSuccess } = useCheckoutGate();
 
   const deliveryFee = 0; // Free delivery
   const taxFee = 0; // Free tax
   const total = cartTotal + deliveryFee + taxFee;
+
+  const handleCheckout = () => {
+    checkAuthAndProceed(() => {
+      navigate('/checkout');
+    });
+  };
 
   if (cart.length === 0) {
     return (
@@ -216,12 +226,22 @@ export default function CartPage() {
             </div>
 
             {/* Checkout Button */}
-            <button className="w-full py-4 bg-primary text-primary-foreground rounded-xl font-bold text-lg hover:bg-primary/90 transition-colors shadow-lg shadow-primary/25">
+            <button
+              onClick={handleCheckout}
+              className="w-full py-4 bg-primary text-primary-foreground rounded-xl font-bold text-lg hover:bg-primary/90 transition-colors shadow-lg shadow-primary/25"
+            >
               {language === 'mn' ? 'ХУДАЛДАН АВАХ' : 'PROCEED TO CHECKOUT'}
             </button>
           </div>
         </div>
       </div>
+
+      {/* Auth Modal - shown when user is not authenticated */}
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        onSuccess={onAuthSuccess}
+      />
     </div>
   );
 }

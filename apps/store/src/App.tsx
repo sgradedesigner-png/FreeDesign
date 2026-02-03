@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 import { WishlistProvider } from './context/WishlistContext';
 import { ThemeProvider } from './context/ThemeContext';
@@ -11,6 +12,8 @@ import Catalog from './pages/Catalog';
 import ProductDetails from './pages/ProductDetails';
 import CartPage from './pages/CartPage';
 import WishlistPage from './pages/WishlistPage';
+import CheckoutPage from './pages/CheckoutPage';
+import AuthResetPassword from './pages/AuthResetPassword';
 import ScrollToTop from './components/layout/ScrollToTop';
 
 // Layout компонент: Хуудас бүрийн байршлыг зохицуулна
@@ -35,6 +38,8 @@ function Layout() {
           <Route path="/product/:id" element={<ProductDetails />} />
           <Route path="/cart" element={<CartPage />} />
           <Route path="/wishlist" element={<WishlistPage />} />
+          <Route path="/checkout" element={<CheckoutPage />} />
+          <Route path="/auth/reset" element={<AuthResetPassword />} />
         </Routes>
       </main>
     </div>
@@ -43,15 +48,17 @@ function Layout() {
 
 function App() {
   return (
-    <ThemeProvider>
-      <WishlistProvider>
-        <CartProvider>
-          <Router>
-            <Layout />
-          </Router>
-        </CartProvider>
-      </WishlistProvider>
-    </ThemeProvider>
+    <AuthProvider>
+      <ThemeProvider>
+        <WishlistProvider>
+          <CartProvider>
+            <Router>
+              <Layout />
+            </Router>
+          </CartProvider>
+        </WishlistProvider>
+      </ThemeProvider>
+    </AuthProvider>
   );
 }
 

@@ -5,13 +5,26 @@ import Icon, { type IconName } from '../ui/AppIcon';
 import { useCart } from '../../context/CartContext';
 import { useWishlist } from '../../context/WishlistContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useAuth } from '../../context/AuthContext';
+import { Button } from '../ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '../ui/dropdown-menu';
+import AuthModal from '../auth/AuthModal';
 
 export default function Header() {
   const { cartCount, setIsCartOpen } = useCart();
   const { wishlistCount } = useWishlist();
   const { theme, toggleTheme, language, toggleLanguage, t } = useTheme();
+  const { user, logout } = useAuth();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const navigate = useNavigate();
 
   // ✅ ЭНЭ ХЭСЭГ ДУТУУ БАЙСАН БАЙХ: Цэсний орчуулгууд
@@ -134,6 +147,55 @@ export default function Header() {
             {language}
           </button>
 
+          <span className="h-6 w-px bg-border mx-1"></span>
+
+          {/* Auth Section */}
+          {user ? (
+            // Logged in - show user dropdown
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="p-2 hover:bg-muted rounded-lg text-foreground transition-colors">
+                  <Icon name="UserCircleIcon" size={20} />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel className="font-normal">
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium leading-none">Account</p>
+                    <p className="text-xs leading-none text-muted-foreground truncate">
+                      {user.email}
+                    </p>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigate('/orders')}>
+                  <Icon name="ShoppingBagIcon" size={16} className="mr-2" />
+                  {language === 'mn' ? 'Миний захиалга' : 'My Orders'}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/profile')}>
+                  <Icon name="UserCircleIcon" size={16} className="mr-2" />
+                  {language === 'mn' ? 'Хувийн мэдээлэл' : 'Profile'}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={logout} className="text-red-600 dark:text-red-400">
+                  <Icon name="ArrowRightOnRectangleIcon" size={16} className="mr-2" />
+                  {language === 'mn' ? 'Гарах' : 'Logout'}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            // Not logged in - show login button
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowAuthModal(true)}
+              className="text-foreground hover:bg-muted"
+            >
+              <Icon name="UserCircleIcon" size={18} className="mr-2" />
+              {language === 'mn' ? 'Нэвтрэх' : 'Login'}
+            </Button>
+          )}
+
           {/* Wishlist */}
           <Link
             to="/wishlist"
@@ -165,6 +227,11 @@ export default function Header() {
 
         </div>
       </div>
+
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+      />
     </header>
   );
 }
