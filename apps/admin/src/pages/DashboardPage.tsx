@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../auth/AuthContext';
 import { api } from '../lib/api';
 import {
@@ -71,68 +72,24 @@ const COLORS = ['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#6366f1'
 export default function DashboardPage() {
   const nav = useNavigate();
   const { user } = useAuth();
-
-  const [stats, setStats] = useState<{
-    productsCount: number;
-    categoriesCount: number;
-    totalRevenue: number;
-    recentProducts: Product[];
-    categoryDistribution: Array<{ name: string; value: number }>;
-  } | null>(null);
-  const [statsLoading, setStatsLoading] = useState(true);
   const [revenueData] = useState(generateRevenueData());
 
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        setStatsLoading(true);
-        const [productsRes, categoriesRes] = await Promise.all([
-          api.get<ProductsResponse>('/admin/products', { params: { limit: 5 } }),
-          api.get<Category[]>('/admin/categories'),
-        ]);
-
-        // Calculate category distribution
-        const allProductsRes = await api.get<ProductsResponse>('/admin/products', {
-          params: { limit: 1000 },
-        });
-        const categoryMap = new Map<string, number>();
-        allProductsRes.data.items.forEach((product) => {
-          const catName = product.category.name;
-          categoryMap.set(catName, (categoryMap.get(catName) || 0) + 1);
-        });
-        const categoryDistribution = Array.from(categoryMap.entries()).map(([name, value]) => ({
-          name,
-          value,
-        }));
-
-        // Calculate total revenue (sum of all variant prices * stock)
-        const totalRevenue = allProductsRes.data.items.reduce(
-          (sum, product) => {
-            const productTotal = product.variants.reduce(
-              (variantSum, variant) => variantSum + variant.price * variant.stock,
-              0
-            );
-            return sum + productTotal;
-          },
-          0
-        );
-
-        setStats({
-          productsCount: productsRes.data.total,
-          categoriesCount: categoriesRes.data.length,
-          totalRevenue,
-          recentProducts: productsRes.data.items,
-          categoryDistribution,
-        });
-      } catch (error) {
-        console.error('Failed to fetch stats:', error);
-      } finally {
-        setStatsLoading(false);
-      }
-    };
-
-    fetchStats();
-  }, []);
+  // Fetch stats with React Query (cached, fast)
+  const { data: stats, isLoading: statsLoading } = useQuery({
+    queryKey: ['dashboard-stats'],
+    queryFn: async () => {
+      const { data } = await api.get<{
+        productsCount: number;
+        categoriesCount: number;
+        totalRevenue: number;
+        recentProducts: Product[];
+        categoryDistribution: Array<{ name: string; value: number }>;
+      }>('/admin/stats');
+      return data;
+    },
+    staleTime: 30000, // 30 seconds
+    gcTime: 300000, // 5 minutes
+  });
 
   const StatCard = ({
     title,

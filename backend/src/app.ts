@@ -6,6 +6,7 @@ import { PrismaClient } from '@prisma/client';
 
 import { adminCategoryRoutes } from './routes/admin/categories';
 import { adminProductRoutes } from './routes/admin/products';
+import { adminStatsRoutes } from './routes/admin/stats';
 import { adminUploadRoutes } from './routes/admin/upload';
 import { adminUploadPresignedRoutes } from './routes/admin/upload-presigned';
 import { publicProductRoutes } from './routes/products';
@@ -64,6 +65,7 @@ app.register(publicProductRoutes, { prefix: '/api/products' });
 // 5) Admin routes
 app.register(adminCategoryRoutes, { prefix: '/admin/categories' });
 app.register(adminProductRoutes, { prefix: '/admin/products' });
+app.register(adminStatsRoutes, { prefix: '/admin/stats' });
 app.register(adminUploadRoutes, { prefix: '/admin/upload' });
 app.register(adminUploadPresignedRoutes, { prefix: '/admin/upload' });
 
