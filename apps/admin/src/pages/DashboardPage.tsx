@@ -32,13 +32,24 @@ type Category = {
   name: string;
 };
 
+type ProductVariant = {
+  id: string;
+  name: string;
+  sku: string;
+  price: number;
+  originalPrice: number | null;
+  imagePath: string;
+  galleryPaths: string[];
+  stock: number;
+  isAvailable: boolean;
+  sizes: string[];
+};
+
 type Product = {
   id: string;
   title: string;
-  price: string;
-  stock: number;
   category: Category;
-  images: string[];
+  variants: ProductVariant[];
   createdAt: string;
 };
 
@@ -94,9 +105,15 @@ export default function DashboardPage() {
           value,
         }));
 
-        // Calculate total revenue (sum of all product prices * stock)
+        // Calculate total revenue (sum of all variant prices * stock)
         const totalRevenue = allProductsRes.data.items.reduce(
-          (sum, product) => sum + parseFloat(product.price) * product.stock,
+          (sum, product) => {
+            const productTotal = product.variants.reduce(
+              (variantSum, variant) => variantSum + variant.price * variant.stock,
+              0
+            );
+            return sum + productTotal;
+          },
           0
         );
 
@@ -275,42 +292,50 @@ export default function DashboardPage() {
             </Button>
           </div>
           <div className="space-y-3">
-            {stats.recentProducts.map((product) => (
-              <div
-                key={product.id}
-                className="flex items-center gap-4 p-4 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer group"
-                onClick={() => nav(`/products/${product.id}`)}
-              >
-                {product.images[0] ? (
-                  <img
-                    src={product.images[0]}
-                    alt={product.title}
-                    className="w-16 h-16 rounded-lg object-cover"
-                  />
-                ) : (
-                  <div className="w-16 h-16 rounded-lg bg-muted flex items-center justify-center text-muted-foreground text-xs">
-                    No image
+            {stats.recentProducts.map((product) => {
+              const firstVariant = product.variants[0];
+              const totalStock = product.variants.reduce((sum, v) => sum + v.stock, 0);
+              const avgPrice = product.variants.reduce((sum, v) => sum + v.price, 0) / product.variants.length;
+
+              return (
+                <div
+                  key={product.id}
+                  className="flex items-center gap-4 p-4 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer group"
+                  onClick={() => nav(`/products/${product.id}`)}
+                >
+                  {firstVariant?.imagePath ? (
+                    <img
+                      src={firstVariant.imagePath}
+                      alt={product.title}
+                      className="w-16 h-16 rounded-lg object-cover"
+                    />
+                  ) : (
+                    <div className="w-16 h-16 rounded-lg bg-muted flex items-center justify-center text-muted-foreground text-xs">
+                      No image
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium truncate group-hover:text-primary transition-colors">
+                      {product.title}
+                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Badge variant="secondary" className="text-xs">
+                        {product.category.name}
+                      </Badge>
+                      <span className="text-sm text-muted-foreground">
+                        Stock: {totalStock} ({product.variants.length} variants)
+                      </span>
+                    </div>
                   </div>
-                )}
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium truncate group-hover:text-primary transition-colors">
-                    {product.title}
-                  </p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Badge variant="secondary" className="text-xs">
-                      {product.category.name}
-                    </Badge>
-                    <span className="text-sm text-muted-foreground">Stock: {product.stock}</span>
+                  <div className="text-right">
+                    <p className="text-lg font-semibold">${avgPrice.toFixed(2)}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {format(new Date(product.createdAt), 'MMM dd, yyyy')}
+                    </p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-lg font-semibold">${parseFloat(product.price).toFixed(2)}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {format(new Date(product.createdAt), 'MMM dd, yyyy')}
-                  </p>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
