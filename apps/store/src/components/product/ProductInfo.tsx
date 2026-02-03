@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Star, Truck, ShieldCheck, ArrowRight } from 'lucide-react';
+import { Star, Truck, ShieldCheck, ArrowRight, Heart, ShoppingCart, Plus, Minus } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
+import { useWishlist } from '../../context/WishlistContext';
 import type { Product } from '../../data/products';
 
 type ProductInfoProps = {
@@ -9,8 +10,31 @@ type ProductInfoProps = {
 
 export default function ProductInfo({ product }: ProductInfoProps) {
   const { addItem, setIsCartOpen } = useCart();
+  const { toggleWishlist, isInWishlist } = useWishlist();
   const [selectedSize, setSelectedSize] = useState(product.sizes?.[0] ?? '');
   const [selectedColor, setSelectedColor] = useState(product.colors?.[0] ?? '');
+  const [quantity, setQuantity] = useState(1);
+  const isWishlisted = isInWishlist(product.id);
+
+  const handleQuantityDecrease = () => {
+    if (quantity > 1) setQuantity(quantity - 1);
+  };
+
+  const handleQuantityIncrease = () => {
+    setQuantity(quantity + 1);
+  };
+
+  const handleAddToCart = () => {
+    // Add multiple items based on quantity
+    for (let i = 0; i < quantity; i++) {
+      addItem(product, selectedColor || null, selectedSize || null);
+    }
+    //setIsCartOpen(true);
+  };
+
+  const handleWishlist = () => {
+    toggleWishlist(product);
+  };
 
   return (
     <div className="space-y-6">
@@ -102,21 +126,68 @@ export default function ProductInfo({ product }: ProductInfoProps) {
         </div>
       </div>
 
-      {/* Buttons */}
-      <div className="pt-4">
-        {/* Add to Cart */}
-        <button
-          id="add-to-cart-button"
-          onClick={() => {
-            addItem(product, selectedColor || null, selectedSize || null);
-            setIsCartOpen(true); // хүсвэл нэмэхэд сагсаа нээ
-          }}
-          className="w-full flex items-center justify-center gap-2 h-13 rounded-2xl font-bold
-                     bg-primary text-primary-foreground
-                     hover:bg-primary/90 transition-all active:scale-95 shadow-md"
-        >
-          Сагсанд нэмэх
-        </button>
+      {/* Quantity & Actions */}
+      <div className="space-y-4 pt-4">
+        {/* Quantity Selector */}
+        <div>
+          <label className="text-sm font-bold text-foreground mb-3 block">
+            Тоо ширхэг
+          </label>
+          <div className="inline-flex items-center border-2 border-border rounded-xl overflow-hidden">
+            <button
+              onClick={handleQuantityDecrease}
+              disabled={quantity <= 1}
+              className="px-4 py-3 hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              aria-label="Decrease quantity"
+            >
+              <Minus size={18} className="text-foreground" />
+            </button>
+            <div className="px-6 py-3 min-w-[60px] text-center font-bold text-foreground border-x-2 border-border">
+              {quantity}
+            </div>
+            <button
+              onClick={handleQuantityIncrease}
+              className="px-4 py-3 hover:bg-muted transition-colors"
+              aria-label="Increase quantity"
+            >
+              <Plus size={18} className="text-foreground" />
+            </button>
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="grid grid-cols-1 sm:grid-cols-[1.8fr,1fr] gap-3">
+          {/* Add to Cart Button */}
+          <button
+            id="add-to-cart-button"
+            onClick={handleAddToCart}
+            className="group flex items-center justify-center gap-2 h-14 px-8 rounded-xl font-bold text-white
+                       bg-primary hover:bg-primary/90
+                       transition-all hover:shadow-xl shadow-lg shadow-primary/25
+                       active:scale-[0.98]"
+          >
+            <ShoppingCart size={20} className="group-hover:scale-110 transition-transform" />
+            <span>ADD TO CART</span>
+          </button>
+
+          {/* Wishlist Button */}
+          <button
+            onClick={handleWishlist}
+            className={`group flex items-center justify-center gap-2 h-14 px-6 rounded-xl font-bold border-2 transition-all active:scale-[0.98] ${
+              isWishlisted
+                ? 'bg-red-50 dark:bg-red-950 border-red-500 text-red-500 hover:bg-red-100 dark:hover:bg-red-900'
+                : 'border-border text-foreground hover:border-primary hover:text-primary hover:bg-primary/5'
+            }`}
+            aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+          >
+            <Heart
+              size={20}
+              fill={isWishlisted ? 'currentColor' : 'none'}
+              className="group-hover:scale-110 transition-transform"
+            />
+            <span>{isWishlisted ? 'SAVED' : 'WISHLIST'}</span>
+          </button>
+        </div>
       </div>
 
       {/* Features List */}

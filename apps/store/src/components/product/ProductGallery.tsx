@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { r2Url } from "@/lib/r2";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
@@ -15,6 +15,10 @@ export default function ProductGallery({ images, name }: ProductGalleryProps) {
   );
 
   const [activeImage, setActiveImage] = useState<string>(resolvedImages[0] ?? "");
+  const [isZooming, setIsZooming] = useState(false);
+  const [zoomPosition, setZoomPosition] = useState({ x: 0, y: 0 });
+  const [lensPosition, setLensPosition] = useState({ x: 0, y: 0 });
+  const imageRef = useRef<HTMLDivElement>(null);
 
   // images солигдоход active-г reset хийж өгнө (product солигдох үед хэрэгтэй)
   useEffect(() => {
@@ -34,6 +38,42 @@ export default function ProductGallery({ images, name }: ProductGalleryProps) {
     if (currentIndex < resolvedImages.length - 1) {
       setActiveImage(resolvedImages[currentIndex + 1]);
     }
+  };
+
+  // Handle mouse move for zoom effect
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!imageRef.current) return;
+
+    const rect = imageRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    // Lens size (30% of image)
+    const lensSize = 150;
+
+    // Calculate lens position (centered on cursor)
+    let lensX = x - lensSize / 2;
+    let lensY = y - lensSize / 2;
+
+    // Keep lens within bounds
+    lensX = Math.max(0, Math.min(lensX, rect.width - lensSize));
+    lensY = Math.max(0, Math.min(lensY, rect.height - lensSize));
+
+    setLensPosition({ x: lensX, y: lensY });
+
+    // Calculate zoom position for the zoomed window (percentage)
+    const zoomX = (lensX + lensSize / 2) / rect.width * 100;
+    const zoomY = (lensY + lensSize / 2) / rect.height * 100;
+
+    setZoomPosition({ x: zoomX, y: zoomY });
+  };
+
+  const handleMouseEnter = () => {
+    setIsZooming(true);
+  };
+
+  const handleMouseLeave = () => {
+    setIsZooming(false);
   };
 
   if (!resolvedImages.length) {
@@ -62,39 +102,84 @@ export default function ProductGallery({ images, name }: ProductGalleryProps) {
       </div>
 
       {/* Main Image */}
-      <div className="flex-1 aspect-square bg-muted rounded-2xl overflow-hidden relative group">
-        <img src={activeImage} alt={name} className="w-full h-full object-cover" />
+      <div className="flex-1 relative">
+        <div
+          ref={imageRef}
+          className="aspect-square bg-muted rounded-2xl overflow-hidden relative group"
+          onMouseMove={handleMouseMove}
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+          style={{ cursor: isZooming ? 'crosshair' : 'default' }}
+        >
+          <img src={activeImage} alt={name} className="w-full h-full object-cover" />
 
-        {/* Navigation Arrows - только если есть несколько изображений */}
-        {resolvedImages.length > 1 && (
-          <div className="absolute bottom-4 right-4 flex gap-2">
-            {/* Previous Button */}
-            <button
-              onClick={goToPrevious}
-              disabled={currentIndex === 0}
-              className={`p-3 rounded-full bg-white/90 dark:bg-black/90 backdrop-blur-sm border border-white/20 transition-all shadow-lg hover:scale-110 ${
-                currentIndex === 0
-                  ? 'opacity-50 cursor-not-allowed'
-                  : 'hover:bg-white dark:hover:bg-black'
-              }`}
-              aria-label="Previous image"
-            >
-              <ChevronLeft size={20} className="text-foreground" />
-            </button>
+          {/* Lens overlay - shows which area is being magnified */}
+          {isZooming && (
+            <div
+              className="absolute border-2 border-primary bg-primary/10 pointer-events-none z-20"
+              style={{
+                width: '150px',
+                height: '150px',
+                left: `${lensPosition.x}px`,
+                top: `${lensPosition.y}px`,
+              }}
+            />
+          )}
 
-            {/* Next Button */}
-            <button
-              onClick={goToNext}
-              disabled={currentIndex === resolvedImages.length - 1}
-              className={`p-3 rounded-full bg-white/90 dark:bg-black/90 backdrop-blur-sm border border-white/20 transition-all shadow-lg hover:scale-110 ${
-                currentIndex === resolvedImages.length - 1
-                  ? 'opacity-50 cursor-not-allowed'
-                  : 'hover:bg-white dark:hover:bg-black'
-              }`}
-              aria-label="Next image"
-            >
-              <ChevronRight size={20} className="text-foreground" />
-            </button>
+          {/* Navigation Arrows - только если есть несколько изображений */}
+          {resolvedImages.length > 1 && (
+            <div className="absolute bottom-4 right-4 flex gap-2 z-10">
+              {/* Previous Button */}
+              <button
+                onClick={goToPrevious}
+                disabled={currentIndex === 0}
+                className={`p-3 rounded-full bg-white/90 dark:bg-black/90 backdrop-blur-sm border border-white/20 transition-all shadow-lg hover:scale-110 ${
+                  currentIndex === 0
+                    ? 'opacity-50 cursor-not-allowed'
+                    : 'hover:bg-white dark:hover:bg-black'
+                }`}
+                aria-label="Previous image"
+              >
+                <ChevronLeft size={20} className="text-foreground" />
+              </button>
+
+              {/* Next Button */}
+              <button
+                onClick={goToNext}
+                disabled={currentIndex === resolvedImages.length - 1}
+                className={`p-3 rounded-full bg-white/90 dark:bg-black/90 backdrop-blur-sm border border-white/20 transition-all shadow-lg hover:scale-110 ${
+                  currentIndex === resolvedImages.length - 1
+                    ? 'opacity-50 cursor-not-allowed'
+                    : 'hover:bg-white dark:hover:bg-black'
+                }`}
+                aria-label="Next image"
+              >
+                <ChevronRight size={20} className="text-foreground" />
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Zoom Window - absolute positioned, appears on the right when hovering */}
+        {isZooming && imageRef.current && (
+          <div
+            className="fixed z-50 bg-white dark:bg-slate-900 rounded-2xl overflow-hidden shadow-2xl border-2 border-primary animate-in fade-in zoom-in-95 duration-200"
+            style={{
+              width: '500px',
+              height: '500px',
+              top: `${imageRef.current.getBoundingClientRect().top}px`,
+              left: `${imageRef.current.getBoundingClientRect().right + 20}px`,
+            }}
+          >
+            <div
+              className="w-full h-full"
+              style={{
+                backgroundImage: `url("${activeImage}")`,
+                backgroundSize: '250%',
+                backgroundPosition: `${zoomPosition.x}% ${zoomPosition.y}%`,
+                backgroundRepeat: 'no-repeat',
+              }}
+            />
           </div>
         )}
       </div>

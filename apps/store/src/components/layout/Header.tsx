@@ -3,10 +3,12 @@ import type { ChangeEvent, FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Icon, { type IconName } from '../ui/AppIcon';
 import { useCart } from '../../context/CartContext';
+import { useWishlist } from '../../context/WishlistContext';
 import { useTheme } from '../../context/ThemeContext';
 
 export default function Header() {
   const { cartCount, setIsCartOpen } = useCart();
+  const { wishlistCount } = useWishlist();
   const { theme, toggleTheme, language, toggleLanguage, t } = useTheme();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -50,17 +52,24 @@ export default function Header() {
       <div className="container mx-auto px-4 h-20 flex items-center justify-between">
 
        {/* Logo */}
-        <Link to="/" className="flex items-center gap-2 group">
-          <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center text-primary-foreground font-bold text-xl group-hover:scale-105 transition-transform shadow-lg shadow-primary/20">
-            3D
-          </div>
-          <span className="font-heading text-2xl font-bold text-foreground tracking-tight flex items-center">
-            <span>No</span>
-            {/* ✅ "MAD" хэсэгт 'green-fire' классыг нэмэв */}
-            <span className="green-fire mx-0.5 text-white font-black">MAD</span>
-            <span>esign</span>
-          </span>
-        </Link>
+        <Link to="/" className="flex items-center gap-3 group">
+  {/* ✅ REAL LOGO ICON */}
+  <div className="relative w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-cyan-500 
+                  flex items-center justify-center font-black text-black text-lg
+                  shadow-lg shadow-emerald-500/30 group-hover:scale-105 transition">
+
+    KG
+
+    {/* glow effect */}
+    <div className="absolute inset-0 rounded-xl blur-md bg-emerald-400/40 -z-10" />
+  </div>
+
+  {/* ✅ BRAND NAME */}
+  <span className="font-heading text-2xl font-extrabold tracking-tight text-white">
+    Korean <span className="text-emerald-400">Goods</span>
+  </span>
+</Link>
+
 
         {/* Desktop Nav */}
         <nav className="hidden lg:flex items-center gap-1">
@@ -125,16 +134,30 @@ export default function Header() {
             {language}
           </button>
 
+          {/* Wishlist */}
+          <Link
+            to="/wishlist"
+            className="flex items-center gap-2 px-4 py-2 border-2 border-border text-foreground hover:border-primary hover:text-primary hover:bg-primary/5 rounded-full transition-colors font-medium text-sm ml-2"
+          >
+            <Icon name="HeartIcon" size={18} />
+            <span className="hidden sm:inline">{language === 'mn' ? 'Wishlist' : 'Wishlist'}</span>
+            {wishlistCount > 0 && (
+              <span className="min-w-[20px] rounded-full px-1.5 py-0.5 text-center text-xs font-bold bg-primary/10 text-primary">
+                {wishlistCount}
+              </span>
+            )}
+          </Link>
+
           {/* Cart */}
           <button
             onClick={() => setIsCartOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/90 rounded-full transition-colors font-medium text-sm ml-2 shadow-lg shadow-primary/20"
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/90 rounded-full transition-colors font-medium text-sm shadow-lg shadow-primary/20"
           >
             <Icon name="ShoppingBagIcon" size={18} />
             <span className="hidden sm:inline">{language === 'mn' ? 'Сагс' : 'Cart'}</span>
             {cartCount > 0 && (
                <span className="min-w-[20px] rounded-full px-1.5 py-0.5 text-center text-xs font-bold bg-primary-foreground/20 text-primary-foreground">
-   
+
              {cartCount}
               </span>
             )}

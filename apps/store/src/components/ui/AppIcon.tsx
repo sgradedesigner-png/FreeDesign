@@ -2,7 +2,7 @@ import React from 'react';
 import {
   ShoppingBag, Sparkles, Layers, Info, Search, // ✅ RectangleStack -> Layers болгов
   Moon, Sun, Menu, X, ChevronDown, Check, Star,
-  Minus, Plus, Truck, RotateCw, ShieldCheck, ThumbsUp
+  Minus, Plus, Truck, RotateCw, ShieldCheck, ThumbsUp, Heart
 } from 'lucide-react';
 
 const icons = {
@@ -23,7 +23,8 @@ const icons = {
   TruckIcon: Truck,
   ArrowPathIcon: RotateCw,
   ShieldCheckIcon: ShieldCheck,
-  HandThumbUpIcon: ThumbsUp
+  HandThumbUpIcon: ThumbsUp,
+  HeartIcon: Heart
 };
 
 export type IconName = keyof typeof icons;

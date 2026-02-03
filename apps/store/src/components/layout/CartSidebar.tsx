@@ -1,7 +1,8 @@
-import { X, Trash2, Plus, Minus, ShoppingBag, ArrowRight } from 'lucide-react';
+import { X, Trash2, Plus, Minus, ShoppingBag, ArrowRight, Eye } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { r2Url } from "@/lib/r2"; // 1. Added this import
 
@@ -193,13 +194,21 @@ export default function CartSidebar() {
 
         {/* Footer */}
         {cart.length > 0 && (
-          <div className="border-t border-black/5 dark:border-white/5 p-6 space-y-4">
+          <div className="border-t border-black/5 dark:border-white/5 p-6 space-y-3">
             <div className="flex justify-between text-lg font-bold text-foreground">
               <p>{language === 'mn' ? 'Нийт дүн' : 'Total'}</p>
               <p>${cartTotal.toFixed(2)}</p>
             </div>
-            <button className="w-full rounded-xl bg-primary px-6 py-4 text-white font-bold flex items-center justify-center gap-2">
-              {language === 'mn' ? 'Худалдан авах' : 'Checkout Now'}
+            <Link
+              to="/cart"
+              onClick={() => setIsCartOpen(false)}
+              className="w-full rounded-xl border-2 border-primary text-primary px-6 py-3 font-bold flex items-center justify-center gap-2 hover:bg-primary/5 transition-colors"
+            >
+              <Eye size={18} />
+              {language === 'mn' ? 'Сагс үзэх' : 'VIEW CART'}
+            </Link>
+            <button className="w-full rounded-xl bg-primary px-6 py-3 text-white font-bold flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors">
+              {language === 'mn' ? 'Худалдан авах' : 'CHECKOUT'}
               <ArrowRight size={18} />
             </button>
           </div>

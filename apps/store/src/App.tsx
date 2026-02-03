@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { CartProvider } from './context/CartContext';
+import { WishlistProvider } from './context/WishlistContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { Toaster } from 'sonner';
 import Header from './components/layout/Header';
@@ -7,7 +8,8 @@ import CartSidebar from './components/layout/CartSidebar';
 
 import Catalog from './pages/Catalog';
 import ProductDetails from './pages/ProductDetails';
-
+import CartPage from './pages/CartPage';
+import WishlistPage from './pages/WishlistPage';
 import ScrollToTop from './components/layout/ScrollToTop';
 
 // Layout компонент: Хуудас бүрийн байршлыг зохицуулна
@@ -29,8 +31,8 @@ function Layout() {
         <Routes>
           <Route path="/" element={<Catalog />} />
           <Route path="/product/:id" element={<ProductDetails />} />
-          
-     
+          <Route path="/cart" element={<CartPage />} />
+          <Route path="/wishlist" element={<WishlistPage />} />
         </Routes>
       </main>
     </div>
@@ -40,11 +42,13 @@ function Layout() {
 function App() {
   return (
     <ThemeProvider>
-      <CartProvider>
-        <Router>
-          <Layout />
-        </Router>
-      </CartProvider>
+      <WishlistProvider>
+        <CartProvider>
+          <Router>
+            <Layout />
+          </Router>
+        </CartProvider>
+      </WishlistProvider>
     </ThemeProvider>
   );
 }
