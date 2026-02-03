@@ -44,9 +44,9 @@ export default function ProductInfo({ product, onVariantChange }: ProductInfoPro
   const handleAddToCart = () => {
     // Add multiple items based on quantity
     for (let i = 0; i < quantity; i++) {
-      addItem(product, selectedVariant.name || null, selectedSize || null);
+      addItem(product, selectedVariant, selectedSize || null);
     }
-    //setIsCartOpen(true);
+   // setIsCartOpen(true);
   };
 
   const handleWishlist = () => {

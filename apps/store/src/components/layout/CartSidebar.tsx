@@ -4,18 +4,9 @@ import { useTheme } from '../../context/ThemeContext';
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from '@/components/ui/sheet';
-import { r2Url } from "@/lib/r2"; // 1. Added this import
+import { r2Url } from "@/lib/r2";
 
-const PLACEHOLDER_IMG = 'https://placehold.co/800x1000/png?text=No+Image'; // 2. Added placeholder
-
-const colorLabel = (color: string | null) => {
-  if (!color) return 'Color';
-  const c = color.toLowerCase();
-  if (c === '#000000' || c === 'black') return 'Black';
-  if (c === '#ffffff' || c === 'white') return 'White';
-  if (c === '#333333') return 'Charcoal';
-  return color;
-};
+const PLACEHOLDER_IMG = 'https://placehold.co/800x1000/png?text=No+Image';
 
 export default function CartSidebar() {
   const { cart, isCartOpen, setIsCartOpen, increaseQty, decreaseQty, removeItem, cartTotal } = useCart();
@@ -25,25 +16,32 @@ export default function CartSidebar() {
     const products = new Map<
       string,
       {
-        product: typeof cart[number];
-        colors: Map<string, Map<string, typeof cart[number]>>;
+        productId: string;
+        productName: string;
+        productCategory: string;
+        variants: Map<string, Map<string, typeof cart[number]>>;
       }
     >();
 
     for (const item of cart) {
-      const productId = item.id;
-      const colorKey = item.color ?? 'none';
+      const productId = item.productId;
+      const variantId = item.variantId;
       const sizeKey = item.size ?? 'none';
 
       if (!products.has(productId)) {
-        products.set(productId, { product: item, colors: new Map() });
+        products.set(productId, {
+          productId: item.productId,
+          productName: item.productName,
+          productCategory: item.productCategory,
+          variants: new Map(),
+        });
       }
 
       const entry = products.get(productId)!;
-      if (!entry.colors.has(colorKey)) {
-        entry.colors.set(colorKey, new Map());
+      if (!entry.variants.has(variantId)) {
+        entry.variants.set(variantId, new Map());
       }
-      entry.colors.get(colorKey)!.set(sizeKey, item);
+      entry.variants.get(variantId)!.set(sizeKey, item);
     }
 
     return Array.from(products.values());
@@ -101,88 +99,79 @@ export default function CartSidebar() {
             </div>
           ) : (
             <div className="space-y-4">
-              {groupedCart.map(({ product, colors }) => {
-                // 3. Updated image logic to match your data structure
-                const imgSrc = r2Url(product.image_path ?? product.gallery_paths?.[0] ?? "") || PLACEHOLDER_IMG;
-
+              {groupedCart.map(({ productId, productName, productCategory, variants }) => {
                 return (
                   <div
-                    key={product.id}
+                    key={productId}
                     className="group relative p-4 bg-white/50 dark:bg-white/5 rounded-2xl border border-white/20 dark:border-white/5 shadow-sm hover:shadow-md transition-all"
                   >
-                    <div className="flex gap-4">
-                      <div className="h-24 w-24 flex-shrink-0 overflow-hidden rounded-xl bg-muted relative">
-                        <img
-                          src={imgSrc}
-                          alt={product.name}
-                          className="h-full w-full object-cover object-center group-hover:scale-110 transition-transform duration-500"
-                        />
+                    <div className="flex flex-col gap-3">
+                      {/* Product Header */}
+                      <div>
+                        <h3 className="font-bold text-base text-foreground">
+                          {productName}
+                        </h3>
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                          {productCategory}
+                        </p>
                       </div>
 
-                      <div className="flex-1">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h3 className="font-bold text-base text-foreground line-clamp-1 pr-6">
-                              {product.name}
-                            </h3>
-                            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mt-1">
-                              {product.category}
-                            </p>
-                          </div>
-                        </div>
+                      {/* Variants */}
+                      <div className="space-y-3">
+                        {Array.from(variants.entries()).map(([variantId, sizeMap]) => {
+                          const firstItem = Array.from(sizeMap.values())[0];
+                          const imgSrc = r2Url(firstItem.variantImage) || PLACEHOLDER_IMG;
+                          const variantTotal = Array.from(sizeMap.values())
+                            .reduce((acc, i) => acc + i.variantPrice * i.quantity, 0);
 
-                        {/* Color & Size logic continues... */}
-                        <div className="mt-3 space-y-3">
-                          {Array.from(colors.entries()).map(([colorKey, sizeMap]) => {
-                            const color = colorKey === 'none' ? null : colorKey;
-                            return (
-                              <div key={`${product.id}-${colorKey}`} className="space-y-2">
-                                <div className="flex items-center gap-2">
-                                  <div
-                                    className="w-4 h-4 rounded-full border border-black/10 shadow-sm"
-                                    style={{ backgroundColor: color ?? 'transparent' }}
-                                  />
-                                  <span className="text-xs font-semibold text-foreground">
-                                    {colorLabel(color)}
+                          return (
+                            <div key={variantId} className="flex gap-3 border-t border-white/10 pt-3 first:border-t-0 first:pt-0">
+                              {/* Variant Image */}
+                              <div className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-xl bg-muted">
+                                <img
+                                  src={imgSrc}
+                                  alt={firstItem.variantName}
+                                  className="h-full w-full object-cover object-center group-hover:scale-110 transition-transform duration-500"
+                                />
+                              </div>
+
+                              {/* Variant Info */}
+                              <div className="flex-1">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm font-semibold text-foreground">
+                                    {firstItem.variantName}
+                                  </span>
+                                  <span className="font-bold text-sm text-primary">
+                                    ${variantTotal.toFixed(2)}
                                   </span>
                                 </div>
-                                <div className="mt-1 flex flex-wrap gap-2">
+
+                                {/* Sizes */}
+                                <div className="mt-2 flex flex-wrap gap-2">
                                   {Array.from(sizeMap.entries()).map(([sizeKey, item]) => (
                                     <div
                                       key={item.cartKey}
                                       className="flex items-center gap-1 bg-black/5 dark:bg-white/10 px-2 py-1 rounded-lg"
                                     >
                                       <span className="text-[11px] font-bold text-foreground">
-                                        {sizeKey === 'none' ? '-' : sizeKey} ({item.quantity})
+                                        {sizeKey === 'none' ? 'No size' : sizeKey} ({item.quantity})
                                       </span>
-                                      <button onClick={() => decreaseQty(item.cartKey)} className="ml-1">
+                                      <button onClick={() => decreaseQty(item.cartKey)} className="ml-1 hover:text-primary">
                                         <Minus size={12} />
                                       </button>
-
-                                      <button onClick={() => increaseQty(item.cartKey)}>
+                                      <button onClick={() => increaseQty(item.cartKey)} className="hover:text-primary">
                                         <Plus size={12} />
                                       </button>
-
                                       <button onClick={() => removeItem(item.cartKey)} className="ml-1 text-muted-foreground hover:text-destructive">
-                                        <Trash2 size={14} />
+                                        <Trash2 size={12} />
                                       </button>
                                     </div>
                                   ))}
                                 </div>
                               </div>
-                            );
-                          })}
-                        </div>
-
-                        <div className="mt-4 flex justify-end">
-                          <span className="font-bold text-lg text-primary">
-                            $
-                            {Array.from(colors.values())
-                              .flatMap((m) => Array.from(m.values()))
-                              .reduce((acc, i) => acc + i.price * i.quantity, 0)
-                              .toFixed(2)}
-                          </span>
-                        </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   </div>

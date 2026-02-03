@@ -80,8 +80,8 @@ export default function CartPage() {
           {/* Cart Items List */}
           <div className="space-y-4">
             {cart.map((item) => {
-              const imgSrc = r2Url(item.image_path ?? item.gallery_paths?.[0] ?? "") || PLACEHOLDER_IMG;
-              const itemTotal = item.price * item.quantity;
+              const imgSrc = r2Url(item.variantImage) || PLACEHOLDER_IMG;
+              const itemTotal = item.variantPrice * item.quantity;
 
               return (
                 <div
@@ -93,21 +93,23 @@ export default function CartPage() {
                     <div className="w-24 h-24 flex-shrink-0 rounded-xl overflow-hidden bg-muted">
                       <img
                         src={imgSrc}
-                        alt={item.name}
+                        alt={`${item.productName} - ${item.variantName}`}
                         className="w-full h-full object-cover"
                       />
                     </div>
                     <div className="flex flex-col justify-center">
                       <h3 className="font-bold text-foreground mb-1 line-clamp-2">
-                        {item.name}
+                        {item.productName}
                       </h3>
-                      <p className="text-sm text-muted-foreground">
-                        ${item.price.toFixed(2)}
+                      <p className="text-sm font-medium text-primary">
+                        {item.variantName}
                       </p>
-                      {(item.color || item.size) && (
+                      <p className="text-sm text-muted-foreground">
+                        ${item.variantPrice.toFixed(2)}
+                      </p>
+                      {item.size && (
                         <div className="flex gap-2 mt-1 text-xs text-muted-foreground">
-                          {item.color && <span>Color: {item.color}</span>}
-                          {item.size && <span>Size: {item.size}</span>}
+                          <span>Size: {item.size}</span>
                         </div>
                       )}
                     </div>

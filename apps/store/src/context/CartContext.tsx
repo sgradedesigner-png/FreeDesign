@@ -1,26 +1,41 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { toast } from 'sonner';
-import type { Product } from '../data/products';
+import type { Product, ProductVariant } from '../data/types';
 
-type CartItem = Product & {
+type CartItem = {
   cartKey: string;
   quantity: number;
-  color: string | null;
+
+  // Product info
+  productId: string;
+  productName: string;
+  productSlug: string;
+  productCategory: string;
+
+  // Variant info
+  variantId: string;
+  variantName: string;
+  variantPrice: number;
+  variantOriginalPrice: number | null;
+  variantImage: string;
+  variantSku: string;
+
+  // Size selection
   size: string | null;
 };
 
 type CartContextValue = {
   cart: CartItem[];
 
-  // ✅ New: add item (initial add)
-  addItem: (product: Product, selectedColor?: string | null, selectedSize?: string | null) => void;
+  // Add item with variant information
+  addItem: (product: Product, variant: ProductVariant, selectedSize?: string | null) => void;
 
-  // ✅ New: quantity controls by cartKey
+  // Quantity controls by cartKey
   increaseQty: (cartKey: string) => void;
   decreaseQty: (cartKey: string) => void;
 
-  // ✅ New: remove item
+  // Remove item
   removeItem: (cartKey: string) => void;
 
   cartCount: number;
@@ -32,8 +47,8 @@ type CartContextValue = {
 
 const CartContext = createContext<CartContextValue | undefined>(undefined);
 
-const makeCartKey = (id: string, color: string | null, size: string | null) =>
-  `${id}__${color ?? 'none'}__${size ?? 'none'}`;
+const makeCartKey = (productId: string, variantId: string, size: string | null) =>
+  `${productId}__${variantId}__${size ?? 'none'}`;
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -44,20 +59,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const savedCart = localStorage.getItem('shopping-cart');
     if (!savedCart) return;
 
-    const parsed = JSON.parse(savedCart) as any[];
-
-    const normalized: CartItem[] = parsed.map((i) => {
-      const color = i.color ?? null;
-      const size = i.size ?? null;
-      return {
-        ...i,
-        color,
-        size,
-        cartKey: i.cartKey ?? makeCartKey(i.id, color, size),
-      };
-    });
-
-    setCart(normalized);
+    try {
+      const parsed = JSON.parse(savedCart) as CartItem[];
+      setCart(parsed);
+    } catch (error) {
+      console.error('Failed to load cart from localStorage:', error);
+      localStorage.removeItem('shopping-cart');
+    }
   }, []);
 
   // LocalStorage-д хадгалах
@@ -65,9 +73,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('shopping-cart', JSON.stringify(cart));
   }, [cart]);
 
-  // ✅ Add new item (or increase if exists)
-  const addItem = (product: Product, selectedColor: string | null = null, selectedSize: string | null = null) => {
-    const cartKey = makeCartKey(product.id, selectedColor, selectedSize);
+  // Add new item (or increase if exists)
+  const addItem = (product: Product, variant: ProductVariant, selectedSize: string | null = null) => {
+    const cartKey = makeCartKey(product.id, variant.id, selectedSize);
 
     setCart((prev) => {
       const existing = prev.find((i) => i.cartKey === cartKey);
@@ -77,17 +85,25 @@ export function CartProvider({ children }: { children: ReactNode }) {
       }
 
       const newItem: CartItem = {
-        ...product,
         cartKey,
         quantity: 1,
-        color: selectedColor,
+        productId: product.id,
+        productName: product.name,
+        productSlug: product.slug,
+        productCategory: product.category,
+        variantId: variant.id,
+        variantName: variant.name,
+        variantPrice: variant.price,
+        variantOriginalPrice: variant.originalPrice,
+        variantImage: variant.imagePath,
+        variantSku: variant.sku,
         size: selectedSize,
       };
 
       return [...prev, newItem];
     });
 
-    toast.success(`${product.name} сагсанд нэмэгдлээ!`);
+    toast.success(`${product.name} - ${variant.name} сагсанд нэмэгдлээ!`);
   };
 
   // ✅ Increase qty (no “added” toast, optional: message)
@@ -98,38 +114,43 @@ export function CartProvider({ children }: { children: ReactNode }) {
     // хүсвэл: toast.message('Тоо нэмэгдлээ');
   };
 
-  // ✅ Decrease qty (if becomes 0 -> remove)
- const decreaseQty = (cartKey: string) => {
-  setCart((prev) => {
-    const item = prev.find((i) => i.cartKey === cartKey);
-    if (!item) return prev;
+  // Decrease qty (if becomes 0 -> remove)
+  const decreaseQty = (cartKey: string) => {
+    setCart((prev) => {
+      const item = prev.find((i) => i.cartKey === cartKey);
+      if (!item) return prev;
 
-    // 1 байхад → устгана + toast
-    if (item.quantity === 1) {
-      toast.error(`${item.name} сагснаас хасагдлаа`);
-      return prev.filter((i) => i.cartKey !== cartKey);
-    }
+      // 1 байхад → устгана + toast
+      if (item.quantity === 1) {
+        toast.error(`${item.productName} - ${item.variantName} сагснаас хасагдлаа`);
+        return prev.filter((i) => i.cartKey !== cartKey);
+      }
 
-    // 2+ байхад → тоо буурна + message
-    toast.message(`${item.name} тоо буурлаа`);
+      // 2+ байхад → тоо буурна + message
+      toast.message(`${item.productName} - ${item.variantName} тоо буурлаа`);
 
-    return prev.map((i) =>
-      i.cartKey === cartKey
-        ? { ...i, quantity: i.quantity - 1 }
-        : i
-    );
-  });
-};
+      return prev.map((i) =>
+        i.cartKey === cartKey
+          ? { ...i, quantity: i.quantity - 1 }
+          : i
+      );
+    });
+  };
 
 
-  // ✅ Remove item
+  // Remove item
   const removeItem = (cartKey: string) => {
-    setCart((prev) => prev.filter((i) => i.cartKey !== cartKey));
-    toast.error('Бараа сагснаас хасагдлаа');
+    setCart((prev) => {
+      const item = prev.find((i) => i.cartKey === cartKey);
+      if (item) {
+        toast.error(`${item.productName} - ${item.variantName} сагснаас хасагдлаа`);
+      }
+      return prev.filter((i) => i.cartKey !== cartKey);
+    });
   };
 
   const cartCount = useMemo(() => cart.reduce((acc, item) => acc + item.quantity, 0), [cart]);
-  const cartTotal = useMemo(() => cart.reduce((acc, item) => acc + item.price * item.quantity, 0), [cart]);
+  const cartTotal = useMemo(() => cart.reduce((acc, item) => acc + item.variantPrice * item.quantity, 0), [cart]);
 
   return (
     <CartContext.Provider
