@@ -15,8 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { ArrowLeft, Loader2, Upload, X } from 'lucide-react';
-import { ImageUpload } from '@/components/ImageUpload';
+import { ArrowLeft, Loader2, Upload, X, Plus, Trash2 } from 'lucide-react';
 
 type Category = {
   id: string;
@@ -24,13 +23,31 @@ type Category = {
   slug: string;
 };
 
+type ProductVariant = {
+  id?: string; // Only for edit mode
+  name: string;
+  sku: string;
+  price: string;
+  originalPrice?: string;
+  sizes: string[];
+  imagePath: string;
+  galleryPaths: string[];
+  stock: string;
+  isAvailable: boolean;
+  sortOrder: number;
+  // For file uploads
+  pendingImage?: File;
+  previewUrl?: string;
+};
+
 const productSchema = z.object({
   title: z.string().min(1, 'Title is required'),
   slug: z.string().min(1, 'Slug is required').regex(/^[a-z0-9-]+$/, 'Slug must be lowercase with hyphens'),
   description: z.string().optional(),
-  price: z.string().min(1, 'Price is required').regex(/^\d+(\.\d{1,2})?$/, 'Invalid price format'),
-  stock: z.string().min(1, 'Stock is required').regex(/^\d+$/, 'Stock must be a number'),
+  basePrice: z.string().regex(/^\d+(\.\d{1,2})?$/, 'Invalid price format').optional(),
   categoryId: z.string().uuid('Please select a category'),
+  rating: z.string().optional(),
+  reviews: z.string().optional(),
 });
 
 type ProductFormData = z.infer<typeof productSchema>;
@@ -43,13 +60,21 @@ export default function ProductFormPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(isEditMode);
   const [submitting, setSubmitting] = useState(false);
-  const [images, setImages] = useState<string[]>([]);
-  const [pendingImageFiles, setPendingImageFiles] = useState<File[]>([]); // Files waiting to be uploaded in CREATE mode
-  const [previewUrls, setPreviewUrls] = useState<string[]>([]); // Preview URLs for pending files
-  const [colors, setColors] = useState<string[]>([]); // Available colors
-  const [sizes, setSizes] = useState<string[]>([]); // Available sizes
-  const [colorInput, setColorInput] = useState(''); // Temp input for adding color
-  const [sizeInput, setSizeInput] = useState(''); // Temp input for adding size
+  const [variants, setVariants] = useState<ProductVariant[]>([
+    {
+      name: '',
+      sku: '',
+      price: '0',
+      sizes: [],
+      imagePath: '',
+      galleryPaths: [],
+      stock: '0',
+      isAvailable: true,
+      sortOrder: 0,
+    },
+  ]);
+  const [features, setFeatures] = useState<string[]>([]);
+  const [featureInput, setFeatureInput] = useState('');
 
   const {
     register,
@@ -63,9 +88,10 @@ export default function ProductFormPage() {
       title: '',
       slug: '',
       description: '',
-      price: '',
-      stock: '0',
+      basePrice: '0',
       categoryId: '',
+      rating: '0',
+      reviews: '0',
     },
   });
 
@@ -80,7 +106,7 @@ export default function ProductFormPage() {
     const presignedResponse = await api.post('/admin/upload/presigned-url', {
       filename: file.name,
       contentType: file.type,
-      productId: productId, // Use real product UUID
+      productId: productId,
     });
 
     const { uploadUrl, publicUrl } = presignedResponse.data;
@@ -101,33 +127,6 @@ export default function ProductFormPage() {
     console.log('[ProductForm] File uploaded successfully:', publicUrl);
     return publicUrl;
   };
-
-  // Handle file selection in CREATE mode (create previews, don't upload yet)
-  const handlePendingFiles = (files: File[]) => {
-    console.log('[ProductForm] Adding pending files:', files.length);
-
-    // Create preview URLs
-    const newPreviewUrls = files.map(file => URL.createObjectURL(file));
-
-    setPendingImageFiles([...pendingImageFiles, ...files]);
-    setPreviewUrls([...previewUrls, ...newPreviewUrls]);
-  };
-
-  // Remove pending file
-  const removePendingFile = (index: number) => {
-    // Revoke the blob URL to free memory
-    URL.revokeObjectURL(previewUrls[index]);
-
-    setPendingImageFiles(pendingImageFiles.filter((_, i) => i !== index));
-    setPreviewUrls(previewUrls.filter((_, i) => i !== index));
-  };
-
-  // Clean up preview URLs on unmount
-  useEffect(() => {
-    return () => {
-      previewUrls.forEach(url => URL.revokeObjectURL(url));
-    };
-  }, []);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -152,12 +151,28 @@ export default function ProductFormPage() {
         setValue('title', data.title);
         setValue('slug', data.slug);
         setValue('description', data.description || '');
-        setValue('price', data.price);
-        setValue('stock', String(data.stock));
+        setValue('basePrice', String(data.basePrice || 0));
         setValue('categoryId', data.categoryId);
-        setImages(data.images || []);
-        setColors(data.colors || []);
-        setSizes(data.sizes || []);
+        setValue('rating', String(data.rating || 0));
+        setValue('reviews', String(data.reviews || 0));
+        setFeatures(data.features || []);
+
+        // Load variants
+        if (data.variants && data.variants.length > 0) {
+          setVariants(data.variants.map((v: any) => ({
+            id: v.id,
+            name: v.name,
+            sku: v.sku,
+            price: String(v.price),
+            originalPrice: v.originalPrice ? String(v.originalPrice) : '',
+            sizes: v.sizes || [],
+            imagePath: v.imagePath || '',
+            galleryPaths: v.galleryPaths || [],
+            stock: String(v.stock || 0),
+            isAvailable: v.isAvailable !== false,
+            sortOrder: v.sortOrder || 0,
+          })));
+        }
       } catch (error) {
         console.error('Failed to fetch product:', error);
         navigate('/products');
@@ -181,67 +196,164 @@ export default function ProductFormPage() {
     }
   }, [titleValue, isEditMode, setValue]);
 
+  const addVariant = () => {
+    setVariants([
+      ...variants,
+      {
+        name: '',
+        sku: '',
+        price: '0',
+        sizes: [],
+        imagePath: '',
+        galleryPaths: [],
+        stock: '0',
+        isAvailable: true,
+        sortOrder: variants.length,
+      },
+    ]);
+  };
+
+  const removeVariant = (index: number) => {
+    if (variants.length === 1) {
+      alert('At least one variant is required');
+      return;
+    }
+    setVariants(variants.filter((_, i) => i !== index));
+  };
+
+  const updateVariant = (index: number, field: keyof ProductVariant, value: any) => {
+    const updated = [...variants];
+    (updated[index] as any)[field] = value;
+    setVariants(updated);
+  };
+
+  const handleVariantImageSelect = (index: number, file: File) => {
+    const updated = [...variants];
+    updated[index].pendingImage = file;
+    updated[index].previewUrl = URL.createObjectURL(file);
+    setVariants(updated);
+  };
+
   const onSubmit = async (data: ProductFormData) => {
     try {
       setSubmitting(true);
+
+      // Validate variants
+      if (variants.length === 0) {
+        alert('At least one variant is required');
+        return;
+      }
+
+      for (let i = 0; i < variants.length; i++) {
+        const v = variants[i];
+        if (!v.name) {
+          alert(`Variant ${i + 1}: Name is required`);
+          return;
+        }
+        if (!v.sku) {
+          alert(`Variant ${i + 1}: SKU is required`);
+          return;
+        }
+        if (!isEditMode && !v.pendingImage) {
+          alert(`Variant ${i + 1}: Image is required`);
+          return;
+        }
+      }
 
       const payload = {
         title: data.title,
         slug: data.slug,
         description: data.description || null,
-        price: data.price,
-        stock: parseInt(data.stock, 10),
+        basePrice: parseFloat(data.basePrice || '0'),
         categoryId: data.categoryId,
-        images: [], // Will be set after creation
-        colors: colors,
-        sizes: sizes,
+        rating: parseFloat(data.rating || '0'),
+        reviews: parseInt(data.reviews || '0', 10),
+        features: features,
+        variants: [] as any[],
       };
 
       if (isEditMode) {
-        // Edit mode: images already have real UUID, just update
-        await api.put(`/admin/products/${id}`, { ...payload, images });
+        // EDIT MODE: Upload new images and prepare variant data
+        const variantData = [];
+
+        for (const variant of variants) {
+          let imagePath = variant.imagePath;
+
+          // If there's a pending image, upload it
+          if (variant.pendingImage) {
+            imagePath = await uploadFileToR2(variant.pendingImage, id!);
+          }
+
+          variantData.push({
+            name: variant.name,
+            sku: variant.sku,
+            price: parseFloat(variant.price),
+            originalPrice: variant.originalPrice ? parseFloat(variant.originalPrice) : null,
+            sizes: variant.sizes,
+            imagePath: imagePath,
+            galleryPaths: variant.galleryPaths,
+            stock: parseInt(variant.stock, 10),
+            isAvailable: variant.isAvailable,
+            sortOrder: variant.sortOrder,
+          });
+        }
+
+        await api.put(`/admin/products/${id}`, { ...payload, variants: variantData });
         navigate('/products');
       } else {
-        // CREATE MODE: Proper flow with real UUID
-        console.log('[ProductForm] Step 1: Creating product without images...');
+        // CREATE MODE
+        console.log('[ProductForm] Step 1: Creating product...');
 
-        // Step 1: Create product without images to get real UUID
-        const response = await api.post('/admin/products', payload);
+        // Create product without variants first to get UUID
+        const response = await api.post('/admin/products', {
+          ...payload,
+          variants: variants.map((v, i) => ({
+            name: v.name,
+            sku: v.sku,
+            price: parseFloat(v.price),
+            originalPrice: v.originalPrice ? parseFloat(v.originalPrice) : null,
+            sizes: v.sizes,
+            imagePath: '', // Temporary empty
+            galleryPaths: [],
+            stock: parseInt(v.stock, 10),
+            isAvailable: v.isAvailable,
+            sortOrder: i,
+          })),
+        });
+
         const newProductId = response.data.id;
-
         console.log('[ProductForm] ✅ Product created with UUID:', newProductId);
 
-        // Step 2: Upload pending image files with the real UUID
-        if (pendingImageFiles.length > 0) {
-          console.log('[ProductForm] Step 2: Uploading', pendingImageFiles.length, 'images with real UUID...');
+        // Step 2: Upload variant images
+        console.log('[ProductForm] Step 2: Uploading variant images...');
+        const variantData = [];
 
-          const uploadedUrls: string[] = [];
-
-          for (const file of pendingImageFiles) {
-            try {
-              const url = await uploadFileToR2(file, newProductId);
-              uploadedUrls.push(url);
-            } catch (error) {
-              console.error('[ProductForm] Failed to upload file:', file.name, error);
-              // Continue with other files
-            }
+        for (const variant of variants) {
+          let imagePath = '';
+          if (variant.pendingImage) {
+            imagePath = await uploadFileToR2(variant.pendingImage, newProductId);
           }
 
-          console.log('[ProductForm] ✅ Uploaded', uploadedUrls.length, 'images');
-
-          // Step 3: Update product with image URLs
-          if (uploadedUrls.length > 0) {
-            console.log('[ProductForm] Step 3: Updating product with image URLs...');
-            await api.put(`/admin/products/${newProductId}`, {
-              ...payload,
-              images: uploadedUrls,
-            });
-            console.log('[ProductForm] ✅ Product updated with images');
-          }
-
-          // Clean up preview URLs
-          previewUrls.forEach(url => URL.revokeObjectURL(url));
+          variantData.push({
+            name: variant.name,
+            sku: variant.sku,
+            price: parseFloat(variant.price),
+            originalPrice: variant.originalPrice ? parseFloat(variant.originalPrice) : null,
+            sizes: variant.sizes,
+            imagePath: imagePath,
+            galleryPaths: [],
+            stock: parseInt(variant.stock, 10),
+            isAvailable: variant.isAvailable,
+            sortOrder: variant.sortOrder,
+          });
         }
+
+        // Step 3: Update product with image URLs
+        console.log('[ProductForm] Step 3: Updating product with variant images...');
+        await api.put(`/admin/products/${newProductId}`, {
+          ...payload,
+          variants: variantData,
+        });
 
         console.log('[ProductForm] ✅ Product creation complete!');
         navigate('/products');
@@ -275,7 +387,7 @@ export default function ProductFormPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-3xl">
+    <div className="space-y-6 max-w-4xl">
       {/* Header */}
       <div>
         <Button variant="ghost" size="sm" onClick={() => navigate('/products')} className="mb-4">
@@ -290,7 +402,10 @@ export default function ProductFormPage() {
 
       {/* Form */}
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        {/* Basic Information */}
         <div className="rounded-lg border bg-card p-6 space-y-4">
+          <h2 className="text-xl font-semibold">Basic Information</h2>
+
           {/* Category */}
           <div className="space-y-2">
             <Label htmlFor="category">Category *</Label>
@@ -337,24 +452,34 @@ export default function ProductFormPage() {
               placeholder="Enter product description"
               rows={4}
             />
-            {errors.description && <p className="text-sm text-destructive">{errors.description.message}</p>}
           </div>
 
-          {/* Colors */}
+          {/* Base Price */}
           <div className="space-y-2">
-            <Label htmlFor="colors">Colors</Label>
+            <Label htmlFor="basePrice">Base Price</Label>
+            <Input
+              id="basePrice"
+              {...register('basePrice')}
+              placeholder="0.00"
+              type="text"
+            />
+            <p className="text-xs text-muted-foreground">Base price (can be overridden by variants)</p>
+          </div>
+
+          {/* Features */}
+          <div className="space-y-2">
+            <Label>Product Features</Label>
             <div className="flex gap-2">
               <Input
-                id="colors"
-                value={colorInput}
-                onChange={(e) => setColorInput(e.target.value)}
-                placeholder="Enter color (e.g., #FF5733 or Red)"
+                value={featureInput}
+                onChange={(e) => setFeatureInput(e.target.value)}
+                placeholder="Enter a feature"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     e.preventDefault();
-                    if (colorInput.trim() && !colors.includes(colorInput.trim())) {
-                      setColors([...colors, colorInput.trim()]);
-                      setColorInput('');
+                    if (featureInput.trim()) {
+                      setFeatures([...features, featureInput.trim()]);
+                      setFeatureInput('');
                     }
                   }
                 }}
@@ -362,215 +487,162 @@ export default function ProductFormPage() {
               <Button
                 type="button"
                 onClick={() => {
-                  if (colorInput.trim() && !colors.includes(colorInput.trim())) {
-                    setColors([...colors, colorInput.trim()]);
-                    setColorInput('');
+                  if (featureInput.trim()) {
+                    setFeatures([...features, featureInput.trim()]);
+                    setFeatureInput('');
                   }
                 }}
               >
                 Add
               </Button>
             </div>
-            <div className="flex flex-wrap gap-2 mt-2">
-              {colors.map((color, index) => (
-                <div
-                  key={index}
-                  className="flex items-center gap-2 px-3 py-1 bg-muted rounded-md border"
-                >
-                  <div
-                    className="w-4 h-4 rounded-full border"
-                    style={{ backgroundColor: color.startsWith('#') ? color : color }}
-                  />
-                  <span className="text-sm">{color}</span>
+            <div className="space-y-1 mt-2">
+              {features.map((feature, index) => (
+                <div key={index} className="flex items-center gap-2 p-2 bg-muted rounded">
+                  <span className="flex-1 text-sm">{feature}</span>
                   <button
                     type="button"
-                    onClick={() => setColors(colors.filter((_, i) => i !== index))}
+                    onClick={() => setFeatures(features.filter((_, i) => i !== index))}
                     className="text-destructive hover:text-destructive/80"
                   >
-                    ×
+                    <X className="w-4 h-4" />
                   </button>
                 </div>
               ))}
             </div>
-            <p className="text-xs text-muted-foreground">
-              Enter color names or hex codes (e.g., #FF5733, Red, Blue)
-            </p>
+          </div>
+        </div>
+
+        {/* Product Variants */}
+        <div className="rounded-lg border bg-card p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold">Product Variants</h2>
+            <Button type="button" onClick={addVariant} variant="outline" size="sm">
+              <Plus className="w-4 h-4 mr-2" />
+              Add Variant
+            </Button>
           </div>
 
-          {/* Sizes */}
-          <div className="space-y-2">
-            <Label htmlFor="sizes">Sizes</Label>
-            <div className="flex gap-2">
-              <Input
-                id="sizes"
-                value={sizeInput}
-                onChange={(e) => setSizeInput(e.target.value)}
-                placeholder="Enter size (e.g., S, M, L, XL)"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    if (sizeInput.trim() && !sizes.includes(sizeInput.trim())) {
-                      setSizes([...sizes, sizeInput.trim()]);
-                      setSizeInput('');
-                    }
-                  }
-                }}
-              />
-              <Button
-                type="button"
-                onClick={() => {
-                  if (sizeInput.trim() && !sizes.includes(sizeInput.trim())) {
-                    setSizes([...sizes, sizeInput.trim()]);
-                    setSizeInput('');
-                  }
-                }}
-              >
-                Add
-              </Button>
-            </div>
-            <div className="flex flex-wrap gap-2 mt-2">
-              {sizes.map((size, index) => (
-                <div
-                  key={index}
-                  className="flex items-center gap-2 px-3 py-1 bg-muted rounded-md border"
-                >
-                  <span className="text-sm font-medium">{size}</span>
-                  <button
-                    type="button"
-                    onClick={() => setSizes(sizes.filter((_, i) => i !== index))}
-                    className="text-destructive hover:text-destructive/80"
-                  >
-                    ×
-                  </button>
+          <div className="space-y-4">
+            {variants.map((variant, index) => (
+              <div key={index} className="border rounded-lg p-4 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold">Variant {index + 1}</h3>
+                  {variants.length > 1 && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeVariant(index)}
+                    >
+                      <Trash2 className="w-4 h-4 text-destructive" />
+                    </Button>
+                  )}
                 </div>
-              ))}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Enter sizes like S, M, L, XL, or 32, 34, 36 for clothing
-            </p>
-          </div>
 
-          {/* Price & Stock */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="price">Price *</Label>
-              <Input
-                id="price"
-                {...register('price')}
-                placeholder="0.00"
-                type="text"
-              />
-              {errors.price && <p className="text-sm text-destructive">{errors.price.message}</p>}
-            </div>
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Variant Name */}
+                  <div className="space-y-2">
+                    <Label>Variant Name *</Label>
+                    <Input
+                      value={variant.name}
+                      onChange={(e) => updateVariant(index, 'name', e.target.value)}
+                      placeholder="e.g., Black/Red, Ocean Blue"
+                    />
+                  </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="stock">Stock *</Label>
-              <Input
-                id="stock"
-                {...register('stock')}
-                placeholder="0"
-                type="text"
-              />
-              {errors.stock && <p className="text-sm text-destructive">{errors.stock.message}</p>}
-            </div>
-          </div>
+                  {/* SKU */}
+                  <div className="space-y-2">
+                    <Label>SKU *</Label>
+                    <Input
+                      value={variant.sku}
+                      onChange={(e) => updateVariant(index, 'sku', e.target.value)}
+                      placeholder="e.g., SHOE-BLK-41"
+                    />
+                  </div>
 
-          {/* Images */}
-          <div className="space-y-2">
-            <Label>Product Images</Label>
+                  {/* Price */}
+                  <div className="space-y-2">
+                    <Label>Price *</Label>
+                    <Input
+                      value={variant.price}
+                      onChange={(e) => updateVariant(index, 'price', e.target.value)}
+                      placeholder="0.00"
+                      type="text"
+                    />
+                  </div>
 
-            {isEditMode ? (
-              // EDIT MODE: Use ImageUpload component (uploads immediately with real UUID)
-              <ImageUpload
-                productId={id}
-                images={images}
-                onChange={setImages}
-                maxImages={10}
-              />
-            ) : (
-              // CREATE MODE: File selection with previews (upload after product creation)
-              <div className="space-y-4">
-                <div className="relative border-2 border-dashed rounded-lg p-8 text-center transition-colors border-border hover:border-primary/50">
-                  <input
-                    type="file"
-                    multiple
-                    accept="image/*"
-                    onChange={(e) => {
-                      const files = Array.from(e.target.files || []);
-                      if (files.length > 0) {
-                        // Validate files
-                        const validFiles = files.filter(file => {
-                          if (!file.type.startsWith('image/')) {
-                            alert(`${file.name} is not an image file`);
-                            return false;
-                          }
-                          if (file.size > 5 * 1024 * 1024) {
-                            alert(`${file.name} is too large (max 5MB)`);
-                            return false;
-                          }
-                          return true;
-                        });
-                        handlePendingFiles(validFiles);
-                      }
-                      e.target.value = ''; // Reset input
-                    }}
-                    disabled={submitting || pendingImageFiles.length >= 10}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                  />
+                  {/* Original Price */}
+                  <div className="space-y-2">
+                    <Label>Original Price (optional)</Label>
+                    <Input
+                      value={variant.originalPrice || ''}
+                      onChange={(e) => updateVariant(index, 'originalPrice', e.target.value)}
+                      placeholder="0.00"
+                      type="text"
+                    />
+                  </div>
 
-                  <div className="flex flex-col items-center gap-2 pointer-events-none">
-                    <Upload className="w-10 h-10 text-muted-foreground" />
-                    <p className="text-sm font-medium">
-                      Select images to upload after product creation
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      PNG, JPG, WebP up to 5MB ({pendingImageFiles.length}/10)
-                    </p>
+                  {/* Stock */}
+                  <div className="space-y-2">
+                    <Label>Stock *</Label>
+                    <Input
+                      value={variant.stock}
+                      onChange={(e) => updateVariant(index, 'stock', e.target.value)}
+                      placeholder="0"
+                      type="text"
+                    />
+                  </div>
+
+                  {/* Sizes */}
+                  <div className="space-y-2">
+                    <Label>Sizes (comma separated)</Label>
+                    <Input
+                      value={variant.sizes.join(', ')}
+                      onChange={(e) => {
+                        const sizes = e.target.value.split(',').map(s => s.trim()).filter(Boolean);
+                        updateVariant(index, 'sizes', sizes);
+                      }}
+                      placeholder="e.g., 41, 42, 43"
+                    />
                   </div>
                 </div>
 
-                {/* Preview Grid */}
-                {previewUrls.length > 0 && (
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {previewUrls.map((url, index) => (
-                      <div
-                        key={index}
-                        className="relative group aspect-square rounded-lg border bg-muted overflow-hidden"
-                      >
+                {/* Variant Image */}
+                <div className="space-y-2">
+                  <Label>Variant Image (Thumbnail) *</Label>
+                  <div className="flex items-center gap-4">
+                    <div className="relative w-24 h-24 rounded border bg-muted overflow-hidden">
+                      {(variant.previewUrl || variant.imagePath) ? (
                         <img
-                          src={url}
-                          alt={`Preview ${index + 1}`}
+                          src={variant.previewUrl || variant.imagePath}
+                          alt="Variant preview"
                           className="w-full h-full object-cover"
                         />
-                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                          <Button
-                            type="button"
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => removePendingFile(index)}
-                            disabled={submitting}
-                          >
-                            <X className="w-4 h-4 mr-1" />
-                            Remove
-                          </Button>
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                          <Upload className="w-8 h-8" />
                         </div>
-                        {index === 0 && (
-                          <div className="absolute top-2 left-2 bg-primary text-primary-foreground text-xs px-2 py-1 rounded">
-                            Main
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                      )}
+                    </div>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          handleVariantImageSelect(index, file);
+                        }
+                      }}
+                      className="text-sm"
+                    />
                   </div>
-                )}
+                  <p className="text-xs text-muted-foreground">
+                    This image will be shown as variant thumbnail
+                  </p>
+                </div>
               </div>
-            )}
-
-            <p className="text-sm text-muted-foreground">
-              {isEditMode
-                ? 'Upload product images. First image will be used as the main image.'
-                : 'Select images now - they will be uploaded with the product UUID after creation.'}
-            </p>
+            ))}
           </div>
         </div>
 
