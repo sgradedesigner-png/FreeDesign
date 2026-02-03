@@ -4,8 +4,8 @@ import { useTheme } from '../../context/ThemeContext';
 import { r2Url } from '@/lib/r2';
 import { ShoppingBag } from 'lucide-react';
 import type { Product } from '../../data/products';
-import { useQueryClient } from '@tantml:invoke>
-<parameter name="prefetchProduct, seedProductCache } from '../../data/products.queries';
+import { useQueryClient } from '@tanstack/react-query';
+import { prefetchProduct, seedProductCache } from '../../data/products.queries';
 
 const PLACEHOLDER_IMG = 'https://placehold.co/800x1000/png?text=No+Image';
 
