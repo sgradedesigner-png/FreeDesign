@@ -37,16 +37,35 @@ type Category = {
   slug: string;
 };
 
+type ProductVariant = {
+  id: string;
+  productId: string;
+  name: string;
+  sku: string;
+  price: string;
+  originalPrice: string | null;
+  sizes: string[];
+  imagePath: string;
+  galleryPaths: string[];
+  stock: number;
+  isAvailable: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
 type Product = {
   id: string;
   title: string;
   slug: string;
   description: string | null;
-  price: string;
-  stock: number;
-  images: string[];
+  basePrice: string;
   categoryId: string;
   category: Category;
+  variants: ProductVariant[];
+  rating: number;
+  reviews: number;
+  features: string[];
   createdAt: string;
   updatedAt: string;
 };
@@ -114,13 +133,22 @@ export default function ProductsPage() {
         filteredProducts = filteredProducts.filter(p => p.categoryId === selectedCategory);
       }
 
-      // Client-side filtering by stock
+      // Client-side filtering by stock (sum of all variants)
       if (stockFilter === 'in-stock') {
-        filteredProducts = filteredProducts.filter(p => p.stock > 0);
+        filteredProducts = filteredProducts.filter(p => {
+          const totalStock = p.variants.reduce((sum, v) => sum + v.stock, 0);
+          return totalStock > 0;
+        });
       } else if (stockFilter === 'out-of-stock') {
-        filteredProducts = filteredProducts.filter(p => p.stock === 0);
+        filteredProducts = filteredProducts.filter(p => {
+          const totalStock = p.variants.reduce((sum, v) => sum + v.stock, 0);
+          return totalStock === 0;
+        });
       } else if (stockFilter === 'low-stock') {
-        filteredProducts = filteredProducts.filter(p => p.stock > 0 && p.stock < 10);
+        filteredProducts = filteredProducts.filter(p => {
+          const totalStock = p.variants.reduce((sum, v) => sum + v.stock, 0);
+          return totalStock > 0 && totalStock < 10;
+        });
       }
 
       // Client-side sorting
@@ -133,8 +161,11 @@ export default function ProductsPage() {
             aValue = a.category.name.toLowerCase();
             bValue = b.category.name.toLowerCase();
           } else if (sortConfig.key === 'price') {
-            aValue = parseFloat(a.price);
-            bValue = parseFloat(b.price);
+            aValue = parseFloat(a.variants[0]?.price ?? a.basePrice);
+            bValue = parseFloat(b.variants[0]?.price ?? b.basePrice);
+          } else if (sortConfig.key === 'stock') {
+            aValue = a.variants.reduce((sum, v) => sum + v.stock, 0);
+            bValue = b.variants.reduce((sum, v) => sum + v.stock, 0);
           } else {
             aValue = a[sortConfig.key];
             bValue = b[sortConfig.key];
@@ -223,14 +254,18 @@ export default function ProductsPage() {
 
   const exportToCSV = () => {
     const headers = ['Title', 'Slug', 'Category', 'Price', 'Stock', 'Created'];
-    const rows = products.map(p => [
-      p.title,
-      p.slug,
-      p.category.name,
-      p.price,
-      p.stock.toString(),
-      new Date(p.createdAt).toLocaleDateString(),
-    ]);
+    const rows = products.map(p => {
+      const totalStock = p.variants.reduce((sum, v) => sum + v.stock, 0);
+      const price = p.variants[0]?.price ?? p.basePrice;
+      return [
+        p.title,
+        p.slug,
+        p.category.name,
+        price,
+        totalStock.toString(),
+        new Date(p.createdAt).toLocaleDateString(),
+      ];
+    });
 
     const csvContent = [
       headers.join(','),
@@ -388,9 +423,9 @@ export default function ProductsPage() {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-3">
-                      {product.images[0] ? (
+                      {product.variants[0]?.imagePath ? (
                         <img
-                          src={product.images[0]}
+                          src={product.variants[0].imagePath}
                           alt={product.title}
                           className="w-12 h-12 rounded object-cover"
                         />
@@ -409,12 +444,17 @@ export default function ProductsPage() {
                     <Badge variant="secondary">{product.category.name}</Badge>
                   </TableCell>
                   <TableCell className="font-medium">
-                    ${parseFloat(product.price).toFixed(2)}
+                    ${parseFloat(product.variants[0]?.price ?? product.basePrice).toFixed(2)}
                   </TableCell>
                   <TableCell>
-                    <Badge variant={product.stock > 0 ? 'default' : 'destructive'}>
-                      {product.stock}
-                    </Badge>
+                    {(() => {
+                      const totalStock = product.variants.reduce((sum, v) => sum + v.stock, 0);
+                      return (
+                        <Badge variant={totalStock > 0 ? 'default' : 'destructive'}>
+                          {totalStock}
+                        </Badge>
+                      );
+                    })()}
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-2">

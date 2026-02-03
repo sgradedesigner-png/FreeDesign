@@ -5,7 +5,7 @@ import { z } from 'zod';
 
 const generatePresignedSchema = z.object({
   filename: z.string().min(1),
-  contentType: z.string().regex(/^image\/(jpeg|jpg|png|webp)$/),
+  contentType: z.string().regex(/^image\/(jpeg|jpg|png|webp|avif|gif)$/),
   productId: z.string().optional(),
 });
 

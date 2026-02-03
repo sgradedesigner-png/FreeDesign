@@ -1,20 +1,37 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Star, Truck, ShieldCheck, ArrowRight, Heart, ShoppingCart, Plus, Minus } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
 import { useWishlist } from '../../context/WishlistContext';
-import type { Product } from '../../data/products';
+import type { Product, ProductVariant } from '../../data/products';
 
 type ProductInfoProps = {
   product: Product;
+  onVariantChange?: (variant: ProductVariant) => void;
 };
 
-export default function ProductInfo({ product }: ProductInfoProps) {
+export default function ProductInfo({ product, onVariantChange }: ProductInfoProps) {
   const { addItem, setIsCartOpen } = useCart();
   const { toggleWishlist, isInWishlist } = useWishlist();
-  const [selectedSize, setSelectedSize] = useState(product.sizes?.[0] ?? '');
-  const [selectedColor, setSelectedColor] = useState(product.colors?.[0] ?? '');
+
+  // Select first variant by default
+  const [selectedVariant, setSelectedVariant] = useState<ProductVariant>(
+    product.variants?.[0] || ({} as ProductVariant)
+  );
+  const [selectedSize, setSelectedSize] = useState(selectedVariant.sizes?.[0] ?? '');
   const [quantity, setQuantity] = useState(1);
   const isWishlisted = isInWishlist(product.id);
+
+  // Notify parent when variant changes
+  useEffect(() => {
+    if (onVariantChange && selectedVariant) {
+      onVariantChange(selectedVariant);
+    }
+  }, [selectedVariant, onVariantChange]);
+
+  // Update selected size when variant changes
+  useEffect(() => {
+    setSelectedSize(selectedVariant.sizes?.[0] ?? '');
+  }, [selectedVariant]);
 
   const handleQuantityDecrease = () => {
     if (quantity > 1) setQuantity(quantity - 1);
@@ -27,7 +44,7 @@ export default function ProductInfo({ product }: ProductInfoProps) {
   const handleAddToCart = () => {
     // Add multiple items based on quantity
     for (let i = 0; i < quantity; i++) {
-      addItem(product, selectedColor || null, selectedSize || null);
+      addItem(product, selectedVariant.name || null, selectedSize || null);
     }
     //setIsCartOpen(true);
   };
@@ -60,11 +77,11 @@ export default function ProductInfo({ product }: ProductInfoProps) {
 
         <div className="flex items-baseline gap-3">
           <span className="text-3xl font-bold text-primary">
-            ${product.price.toFixed(2)}
+            ${selectedVariant.price ? selectedVariant.price.toFixed(2) : product.price.toFixed(2)}
           </span>
-          {product.originalPrice && (
+          {selectedVariant.originalPrice && (
             <span className="text-lg text-muted-foreground line-through">
-              ${product.originalPrice.toFixed(2)}
+              ${selectedVariant.originalPrice.toFixed(2)}
             </span>
           )}
         </div>
@@ -77,53 +94,74 @@ export default function ProductInfo({ product }: ProductInfoProps) {
 
       {/* Options */}
       <div className="space-y-6">
-        {/* Colors */}
-        <div role="group" aria-labelledby="color-label">
-          <label id="color-label" className="text-sm font-bold text-foreground mb-3 block">
-            Өнгө: <span className="text-muted-foreground font-medium">{selectedColor}</span>
-          </label>
-          <div className="flex gap-3">
-            {(product.colors || []).map((color) => (
-              <button
-                key={color}
-                onClick={() => setSelectedColor(color)}
-                aria-label={`Select color ${color}`}
-                aria-pressed={selectedColor === color}
-                className={[
-                  'w-9 h-9 rounded-full border-2 transition-all duration-200',
-                  selectedColor === color
-                    ? 'border-primary ring-4 ring-primary/20 scale-110'
-                    : 'border-border hover:border-muted-foreground/30',
-                ].join(' ')}
-                style={{ backgroundColor: color }}
-              />
-            ))}
+        {/* Variant Selector (Thumbnail Images) */}
+        {product.variants && product.variants.length > 0 && (
+          <div role="group" aria-labelledby="variant-label">
+            <label id="variant-label" className="text-sm font-bold text-foreground mb-3 block">
+              Color / Style: <span className="text-muted-foreground font-medium">{selectedVariant.name}</span>
+            </label>
+            <div className="flex gap-3 flex-wrap">
+              {product.variants.map((variant) => (
+                <button
+                  key={variant.id}
+                  onClick={() => setSelectedVariant(variant)}
+                  aria-label={`Select variant ${variant.name}`}
+                  aria-pressed={selectedVariant.id === variant.id}
+                  className={[
+                    'relative w-16 h-16 rounded-lg border-2 overflow-hidden transition-all duration-200',
+                    selectedVariant.id === variant.id
+                      ? 'border-primary ring-2 ring-primary/20 scale-110'
+                      : 'border-border hover:border-primary/50',
+                  ].join(' ')}
+                >
+                  <img
+                    src={variant.imagePath}
+                    alt={variant.name}
+                    className="w-full h-full object-cover"
+                  />
+                  {!variant.isAvailable && (
+                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                      <span className="text-[8px] text-white font-bold">Out</span>
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
+            {selectedVariant.stock !== undefined && (
+              <p className="text-xs text-muted-foreground mt-2">
+                {selectedVariant.stock > 0
+                  ? `${selectedVariant.stock} in stock`
+                  : 'Out of stock'}
+              </p>
+            )}
           </div>
-        </div>
+        )}
 
-        {/* Sizes */}
-        <div role="group" aria-labelledby="size-label">
-          <label id="size-label" className="text-sm font-bold text-foreground mb-3 block">
-            Хэмжээ
-          </label>
-          <div className="flex gap-2 flex-wrap">
-            {(product.sizes || []).map((size) => (
-              <button
-                key={size}
-                onClick={() => setSelectedSize(size)}
-                aria-pressed={selectedSize === size}
-                className={[
-                  'px-5 py-2.5 rounded-xl border text-sm font-bold transition-all duration-200',
-                  selectedSize === size
-                    ? 'border-primary bg-primary text-primary-foreground shadow-md shadow-primary/10'
-                    : 'border-border bg-background text-foreground hover:bg-muted hover:border-muted-foreground/30',
-                ].join(' ')}
-              >
-                {size}
-              </button>
-            ))}
+        {/* Sizes (from selected variant) */}
+        {selectedVariant.sizes && selectedVariant.sizes.length > 0 && (
+          <div role="group" aria-labelledby="size-label">
+            <label id="size-label" className="text-sm font-bold text-foreground mb-3 block">
+              Хэмжээ
+            </label>
+            <div className="flex gap-2 flex-wrap">
+              {selectedVariant.sizes.map((size) => (
+                <button
+                  key={size}
+                  onClick={() => setSelectedSize(size)}
+                  aria-pressed={selectedSize === size}
+                  className={[
+                    'px-5 py-2.5 rounded-xl border text-sm font-bold transition-all duration-200',
+                    selectedSize === size
+                      ? 'border-primary bg-primary text-primary-foreground shadow-md shadow-primary/10'
+                      : 'border-border bg-background text-foreground hover:bg-muted hover:border-muted-foreground/30',
+                  ].join(' ')}
+                >
+                  {size}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Quantity & Actions */}

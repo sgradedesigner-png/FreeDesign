@@ -15,6 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowLeft, Loader2, Upload, X, Plus, Trash2 } from 'lucide-react';
 
 type Category = {
@@ -38,6 +39,8 @@ type ProductVariant = {
   // For file uploads
   pendingImage?: File;
   previewUrl?: string;
+  pendingGalleryImages?: File[];
+  galleryPreviewUrls?: string[];
 };
 
 const productSchema = z.object({
@@ -60,6 +63,7 @@ export default function ProductFormPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(isEditMode);
   const [submitting, setSubmitting] = useState(false);
+  const [activeVariantTab, setActiveVariantTab] = useState('variant-0');
   const [variants, setVariants] = useState<ProductVariant[]>([
     {
       name: '',
@@ -234,6 +238,33 @@ export default function ProductFormPage() {
     setVariants(updated);
   };
 
+  const handleVariantGalleryImagesSelect = (index: number, files: FileList) => {
+    const updated = [...variants];
+    const newFiles = Array.from(files);
+    const existingFiles = updated[index].pendingGalleryImages || [];
+    updated[index].pendingGalleryImages = [...existingFiles, ...newFiles];
+
+    const newPreviewUrls = newFiles.map(f => URL.createObjectURL(f));
+    const existingPreviewUrls = updated[index].galleryPreviewUrls || [];
+    updated[index].galleryPreviewUrls = [...existingPreviewUrls, ...newPreviewUrls];
+
+    setVariants(updated);
+  };
+
+  const removeVariantGalleryImage = (variantIndex: number, imageIndex: number) => {
+    const updated = [...variants];
+    if (updated[variantIndex].pendingGalleryImages) {
+      updated[variantIndex].pendingGalleryImages = updated[variantIndex].pendingGalleryImages!.filter((_, i) => i !== imageIndex);
+    }
+    if (updated[variantIndex].galleryPreviewUrls) {
+      updated[variantIndex].galleryPreviewUrls = updated[variantIndex].galleryPreviewUrls!.filter((_, i) => i !== imageIndex);
+    }
+    if (updated[variantIndex].galleryPaths) {
+      updated[variantIndex].galleryPaths = updated[variantIndex].galleryPaths.filter((_, i) => i !== imageIndex);
+    }
+    setVariants(updated);
+  };
+
   const onSubmit = async (data: ProductFormData) => {
     try {
       setSubmitting(true);
@@ -284,6 +315,18 @@ export default function ProductFormPage() {
             imagePath = await uploadFileToR2(variant.pendingImage, id!);
           }
 
+          // Upload new gallery images and merge with existing
+          let galleryPaths = [...(variant.galleryPaths || [])];
+          if (variant.pendingGalleryImages && variant.pendingGalleryImages.length > 0) {
+            console.log(`[ProductForm] Uploading ${variant.pendingGalleryImages.length} new gallery images for variant ${variant.name}...`);
+            for (const galleryFile of variant.pendingGalleryImages) {
+              const galleryUrl = await uploadFileToR2(galleryFile, id!);
+              if (galleryUrl) {
+                galleryPaths.push(galleryUrl);
+              }
+            }
+          }
+
           variantData.push({
             name: variant.name,
             sku: variant.sku,
@@ -291,7 +334,7 @@ export default function ProductFormPage() {
             originalPrice: variant.originalPrice ? parseFloat(variant.originalPrice) : null,
             sizes: variant.sizes,
             imagePath: imagePath,
-            galleryPaths: variant.galleryPaths,
+            galleryPaths: galleryPaths,
             stock: parseInt(variant.stock, 10),
             isAvailable: variant.isAvailable,
             sortOrder: variant.sortOrder,
@@ -334,6 +377,18 @@ export default function ProductFormPage() {
             imagePath = await uploadFileToR2(variant.pendingImage, newProductId);
           }
 
+          // Upload gallery images
+          const galleryPaths: string[] = [];
+          if (variant.pendingGalleryImages && variant.pendingGalleryImages.length > 0) {
+            console.log(`[ProductForm] Uploading ${variant.pendingGalleryImages.length} gallery images for variant ${variant.name}...`);
+            for (const galleryFile of variant.pendingGalleryImages) {
+              const galleryUrl = await uploadFileToR2(galleryFile, newProductId);
+              if (galleryUrl) {
+                galleryPaths.push(galleryUrl);
+              }
+            }
+          }
+
           variantData.push({
             name: variant.name,
             sku: variant.sku,
@@ -341,7 +396,7 @@ export default function ProductFormPage() {
             originalPrice: variant.originalPrice ? parseFloat(variant.originalPrice) : null,
             sizes: variant.sizes,
             imagePath: imagePath,
-            galleryPaths: [],
+            galleryPaths: galleryPaths,
             stock: parseInt(variant.stock, 10),
             isAvailable: variant.isAvailable,
             sortOrder: variant.sortOrder,
@@ -523,22 +578,38 @@ export default function ProductFormPage() {
             </Button>
           </div>
 
-          <div className="space-y-4">
+          <Tabs value={activeVariantTab} onValueChange={setActiveVariantTab} className="w-full">
+            <div className="flex items-center gap-2">
+              <TabsList className="flex-1 justify-start flex-wrap h-auto">
+                {variants.map((variant, index) => (
+                  <TabsTrigger key={index} value={`variant-${index}`}>
+                    {variant.name || `Variant ${index + 1}`}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+              {variants.length > 1 && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const activeIndex = parseInt(activeVariantTab.split('-')[1]);
+                    removeVariant(activeIndex);
+                    // Switch to previous tab if last tab is deleted
+                    if (activeIndex > 0) {
+                      setActiveVariantTab(`variant-${activeIndex - 1}`);
+                    }
+                  }}
+                  className="hover:bg-destructive hover:text-white"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete Current
+                </Button>
+              )}
+            </div>
+
             {variants.map((variant, index) => (
-              <div key={index} className="border rounded-lg p-4 space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-semibold">Variant {index + 1}</h3>
-                  {variants.length > 1 && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeVariant(index)}
-                    >
-                      <Trash2 className="w-4 h-4 text-destructive" />
-                    </Button>
-                  )}
-                </div>
+              <TabsContent key={index} value={`variant-${index}`} className="space-y-4 border rounded-lg p-4 mt-4">
 
                 <div className="grid grid-cols-2 gap-4">
                   {/* Variant Name */}
@@ -627,7 +698,7 @@ export default function ProductFormPage() {
                     </div>
                     <input
                       type="file"
-                      accept="image/*"
+                      accept="image/jpeg,image/jpg,image/png,image/webp,image/avif,image/gif"
                       onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (file) {
@@ -641,9 +712,66 @@ export default function ProductFormPage() {
                     This image will be shown as variant thumbnail
                   </p>
                 </div>
-              </div>
+
+                {/* Variant Gallery Images */}
+                <div className="space-y-2 col-span-2">
+                  <Label>Gallery Images (Optional)</Label>
+                  <div className="space-y-4">
+                    {/* Preview existing gallery images */}
+                    <div className="flex flex-wrap gap-2">
+                      {variant.galleryPaths?.map((path, imgIndex) => (
+                        <div key={`existing-${imgIndex}`} className="relative w-20 h-20 rounded border bg-muted overflow-hidden group">
+                          <img
+                            src={path}
+                            alt={`Gallery ${imgIndex + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeVariantGalleryImage(index, imgIndex)}
+                            className="absolute top-1 right-1 p-1 bg-destructive text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                      {variant.galleryPreviewUrls?.map((url, imgIndex) => (
+                        <div key={`preview-${imgIndex}`} className="relative w-20 h-20 rounded border bg-muted overflow-hidden group">
+                          <img
+                            src={url}
+                            alt={`Preview ${imgIndex + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeVariantGalleryImage(index, variant.galleryPaths?.length || 0 + imgIndex)}
+                            className="absolute top-1 right-1 p-1 bg-destructive text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                    {/* Upload input */}
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/jpg,image/png,image/webp,image/avif,image/gif"
+                      multiple
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files.length > 0) {
+                          handleVariantGalleryImagesSelect(index, e.target.files);
+                        }
+                      }}
+                      className="text-sm"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    These images will be shown in the product gallery when this variant is selected
+                  </p>
+                </div>
+              </TabsContent>
             ))}
-          </div>
+          </Tabs>
         </div>
 
         {/* Actions */}

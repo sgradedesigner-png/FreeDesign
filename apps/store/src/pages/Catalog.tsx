@@ -74,7 +74,8 @@ export default function Catalog() {
 
     if (sortBy === 'price-low') result.sort((a, b) => a.price - b.price);
     else if (sortBy === 'price-high') result.sort((a, b) => b.price - a.price);
-    else result.sort((a, b) => (b.isNew === a.isNew ? 0 : b.isNew ? 1 : -1));
+    else result.sort((a, b) => (b.is_new === a.is_new ? 0 : b.is_new ? 1 : -1));
+
 
     return result;
   }, [products, searchQuery, filters, sortBy]);
@@ -129,7 +130,7 @@ export default function Catalog() {
 
                 return (
                   <div
-                    key={product.uuid}
+                    key={product.id}
                     className="group relative rounded-3xl overflow-hidden flex flex-col transition-all duration-500
                  bg-card text-card-foreground border border-border/40
                  hover:shadow-2xl hover:shadow-primary/10"

@@ -16,6 +16,7 @@ export default function ProductGallery({ images, name }: ProductGalleryProps) {
 
   const [activeImage, setActiveImage] = useState<string>(resolvedImages[0] ?? "");
   const [isZooming, setIsZooming] = useState(false);
+  const [isOverNavButtons, setIsOverNavButtons] = useState(false);
   const [zoomPosition, setZoomPosition] = useState({ x: 0, y: 0 });
   const [lensPosition, setLensPosition] = useState({ x: 0, y: 0 });
   const imageRef = useRef<HTMLDivElement>(null);
@@ -69,7 +70,9 @@ export default function ProductGallery({ images, name }: ProductGalleryProps) {
   };
 
   const handleMouseEnter = () => {
-    setIsZooming(true);
+    if (!isOverNavButtons) {
+      setIsZooming(true);
+    }
   };
 
   const handleMouseLeave = () => {
@@ -92,6 +95,7 @@ export default function ProductGallery({ images, name }: ProductGalleryProps) {
           <button
             key={img}
             onClick={() => setActiveImage(img)}
+            onMouseEnter={() => setActiveImage(img)}
             className={`relative w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden border-2 transition-all ${
               activeImage === img ? "border-primary" : "border-transparent hover:border-border"
             }`}
@@ -109,12 +113,12 @@ export default function ProductGallery({ images, name }: ProductGalleryProps) {
           onMouseMove={handleMouseMove}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
-          style={{ cursor: isZooming ? 'crosshair' : 'default' }}
+          style={{ cursor: isZooming && !isOverNavButtons ? 'crosshair' : 'default' }}
         >
           <img src={activeImage} alt={name} className="w-full h-full object-cover" />
 
           {/* Lens overlay - shows which area is being magnified */}
-          {isZooming && (
+          {isZooming && !isOverNavButtons && (
             <div
               className="absolute border-2 border-primary bg-primary/10 pointer-events-none z-20"
               style={{
@@ -128,7 +132,17 @@ export default function ProductGallery({ images, name }: ProductGalleryProps) {
 
           {/* Navigation Arrows - только если есть несколько изображений */}
           {resolvedImages.length > 1 && (
-            <div className="absolute bottom-4 right-4 flex gap-2 z-10">
+            <div
+              className="absolute bottom-4 right-4 flex gap-2 z-10"
+              onMouseEnter={() => {
+                setIsOverNavButtons(true);
+                setIsZooming(false);
+              }}
+              onMouseLeave={() => {
+                setIsOverNavButtons(false);
+                setIsZooming(true);
+              }}
+            >
               {/* Previous Button */}
               <button
                 onClick={goToPrevious}
@@ -161,7 +175,7 @@ export default function ProductGallery({ images, name }: ProductGalleryProps) {
         </div>
 
         {/* Zoom Window - absolute positioned, appears on the right when hovering */}
-        {isZooming && imageRef.current && (
+        {isZooming && !isOverNavButtons && imageRef.current && (
           <div
             className="fixed z-50 bg-white dark:bg-slate-900 rounded-2xl overflow-hidden shadow-2xl border-2 border-primary animate-in fade-in zoom-in-95 duration-200"
             style={{

@@ -40,7 +40,7 @@ export default function RelatedProducts({ currentSlug }: { currentSlug?: string 
 
           return (
             <Link
-              key={product.slug ?? product.uuid ?? product.id ?? `${product.name}-${product.price}`}
+              key={product.id}
               to={`/product/${product.slug}`}
               state={{ product }}
               className="group block"
@@ -64,7 +64,7 @@ export default function RelatedProducts({ currentSlug }: { currentSlug?: string 
                     ХЯМДРАЛ
                   </span>
                 )}
-                {product.isNew && (
+                {product.is_new && (
                   <span className="absolute top-2 left-2 bg-success text-white text-[10px] font-bold px-2 py-1 rounded">
                     ШИНЭ
                   </span>

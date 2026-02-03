@@ -1,99 +1,70 @@
-import type { EcommerceProduct, BackendProduct } from './types';
+import type { BackendProduct, Product, ProductVariant } from './types';
 
 const NEW_PRODUCT_WINDOW_DAYS = 30;
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
-export type Product = {
-  id: string;
+// Export Product type from types.ts
+export type { Product, ProductVariant } from './types';
 
-  uuid?: string | null;
-  slug?: string | null;
-
-  name: string;
-  category: string;
-  price: number;
-  originalPrice?: number;
-  rating: number;
-  reviews: number;
-
-  // ✅ ONLY R2
-  image_path: string;          // REQUIRED
-  gallery_paths: string[];     // REQUIRED
-
-  description: string;
-
-  sizes?: string[];
-  colors?: string[];
-  features?: string[];
-  isNew?: boolean;
-};
-
-
-const toArray = (value?: string[] | null) => (Array.isArray(value) ? value : undefined);
-
-// ✅ Backend schema-н шинэ mapper
+// Backend product mapper with variant support
 export const mapProductFromBackend = (row: BackendProduct): Product => {
   const createdAtMs = row.createdAt ? Date.parse(row.createdAt) : null;
   const isNewByDate =
     createdAtMs && !Number.isNaN(createdAtMs)
-      ? Date.now() - createdAtMs <= 30 * 24 * 60 * 60 * 1000
+      ? Date.now() - createdAtMs <= NEW_PRODUCT_WINDOW_DAYS * 24 * 60 * 60 * 1000
       : false;
 
-  const images = row.images || [];
-  const mainImage = images[0] || '';
-  const galleryImages = images;
+  // Get variants (sorted by sortOrder)
+  const variants = row.variants || [];
+  const sortedVariants = [...variants].sort((a, b) => a.sortOrder - b.sortOrder);
+
+  // Use first variant for default/compatibility values
+  const firstVariant = sortedVariants[0];
+
+  // Collect all unique sizes from all variants
+  const allSizes = Array.from(
+    new Set(sortedVariants.flatMap((v) => v.sizes || []))
+  );
+
+  // Variant names as "colors" for compatibility
+  const variantNames = sortedVariants.map((v) => v.name);
 
   return {
     id: row.id,
-    uuid: row.id,
     slug: row.slug,
-
     name: row.title,
     category: row.category?.name || 'Uncategorized',
-    price: typeof row.price === 'string' ? parseFloat(row.price) : row.price,
-    originalPrice: undefined, // Backend schema-д байхгүй
-    rating: 4.5, // Default (backend-д reviews систем хараахан байхгүй)
-    reviews: 0,
+    description: row.description || '',
+    rating: row.rating || 0,
+    reviews: row.reviews || 0,
+    features: row.features || [],
 
-    image_path: mainImage,
-    gallery_paths: galleryImages,
+    // Variant data
+    variants: sortedVariants.map((v) => ({
+      ...v,
+      price: typeof v.price === 'string' ? parseFloat(v.price) : v.price,
+      originalPrice:
+        v.originalPrice && typeof v.originalPrice === 'string'
+          ? parseFloat(v.originalPrice)
+          : v.originalPrice,
+    })),
 
-    description: row.description || "",
-    sizes: row.sizes && row.sizes.length > 0 ? row.sizes : undefined,
-    colors: row.colors && row.colors.length > 0 ? row.colors : undefined,
-    features: undefined,
-    isNew: isNewByDate,
-  };
-};
+    // Computed properties from first variant (for backward compatibility)
+    price: firstVariant
+      ? typeof firstVariant.price === 'string'
+        ? parseFloat(firstVariant.price)
+        : firstVariant.price
+      : row.basePrice || 0,
+    originalPrice: firstVariant?.originalPrice
+      ? typeof firstVariant.originalPrice === 'string'
+        ? parseFloat(firstVariant.originalPrice)
+        : firstVariant.originalPrice
+      : null,
+    image_path: firstVariant?.imagePath || '',
+    gallery_paths: firstVariant?.galleryPaths || [],
+    colors: variantNames,
+    sizes: allSizes,
 
-// Legacy mapper (migration-н үед хэрэг болно)
-export const mapProductFromDb = (row: EcommerceProduct): Product => {
-  const createdAtMs = row.created_at ? Date.parse(row.created_at) : null;
-  const isNewByDate =
-    createdAtMs && !Number.isNaN(createdAtMs)
-      ? Date.now() - createdAtMs <= 30 * 24 * 60 * 60 * 1000
-      : false;
-
-  return {
-    id: row.id,
-    uuid: row.uuid,
-    slug: row.slug,
-
-    name: row.name ?? "",
-    category: row.category ?? "",
-    price: row.price ?? 0,
-    originalPrice: row.original_price ?? undefined,
-    rating: row.rating ?? 0,
-    reviews: row.reviews ?? 0,
-
-    // ✅ ONLY R2
-    image_path: row.image_path,
-    gallery_paths: row.gallery_paths ?? [],
-
-    description: row.description ?? "",
-    sizes: row.sizes ?? undefined,
-    colors: row.colors ?? undefined,
-    features: row.features ?? undefined,
-    isNew: row.is_new ?? isNewByDate,
+    is_new: isNewByDate,
+    created_at: row.createdAt,
   };
 };

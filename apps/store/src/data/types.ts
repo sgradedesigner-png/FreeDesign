@@ -1,47 +1,64 @@
-// Backend schema-тай тааруулсан шинэ type
+// Product Variant Type
+export type ProductVariant = {
+  id: string;
+  productId: string;
+  name: string;
+  sku: string;
+  price: number;
+  originalPrice: number | null;
+  sizes: string[];
+  imagePath: string;
+  galleryPaths: string[];
+  stock: number;
+  isAvailable: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+// Backend Product with Variants
 export type BackendProduct = {
   id: string;
   title: string;
   slug: string;
   description: string | null;
-  price: number;
-  stock: number;
-  images: string[]; // R2 URLs
-  colors: string[]; // Available colors
-  sizes: string[]; // Available sizes
+  basePrice: number;
   categoryId: string;
   category?: {
     id: string;
     name: string;
     slug: string;
   };
+  variants: ProductVariant[];
+  rating: number;
+  reviews: number;
+  features: string[];
   createdAt: string;
   updatedAt: string;
 };
 
-// Legacy type (migration-н үед ашиглана)
-export type EcommerceProduct = {
+// Frontend Product Type (for compatibility)
+export type Product = {
   id: string;
-  created_at?: string | null;
-
-  uuid: string;
   slug: string;
+  name: string; // Maps to title
+  category: string;
+  description: string | null;
+  rating: number;
+  reviews: number;
+  features: string[];
 
-  name?: string | null;
-  category?: string | null;
-  price?: number | null;
-  original_price?: number | null;
-  rating?: number | null;
-  reviews?: number | null;
+  // Variant-based properties
+  variants: ProductVariant[];
 
-  // ✅ ONLY R2
-  image_path: string;
-  gallery_paths: string[];
+  // Computed properties for backward compatibility
+  price: number; // First variant price
+  originalPrice: number | null; // First variant originalPrice
+  colors: string[]; // Variant names
+  sizes: string[]; // All sizes from all variants
+  image_path: string; // First variant imagePath
+  gallery_paths: string[]; // First variant galleryPaths
 
-  description?: string | null;
-
-  sizes?: string[] | null;
-  colors?: string[] | null;
-  features?: string[] | null;
-  is_new?: boolean | null;
+  is_new?: boolean;
+  created_at?: string;
 };

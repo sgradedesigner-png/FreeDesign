@@ -1,6 +1,7 @@
+import { useState, useEffect } from 'react';
 import { useLocation, useParams, Link } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import type { Product } from '../data/products';
+import type { Product, ProductVariant } from '../data/products';
 import { PRODUCTS_QUERY_KEY, useProductQuery } from '../data/products.queries';
 
 import ProductGallery from '../components/product/ProductGallery';
@@ -47,13 +48,33 @@ export default function ProductDetails() {
     return <div className="container mx-auto px-4 py-8 pt-28">Not Found</div>;
   }
 
-  // ✅ Gallery images
-  const images =
-    product.gallery_paths?.length
-      ? product.gallery_paths
-      : product.image_path
-      ? [product.image_path]
-      : [];
+  // State to track selected variant
+  const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(
+    product.variants?.[0] || null
+  );
+
+  // Reset selected variant when product changes
+  useEffect(() => {
+    setSelectedVariant(product.variants?.[0] || null);
+  }, [product.id]);
+
+  // Handle variant change from ProductInfo
+  const handleVariantChange = (variant: ProductVariant) => {
+    setSelectedVariant(variant);
+  };
+
+  // ✅ Gallery images from selected variant or fallback to compatibility props
+  const images = selectedVariant
+    ? selectedVariant.galleryPaths?.length
+      ? selectedVariant.galleryPaths
+      : selectedVariant.imagePath
+      ? [selectedVariant.imagePath]
+      : []
+    : product.gallery_paths?.length
+    ? product.gallery_paths
+    : product.image_path
+    ? [product.image_path]
+    : [];
 
   return (
     <div className="container mx-auto px-4 py-8 pt-28 animate-in fade-in duration-500 pb-20">
@@ -70,7 +91,7 @@ export default function ProductDetails() {
       {/* Top */}
       <div className="grid lg:grid-cols-2 gap-12 xl:gap-20">
         <ProductGallery images={images} name={product.name} />
-        <ProductInfo product={product} />
+        <ProductInfo product={product} onVariantChange={handleVariantChange} />
       </div>
 
       <ProductTabs />

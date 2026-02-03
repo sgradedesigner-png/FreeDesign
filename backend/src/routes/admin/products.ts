@@ -18,7 +18,7 @@ const variantSchema = z.object({
   price: priceSchema,
   originalPrice: priceSchema.optional().nullable(),
   sizes: z.array(z.string()).optional().default([]),
-  imagePath: z.string().url(),
+  imagePath: z.string().url().or(z.literal('')).optional().default(''),
   galleryPaths: z.array(z.string().url()).optional().default([]),
   stock: z.number().int().min(0).optional().default(0),
   isAvailable: z.boolean().optional().default(true),
