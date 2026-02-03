@@ -15,6 +15,8 @@ export async function fetchProducts(): Promise<Product[]> {
       price,
       stock,
       images,
+      colors,
+      sizes,
       categoryId,
       category:categories (
         id,
@@ -44,6 +46,8 @@ export async function fetchProductBySlug(slug: string): Promise<Product | null> 
       price,
       stock,
       images,
+      colors,
+      sizes,
       categoryId,
       category:categories (
         id,

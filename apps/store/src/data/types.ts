@@ -7,6 +7,8 @@ export type BackendProduct = {
   price: number;
   stock: number;
   images: string[]; // R2 URLs
+  colors: string[]; // Available colors
+  sizes: string[]; // Available sizes
   categoryId: string;
   category?: {
     id: string;

@@ -51,6 +51,8 @@ model Product {
   price       Decimal
   stock       Int      @default(0)
   images      String[] // Array of R2 URLs
+  colors      String[] @default([]) // Available colors (hex codes or names)
+  sizes       String[] @default([]) // Available sizes (S, M, L, XL, etc.)
   categoryId  String
   category    Category @relation(fields: [categoryId], references: [id])
   createdAt   DateTime @default(now())

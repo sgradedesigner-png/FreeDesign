@@ -2,7 +2,7 @@ import { X, Trash2, Plus, Minus, ShoppingBag, ArrowRight } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useMemo } from 'react';
-import { Sheet, SheetContent } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { r2Url } from "@/lib/r2"; // 1. Added this import
 
 const PLACEHOLDER_IMG = 'https://placehold.co/800x1000/png?text=No+Image'; // 2. Added placeholder
@@ -56,13 +56,18 @@ export default function CartSidebar() {
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-black/5 dark:border-white/5">
-          <h2 className="text-xl font-heading font-bold text-foreground flex items-center gap-2">
+          <SheetTitle className="text-xl font-heading font-bold text-foreground flex items-center gap-2">
             <ShoppingBag className="text-primary" size={22} />
             {language === 'mn' ? 'Таны Сагс' : 'Your Cart'}
             <span className="text-sm font-medium text-muted-foreground bg-black/5 dark:bg-white/10 px-2 py-0.5 rounded-full">
               {cart.length}
             </span>
-          </h2>
+          </SheetTitle>
+          <SheetDescription className="sr-only">
+            {language === 'mn'
+              ? `Таны сагсанд ${cart.length} бараа байна. Дэлгэрэнгүйг доор үзнэ үү.`
+              : `Your shopping cart contains ${cart.length} items. View details below.`}
+          </SheetDescription>
           <button
             onClick={() => setIsCartOpen(false)}
             className="group p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-all active:scale-90"

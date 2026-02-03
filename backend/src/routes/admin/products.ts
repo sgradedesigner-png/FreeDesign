@@ -24,6 +24,8 @@ app.addHook('preHandler', adminGuard);
       price: priceSchema,
       stock: z.number().int().min(0).optional().default(0),
       images: z.array(z.string().url()).optional().default([]),
+      colors: z.array(z.string()).optional().default([]),
+      sizes: z.array(z.string()).optional().default([]),
       categoryId: z.string().uuid(),
     });
 
@@ -45,6 +47,8 @@ app.addHook('preHandler', adminGuard);
         price: typeof body.price === 'string' ? body.price : body.price, // Prisma Decimal accepts string/number
         stock: body.stock,
         images: body.images,
+        colors: body.colors,
+        sizes: body.sizes,
         categoryId: body.categoryId,
       },
     });
@@ -118,6 +122,8 @@ app.addHook('preHandler', adminGuard);
       price: priceSchema.optional(),
       stock: z.number().int().min(0).optional(),
       images: z.array(z.string().url()).optional(),
+      colors: z.array(z.string()).optional(),
+      sizes: z.array(z.string()).optional(),
       categoryId: z.string().uuid().optional(),
     });
 

@@ -46,6 +46,10 @@ export default function ProductFormPage() {
   const [images, setImages] = useState<string[]>([]);
   const [pendingImageFiles, setPendingImageFiles] = useState<File[]>([]); // Files waiting to be uploaded in CREATE mode
   const [previewUrls, setPreviewUrls] = useState<string[]>([]); // Preview URLs for pending files
+  const [colors, setColors] = useState<string[]>([]); // Available colors
+  const [sizes, setSizes] = useState<string[]>([]); // Available sizes
+  const [colorInput, setColorInput] = useState(''); // Temp input for adding color
+  const [sizeInput, setSizeInput] = useState(''); // Temp input for adding size
 
   const {
     register,
@@ -152,6 +156,8 @@ export default function ProductFormPage() {
         setValue('stock', String(data.stock));
         setValue('categoryId', data.categoryId);
         setImages(data.images || []);
+        setColors(data.colors || []);
+        setSizes(data.sizes || []);
       } catch (error) {
         console.error('Failed to fetch product:', error);
         navigate('/products');
@@ -187,6 +193,8 @@ export default function ProductFormPage() {
         stock: parseInt(data.stock, 10),
         categoryId: data.categoryId,
         images: [], // Will be set after creation
+        colors: colors,
+        sizes: sizes,
       };
 
       if (isEditMode) {
@@ -330,6 +338,116 @@ export default function ProductFormPage() {
               rows={4}
             />
             {errors.description && <p className="text-sm text-destructive">{errors.description.message}</p>}
+          </div>
+
+          {/* Colors */}
+          <div className="space-y-2">
+            <Label htmlFor="colors">Colors</Label>
+            <div className="flex gap-2">
+              <Input
+                id="colors"
+                value={colorInput}
+                onChange={(e) => setColorInput(e.target.value)}
+                placeholder="Enter color (e.g., #FF5733 or Red)"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (colorInput.trim() && !colors.includes(colorInput.trim())) {
+                      setColors([...colors, colorInput.trim()]);
+                      setColorInput('');
+                    }
+                  }
+                }}
+              />
+              <Button
+                type="button"
+                onClick={() => {
+                  if (colorInput.trim() && !colors.includes(colorInput.trim())) {
+                    setColors([...colors, colorInput.trim()]);
+                    setColorInput('');
+                  }
+                }}
+              >
+                Add
+              </Button>
+            </div>
+            <div className="flex flex-wrap gap-2 mt-2">
+              {colors.map((color, index) => (
+                <div
+                  key={index}
+                  className="flex items-center gap-2 px-3 py-1 bg-muted rounded-md border"
+                >
+                  <div
+                    className="w-4 h-4 rounded-full border"
+                    style={{ backgroundColor: color.startsWith('#') ? color : color }}
+                  />
+                  <span className="text-sm">{color}</span>
+                  <button
+                    type="button"
+                    onClick={() => setColors(colors.filter((_, i) => i !== index))}
+                    className="text-destructive hover:text-destructive/80"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Enter color names or hex codes (e.g., #FF5733, Red, Blue)
+            </p>
+          </div>
+
+          {/* Sizes */}
+          <div className="space-y-2">
+            <Label htmlFor="sizes">Sizes</Label>
+            <div className="flex gap-2">
+              <Input
+                id="sizes"
+                value={sizeInput}
+                onChange={(e) => setSizeInput(e.target.value)}
+                placeholder="Enter size (e.g., S, M, L, XL)"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (sizeInput.trim() && !sizes.includes(sizeInput.trim())) {
+                      setSizes([...sizes, sizeInput.trim()]);
+                      setSizeInput('');
+                    }
+                  }
+                }}
+              />
+              <Button
+                type="button"
+                onClick={() => {
+                  if (sizeInput.trim() && !sizes.includes(sizeInput.trim())) {
+                    setSizes([...sizes, sizeInput.trim()]);
+                    setSizeInput('');
+                  }
+                }}
+              >
+                Add
+              </Button>
+            </div>
+            <div className="flex flex-wrap gap-2 mt-2">
+              {sizes.map((size, index) => (
+                <div
+                  key={index}
+                  className="flex items-center gap-2 px-3 py-1 bg-muted rounded-md border"
+                >
+                  <span className="text-sm font-medium">{size}</span>
+                  <button
+                    type="button"
+                    onClick={() => setSizes(sizes.filter((_, i) => i !== index))}
+                    className="text-destructive hover:text-destructive/80"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Enter sizes like S, M, L, XL, or 32, 34, 36 for clothing
+            </p>
           </div>
 
           {/* Price & Stock */}

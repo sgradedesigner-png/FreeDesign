@@ -59,8 +59,8 @@ export const mapProductFromBackend = (row: BackendProduct): Product => {
     gallery_paths: galleryImages,
 
     description: row.description || "",
-    sizes: undefined, // Backend schema-д байхгүй (цаашид нэмнэ)
-    colors: undefined,
+    sizes: row.sizes && row.sizes.length > 0 ? row.sizes : undefined,
+    colors: row.colors && row.colors.length > 0 ? row.colors : undefined,
     features: undefined,
     isNew: isNewByDate,
   };
