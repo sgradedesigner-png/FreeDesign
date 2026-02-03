@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Select,
   SelectContent,
@@ -16,7 +17,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Loader2, Upload, X, Plus, Trash2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { ArrowLeft, Loader2, Upload, X, Plus, Trash2, AlertCircle, CheckCircle2, Image as ImageIcon, Video } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 type Category = {
   id: string;
@@ -25,7 +29,7 @@ type Category = {
 };
 
 type ProductVariant = {
-  id?: string; // Only for edit mode
+  id?: string;
   name: string;
   sku: string;
   price: string;
@@ -36,7 +40,6 @@ type ProductVariant = {
   stock: string;
   isAvailable: boolean;
   sortOrder: number;
-  // For file uploads
   pendingImage?: File;
   previewUrl?: string;
   pendingGalleryImages?: File[];
@@ -99,130 +102,226 @@ export default function ProductFormPage() {
     },
   });
 
-  const categoryId = watch('categoryId');
-  const titleValue = watch('title');
+  const watchedValues = watch();
 
-  // Helper to upload a single file to R2
-  const uploadFileToR2 = async (file: File, productId: string): Promise<string> => {
-    console.log('[ProductForm] Uploading file:', file.name, 'for product:', productId);
-
-    // Step 1: Get presigned URL
-    const presignedResponse = await api.post('/admin/upload/presigned-url', {
-      filename: file.name,
-      contentType: file.type,
-      productId: productId,
-    });
-
-    const { uploadUrl, publicUrl } = presignedResponse.data;
-
-    // Step 2: Upload to R2
-    const uploadResponse = await fetch(uploadUrl, {
-      method: 'PUT',
-      body: file,
-      headers: {
-        'Content-Type': file.type,
-      },
-    });
-
-    if (!uploadResponse.ok) {
-      throw new Error(`R2 upload failed: ${uploadResponse.status}`);
+  useEffect(() => {
+    fetchCategories();
+    if (isEditMode && id) {
+      fetchProduct(id);
     }
+  }, [id]);
 
-    console.log('[ProductForm] File uploaded successfully:', publicUrl);
-    return publicUrl;
+  const fetchCategories = async () => {
+    try {
+      const { data } = await api.get<Category[]>('/admin/categories');
+      setCategories(data);
+    } catch (error) {
+      console.error('Failed to fetch categories:', error);
+    }
   };
 
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const { data } = await api.get<Category[]>('/admin/categories');
-        setCategories(data);
-      } catch (error) {
-        console.error('Failed to fetch categories:', error);
-      }
-    };
+  const fetchProduct = async (productId: string) => {
+    try {
+      setLoading(true);
+      const { data } = await api.get(`/admin/products/${productId}`);
 
-    fetchCategories();
-  }, []);
+      setValue('title', data.title);
+      setValue('slug', data.slug);
+      setValue('description', data.description || '');
+      setValue('basePrice', data.basePrice.toString());
+      setValue('categoryId', data.categoryId);
+      setValue('rating', data.rating.toString());
+      setValue('reviews', data.reviews.toString());
 
-  useEffect(() => {
-    if (!isEditMode) return;
+      setFeatures(data.features || []);
 
-    const fetchProduct = async () => {
-      try {
-        setLoading(true);
-        const { data } = await api.get(`/admin/products/${id}`);
-        setValue('title', data.title);
-        setValue('slug', data.slug);
-        setValue('description', data.description || '');
-        setValue('basePrice', String(data.basePrice || 0));
-        setValue('categoryId', data.categoryId);
-        setValue('rating', String(data.rating || 0));
-        setValue('reviews', String(data.reviews || 0));
-        setFeatures(data.features || []);
-
-        // Load variants
-        if (data.variants && data.variants.length > 0) {
-          setVariants(data.variants.map((v: any) => ({
+      if (data.variants && data.variants.length > 0) {
+        setVariants(
+          data.variants.map((v: any) => ({
             id: v.id,
             name: v.name,
             sku: v.sku,
-            price: String(v.price),
-            originalPrice: v.originalPrice ? String(v.originalPrice) : '',
-            sizes: v.sizes || [],
-            imagePath: v.imagePath || '',
-            galleryPaths: v.galleryPaths || [],
-            stock: String(v.stock || 0),
-            isAvailable: v.isAvailable !== false,
-            sortOrder: v.sortOrder || 0,
-          })));
-        }
-      } catch (error) {
-        console.error('Failed to fetch product:', error);
-        navigate('/products');
-      } finally {
-        setLoading(false);
+            price: v.price.toString(),
+            originalPrice: v.originalPrice?.toString(),
+            sizes: v.sizes,
+            imagePath: v.imagePath,
+            galleryPaths: v.galleryPaths,
+            stock: v.stock.toString(),
+            isAvailable: v.isAvailable,
+            sortOrder: v.sortOrder,
+          }))
+        );
       }
-    };
+    } catch (error) {
+      console.error('Failed to fetch product:', error);
+      alert('Failed to load product');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    fetchProduct();
-  }, [id, isEditMode, navigate, setValue]);
-
-  // Auto-generate slug from title (only in create mode)
-  useEffect(() => {
-    if (titleValue && !isEditMode) {
-      const slug = titleValue
+  const generateSlug = () => {
+    if (watchedValues.title) {
+      const slug = watchedValues.title
         .toLowerCase()
         .replace(/[^a-z0-9\s-]/g, '')
         .replace(/\s+/g, '-')
         .replace(/-+/g, '-');
       setValue('slug', slug);
     }
-  }, [titleValue, isEditMode, setValue]);
-
-  const addVariant = () => {
-    setVariants([
-      ...variants,
-      {
-        name: '',
-        sku: '',
-        price: '0',
-        sizes: [],
-        imagePath: '',
-        galleryPaths: [],
-        stock: '0',
-        isAvailable: true,
-        sortOrder: variants.length,
-      },
-    ]);
   };
 
-  const removeVariant = (index: number) => {
+  const uploadFileToR2 = async (file: File, productId: string): Promise<string | null> => {
+    try {
+      const presignedRes = await api.post('/admin/upload/presigned-url', {
+        filename: file.name,
+        contentType: file.type,
+        productId,
+      });
+
+      const { uploadUrl, publicUrl } = presignedRes.data;
+
+      await fetch(uploadUrl, {
+        method: 'PUT',
+        body: file,
+        headers: { 'Content-Type': file.type },
+      });
+
+      return publicUrl;
+    } catch (error) {
+      console.error('Failed to upload file:', error);
+      return null;
+    }
+  };
+
+  const onSubmit = async (data: ProductFormData) => {
+    try {
+      setSubmitting(true);
+
+      if (variants.length === 0) {
+        alert('At least one variant is required');
+        return;
+      }
+
+      for (const variant of variants) {
+        if (!variant.name || !variant.sku || !variant.price) {
+          alert('All variants must have name, SKU, and price');
+          return;
+        }
+      }
+
+      let productId = id;
+
+      const payload: any = {
+        title: data.title,
+        slug: data.slug,
+        description: data.description || null,
+        basePrice: parseFloat(data.basePrice || '0'),
+        categoryId: data.categoryId,
+        rating: parseFloat(data.rating || '0'),
+        reviews: parseInt(data.reviews || '0'),
+        features,
+        variants: variants.map((v, idx) => ({
+          ...(v.id && { id: v.id }),
+          name: v.name,
+          sku: v.sku,
+          price: parseFloat(v.price),
+          originalPrice: v.originalPrice ? parseFloat(v.originalPrice) : null,
+          sizes: v.sizes,
+          imagePath: v.imagePath,
+          galleryPaths: v.galleryPaths,
+          stock: parseInt(v.stock),
+          isAvailable: v.isAvailable,
+          sortOrder: idx,
+        })),
+      };
+
+      if (isEditMode && id) {
+        await api.put(`/admin/products/${id}`, payload);
+        alert('Product updated successfully!');
+      } else {
+        const createRes = await api.post('/admin/products', payload);
+        productId = createRes.data.id;
+        alert('Product created successfully!');
+      }
+
+      if (productId) {
+        for (let i = 0; i < variants.length; i++) {
+          const variant = variants[i];
+
+          if (variant.pendingImage) {
+            const imageUrl = await uploadFileToR2(variant.pendingImage, productId);
+            if (imageUrl) {
+              variant.imagePath = imageUrl;
+            }
+          }
+
+          if (variant.pendingGalleryImages && variant.pendingGalleryImages.length > 0) {
+            const galleryUrls: string[] = [];
+            for (const galleryFile of variant.pendingGalleryImages) {
+              const url = await uploadFileToR2(galleryFile, productId);
+              if (url) galleryUrls.push(url);
+            }
+            variant.galleryPaths = [...variant.galleryPaths, ...galleryUrls];
+          }
+        }
+
+        if (variants.some(v => v.pendingImage || (v.pendingGalleryImages && v.pendingGalleryImages.length > 0))) {
+          const updatePayload = {
+            ...payload,
+            variants: variants.map((v, idx) => ({
+              ...(v.id && { id: v.id }),
+              name: v.name,
+              sku: v.sku,
+              price: parseFloat(v.price),
+              originalPrice: v.originalPrice ? parseFloat(v.originalPrice) : null,
+              sizes: v.sizes,
+              imagePath: v.imagePath,
+              galleryPaths: v.galleryPaths,
+              stock: parseInt(v.stock),
+              isAvailable: v.isAvailable,
+              sortOrder: idx,
+            })),
+          };
+          await api.put(`/admin/products/${productId}`, updatePayload);
+        }
+      }
+
+      navigate('/products');
+    } catch (error: any) {
+      console.error('Failed to save product:', error);
+      alert(error?.response?.data?.message || 'Failed to save product');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const addVariant = () => {
+    const newVariant: ProductVariant = {
+      name: '',
+      sku: '',
+      price: '0',
+      sizes: [],
+      imagePath: '',
+      galleryPaths: [],
+      stock: '0',
+      isAvailable: true,
+      sortOrder: variants.length,
+    };
+    setVariants([...variants, newVariant]);
+    setActiveVariantTab(`variant-${variants.length}`);
+  };
+
+  const deleteVariant = (index: number) => {
     if (variants.length === 1) {
       alert('At least one variant is required');
       return;
     }
-    setVariants(variants.filter((_, i) => i !== index));
+    const updated = variants.filter((_, i) => i !== index);
+    setVariants(updated);
+    if (activeVariantTab === `variant-${index}`) {
+      setActiveVariantTab(`variant-${Math.max(0, index - 1)}`);
+    }
   };
 
   const updateVariant = (index: number, field: keyof ProductVariant, value: any) => {
@@ -243,554 +342,671 @@ export default function ProductFormPage() {
     const newFiles = Array.from(files);
     const existingFiles = updated[index].pendingGalleryImages || [];
     updated[index].pendingGalleryImages = [...existingFiles, ...newFiles];
-
     const newPreviewUrls = newFiles.map(f => URL.createObjectURL(f));
     const existingPreviewUrls = updated[index].galleryPreviewUrls || [];
     updated[index].galleryPreviewUrls = [...existingPreviewUrls, ...newPreviewUrls];
-
     setVariants(updated);
   };
 
-  const removeVariantGalleryImage = (variantIndex: number, imageIndex: number) => {
+  const removeGalleryImage = (variantIndex: number, galleryIndex: number) => {
     const updated = [...variants];
-    if (updated[variantIndex].pendingGalleryImages) {
-      updated[variantIndex].pendingGalleryImages = updated[variantIndex].pendingGalleryImages!.filter((_, i) => i !== imageIndex);
-    }
-    if (updated[variantIndex].galleryPreviewUrls) {
-      updated[variantIndex].galleryPreviewUrls = updated[variantIndex].galleryPreviewUrls!.filter((_, i) => i !== imageIndex);
-    }
-    if (updated[variantIndex].galleryPaths) {
-      updated[variantIndex].galleryPaths = updated[variantIndex].galleryPaths.filter((_, i) => i !== imageIndex);
-    }
+    updated[variantIndex].galleryPaths.splice(galleryIndex, 1);
     setVariants(updated);
   };
 
-  const onSubmit = async (data: ProductFormData) => {
-    try {
-      setSubmitting(true);
+  const removePendingGalleryImage = (variantIndex: number, pendingIndex: number) => {
+    const updated = [...variants];
+    updated[variantIndex].pendingGalleryImages?.splice(pendingIndex, 1);
+    updated[variantIndex].galleryPreviewUrls?.splice(pendingIndex, 1);
+    setVariants(updated);
+  };
 
-      // Validate variants
-      if (variants.length === 0) {
-        alert('At least one variant is required');
-        return;
-      }
-
-      for (let i = 0; i < variants.length; i++) {
-        const v = variants[i];
-        if (!v.name) {
-          alert(`Variant ${i + 1}: Name is required`);
-          return;
-        }
-        if (!v.sku) {
-          alert(`Variant ${i + 1}: SKU is required`);
-          return;
-        }
-        if (!isEditMode && !v.pendingImage) {
-          alert(`Variant ${i + 1}: Image is required`);
-          return;
-        }
-      }
-
-      const payload = {
-        title: data.title,
-        slug: data.slug,
-        description: data.description || null,
-        basePrice: parseFloat(data.basePrice || '0'),
-        categoryId: data.categoryId,
-        rating: parseFloat(data.rating || '0'),
-        reviews: parseInt(data.reviews || '0', 10),
-        features: features,
-        variants: [] as any[],
-      };
-
-      if (isEditMode) {
-        // EDIT MODE: Upload new images and prepare variant data
-        const variantData = [];
-
-        for (const variant of variants) {
-          let imagePath = variant.imagePath;
-
-          // If there's a pending image, upload it
-          if (variant.pendingImage) {
-            imagePath = await uploadFileToR2(variant.pendingImage, id!);
-          }
-
-          // Upload new gallery images and merge with existing
-          let galleryPaths = [...(variant.galleryPaths || [])];
-          if (variant.pendingGalleryImages && variant.pendingGalleryImages.length > 0) {
-            console.log(`[ProductForm] Uploading ${variant.pendingGalleryImages.length} new gallery images for variant ${variant.name}...`);
-            for (const galleryFile of variant.pendingGalleryImages) {
-              const galleryUrl = await uploadFileToR2(galleryFile, id!);
-              if (galleryUrl) {
-                galleryPaths.push(galleryUrl);
-              }
-            }
-          }
-
-          variantData.push({
-            name: variant.name,
-            sku: variant.sku,
-            price: parseFloat(variant.price),
-            originalPrice: variant.originalPrice ? parseFloat(variant.originalPrice) : null,
-            sizes: variant.sizes,
-            imagePath: imagePath,
-            galleryPaths: galleryPaths,
-            stock: parseInt(variant.stock, 10),
-            isAvailable: variant.isAvailable,
-            sortOrder: variant.sortOrder,
-          });
-        }
-
-        await api.put(`/admin/products/${id}`, { ...payload, variants: variantData });
-        navigate('/products');
-      } else {
-        // CREATE MODE
-        console.log('[ProductForm] Step 1: Creating product...');
-
-        // Create product without variants first to get UUID
-        const response = await api.post('/admin/products', {
-          ...payload,
-          variants: variants.map((v, i) => ({
-            name: v.name,
-            sku: v.sku,
-            price: parseFloat(v.price),
-            originalPrice: v.originalPrice ? parseFloat(v.originalPrice) : null,
-            sizes: v.sizes,
-            imagePath: '', // Temporary empty
-            galleryPaths: [],
-            stock: parseInt(v.stock, 10),
-            isAvailable: v.isAvailable,
-            sortOrder: i,
-          })),
-        });
-
-        const newProductId = response.data.id;
-        console.log('[ProductForm] ✅ Product created with UUID:', newProductId);
-
-        // Step 2: Upload variant images
-        console.log('[ProductForm] Step 2: Uploading variant images...');
-        const variantData = [];
-
-        for (const variant of variants) {
-          let imagePath = '';
-          if (variant.pendingImage) {
-            imagePath = await uploadFileToR2(variant.pendingImage, newProductId);
-          }
-
-          // Upload gallery images
-          const galleryPaths: string[] = [];
-          if (variant.pendingGalleryImages && variant.pendingGalleryImages.length > 0) {
-            console.log(`[ProductForm] Uploading ${variant.pendingGalleryImages.length} gallery images for variant ${variant.name}...`);
-            for (const galleryFile of variant.pendingGalleryImages) {
-              const galleryUrl = await uploadFileToR2(galleryFile, newProductId);
-              if (galleryUrl) {
-                galleryPaths.push(galleryUrl);
-              }
-            }
-          }
-
-          variantData.push({
-            name: variant.name,
-            sku: variant.sku,
-            price: parseFloat(variant.price),
-            originalPrice: variant.originalPrice ? parseFloat(variant.originalPrice) : null,
-            sizes: variant.sizes,
-            imagePath: imagePath,
-            galleryPaths: galleryPaths,
-            stock: parseInt(variant.stock, 10),
-            isAvailable: variant.isAvailable,
-            sortOrder: variant.sortOrder,
-          });
-        }
-
-        // Step 3: Update product with image URLs
-        console.log('[ProductForm] Step 3: Updating product with variant images...');
-        await api.put(`/admin/products/${newProductId}`, {
-          ...payload,
-          variants: variantData,
-        });
-
-        console.log('[ProductForm] ✅ Product creation complete!');
-        navigate('/products');
-      }
-    } catch (error: any) {
-      console.error('Failed to save product:', error);
-      alert(error?.response?.data?.message || 'Failed to save product');
-    } finally {
-      setSubmitting(false);
+  const addFeature = () => {
+    if (featureInput.trim()) {
+      setFeatures([...features, featureInput.trim()]);
+      setFeatureInput('');
     }
   };
 
-  const generateSlug = () => {
-    const title = watch('title');
-    if (title) {
-      const slug = title
-        .toLowerCase()
-        .replace(/[^a-z0-9\s-]/g, '')
-        .replace(/\s+/g, '-')
-        .replace(/-+/g, '-');
-      setValue('slug', slug);
+  const removeFeature = (index: number) => {
+    setFeatures(features.filter((_, i) => i !== index));
+  };
+
+  const addSize = (variantIndex: number, size: string) => {
+    if (size.trim()) {
+      const updated = [...variants];
+      if (!updated[variantIndex].sizes.includes(size.trim())) {
+        updated[variantIndex].sizes.push(size.trim());
+        setVariants(updated);
+      }
     }
   };
+
+  const removeSize = (variantIndex: number, sizeIndex: number) => {
+    const updated = [...variants];
+    updated[variantIndex].sizes.splice(sizeIndex, 1);
+    setVariants(updated);
+  };
+
+  // Validation summary
+  const getValidationErrors = () => {
+    const errorsList: string[] = [];
+    if (errors.title) errorsList.push('Title is required');
+    if (errors.slug) errorsList.push('Slug is required');
+    if (errors.categoryId) errorsList.push('Category is required');
+    if (variants.length === 0) errorsList.push('At least one variant is required');
+    variants.forEach((v, i) => {
+      if (!v.name) errorsList.push(`Variant ${i + 1}: Name is required`);
+      if (!v.sku) errorsList.push(`Variant ${i + 1}: SKU is required`);
+      if (!v.price || parseFloat(v.price) <= 0) errorsList.push(`Variant ${i + 1}: Valid price is required`);
+    });
+    return errorsList;
+  };
+
+  const validationErrors = getValidationErrors();
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <form onSubmit={handleSubmit(onSubmit)} className="pb-24">
       {/* Header */}
-      <div>
-        <Button variant="ghost" size="sm" onClick={() => navigate('/products')} className="mb-4">
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Products
-        </Button>
-        <h1 className="text-3xl font-bold">{isEditMode ? 'Edit Product' : 'Create Product'}</h1>
-        <p className="text-muted-foreground">
-          {isEditMode ? 'Update product information' : 'Add a new product to your catalog'}
-        </p>
+      <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-sm border-b mb-6 px-6 py-4">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate('/products')}
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold">
+                {isEditMode ? 'Edit Product' : 'Create Product'}
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                {isEditMode ? 'Update product details and variants' : 'Add a new product to your catalog'}
+              </p>
+            </div>
+          </div>
+          <Badge variant={validationErrors.length === 0 ? 'default' : 'destructive'}>
+            {validationErrors.length === 0 ? 'Ready' : `${validationErrors.length} issues`}
+          </Badge>
+        </div>
       </div>
 
-      {/* Form */}
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        {/* Basic Information */}
-        <div className="rounded-lg border bg-card p-6 space-y-4">
-          <h2 className="text-xl font-semibold">Basic Information</h2>
+      {/* Two-Column Layout */}
+      <div className="max-w-7xl mx-auto px-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left Column - Form */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Basic Info Card */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Basic Information</CardTitle>
+                <CardDescription>Product name, description, and categorization</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="col-span-2 space-y-2">
+                    <Label htmlFor="title">Product Title *</Label>
+                    <Input
+                      id="title"
+                      {...register('title')}
+                      placeholder="Nike Air Max 270"
+                      className={errors.title ? 'border-destructive' : ''}
+                    />
+                    {errors.title && (
+                      <p className="text-sm text-destructive">{errors.title.message}</p>
+                    )}
+                  </div>
 
-          {/* Category */}
-          <div className="space-y-2">
-            <Label htmlFor="category">Category *</Label>
-            <Select value={categoryId} onValueChange={(value) => setValue('categoryId', value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select a category" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map((category) => (
-                  <SelectItem key={category.id} value={category.id}>
-                    {category.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {errors.categoryId && <p className="text-sm text-destructive">{errors.categoryId.message}</p>}
-          </div>
+                  <div className="col-span-2 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="slug">URL Slug *</Label>
+                      <Button
+                        type="button"
+                        variant="link"
+                        size="sm"
+                        onClick={generateSlug}
+                        className="h-auto p-0"
+                      >
+                        Generate from title
+                      </Button>
+                    </div>
+                    <Input
+                      id="slug"
+                      {...register('slug')}
+                      placeholder="nike-air-max-270"
+                      className={errors.slug ? 'border-destructive' : ''}
+                    />
+                    {errors.slug && (
+                      <p className="text-sm text-destructive">{errors.slug.message}</p>
+                    )}
+                  </div>
 
-          {/* Title */}
-          <div className="space-y-2">
-            <Label htmlFor="title">Title *</Label>
-            <Input id="title" {...register('title')} placeholder="Enter product title" />
-            {errors.title && <p className="text-sm text-destructive">{errors.title.message}</p>}
-          </div>
+                  <div className="col-span-2 space-y-2">
+                    <Label htmlFor="description">Description</Label>
+                    <Textarea
+                      id="description"
+                      {...register('description')}
+                      placeholder="Detailed product description..."
+                      rows={4}
+                    />
+                  </div>
 
-          {/* Slug */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="slug">Slug *</Label>
-              <Button type="button" variant="link" size="sm" onClick={generateSlug}>
-                Generate from title
-              </Button>
-            </div>
-            <Input id="slug" {...register('slug')} placeholder="product-slug" />
-            {errors.slug && <p className="text-sm text-destructive">{errors.slug.message}</p>}
-          </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="categoryId">Category *</Label>
+                    <Select
+                      value={watchedValues.categoryId}
+                      onValueChange={(value) => setValue('categoryId', value)}
+                    >
+                      <SelectTrigger className={errors.categoryId ? 'border-destructive' : ''}>
+                        <SelectValue placeholder="Select category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categories.map((cat) => (
+                          <SelectItem key={cat.id} value={cat.id}>
+                            {cat.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {errors.categoryId && (
+                      <p className="text-sm text-destructive">{errors.categoryId.message}</p>
+                    )}
+                  </div>
 
-          {/* Description */}
-          <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              {...register('description')}
-              placeholder="Enter product description"
-              rows={4}
-            />
-          </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="basePrice">Base Price</Label>
+                    <Input
+                      id="basePrice"
+                      type="number"
+                      step="0.01"
+                      {...register('basePrice')}
+                      placeholder="0.00"
+                    />
+                  </div>
 
-          {/* Base Price */}
-          <div className="space-y-2">
-            <Label htmlFor="basePrice">Base Price</Label>
-            <Input
-              id="basePrice"
-              {...register('basePrice')}
-              placeholder="0.00"
-              type="text"
-            />
-            <p className="text-xs text-muted-foreground">Base price (can be overridden by variants)</p>
-          </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="rating">Rating (0-5)</Label>
+                    <Input
+                      id="rating"
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      max="5"
+                      {...register('rating')}
+                      placeholder="0.0"
+                    />
+                  </div>
 
-          {/* Features */}
-          <div className="space-y-2">
-            <Label>Product Features</Label>
-            <div className="flex gap-2">
-              <Input
-                value={featureInput}
-                onChange={(e) => setFeatureInput(e.target.value)}
-                placeholder="Enter a feature"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    if (featureInput.trim()) {
-                      setFeatures([...features, featureInput.trim()]);
-                      setFeatureInput('');
-                    }
-                  }
-                }}
-              />
-              <Button
-                type="button"
-                onClick={() => {
-                  if (featureInput.trim()) {
-                    setFeatures([...features, featureInput.trim()]);
-                    setFeatureInput('');
-                  }
-                }}
-              >
-                Add
-              </Button>
-            </div>
-            <div className="space-y-1 mt-2">
-              {features.map((feature, index) => (
-                <div key={index} className="flex items-center gap-2 p-2 bg-muted rounded">
-                  <span className="flex-1 text-sm">{feature}</span>
-                  <button
-                    type="button"
-                    onClick={() => setFeatures(features.filter((_, i) => i !== index))}
-                    className="text-destructive hover:text-destructive/80"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
+                  <div className="space-y-2">
+                    <Label htmlFor="reviews">Reviews Count</Label>
+                    <Input
+                      id="reviews"
+                      type="number"
+                      {...register('reviews')}
+                      placeholder="0"
+                    />
+                  </div>
                 </div>
-              ))}
-            </div>
+
+                <Separator />
+
+                <div className="space-y-2">
+                  <Label>Features & Highlights</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      value={featureInput}
+                      onChange={(e) => setFeatureInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          addFeature();
+                        }
+                      }}
+                      placeholder="Add a feature..."
+                    />
+                    <Button type="button" onClick={addFeature} variant="secondary">
+                      <Plus className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  {features.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {features.map((feature, index) => (
+                        <Badge key={index} variant="secondary" className="gap-1">
+                          {feature}
+                          <button
+                            type="button"
+                            onClick={() => removeFeature(index)}
+                            className="ml-1 hover:text-destructive"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Variants Card */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Product Variants</CardTitle>
+                    <CardDescription>Colors, sizes, and pricing options</CardDescription>
+                  </div>
+                  <Button type="button" onClick={addVariant} variant="outline" size="sm">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Variant
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <Tabs value={activeVariantTab} onValueChange={setActiveVariantTab}>
+                  <TabsList className="w-full flex-wrap h-auto">
+                    {variants.map((variant, index) => (
+                      <TabsTrigger key={index} value={`variant-${index}`} className="flex-1 min-w-[120px]">
+                        {variant.name || `Variant ${index + 1}`}
+                      </TabsTrigger>
+                    ))}
+                  </TabsList>
+
+                  {variants.map((variant, index) => (
+                    <TabsContent key={index} value={`variant-${index}`} className="space-y-4 mt-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="col-span-2 space-y-2">
+                          <Label>Variant Name *</Label>
+                          <Input
+                            value={variant.name}
+                            onChange={(e) => updateVariant(index, 'name', e.target.value)}
+                            placeholder="e.g., Black/White, Ocean Blue"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label>SKU *</Label>
+                          <Input
+                            value={variant.sku}
+                            onChange={(e) => updateVariant(index, 'sku', e.target.value)}
+                            placeholder="PROD-001"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label>Stock Quantity</Label>
+                          <Input
+                            type="number"
+                            value={variant.stock}
+                            onChange={(e) => updateVariant(index, 'stock', e.target.value)}
+                            placeholder="0"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label>Price *</Label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={variant.price}
+                            onChange={(e) => updateVariant(index, 'price', e.target.value)}
+                            placeholder="0.00"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label>Original Price</Label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={variant.originalPrice || ''}
+                            onChange={(e) => updateVariant(index, 'originalPrice', e.target.value)}
+                            placeholder="0.00"
+                          />
+                        </div>
+
+                        <div className="col-span-2 space-y-2">
+                          <Label>Available Sizes</Label>
+                          <div className="flex gap-2">
+                            <Input
+                              placeholder="Enter size (e.g., 42, M, XL)"
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  addSize(index, (e.target as HTMLInputElement).value);
+                                  (e.target as HTMLInputElement).value = '';
+                                }
+                              }}
+                            />
+                          </div>
+                          {variant.sizes.length > 0 && (
+                            <div className="flex flex-wrap gap-2">
+                              {variant.sizes.map((size, sizeIndex) => (
+                                <Badge key={sizeIndex} variant="outline" className="gap-1">
+                                  {size}
+                                  <button
+                                    type="button"
+                                    onClick={() => removeSize(index, sizeIndex)}
+                                    className="ml-1 hover:text-destructive"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="col-span-2 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={variant.isAvailable}
+                              onChange={(e) => updateVariant(index, 'isAvailable', e.target.checked)}
+                              className="rounded"
+                            />
+                            <Label className="cursor-pointer">Available for sale</Label>
+                          </div>
+                        </div>
+                      </div>
+
+                      <Separator />
+
+                      {/* Media Section */}
+                      <div className="space-y-4">
+                        <h4 className="font-semibold flex items-center gap-2">
+                          <ImageIcon className="w-4 h-4" />
+                          Media
+                        </h4>
+
+                        {/* Thumbnail */}
+                        <div className="space-y-2">
+                          <Label>Thumbnail Image</Label>
+                          <div className="flex items-center gap-4">
+                            {(variant.previewUrl || variant.imagePath) && (
+                              <img
+                                src={variant.previewUrl || variant.imagePath}
+                                alt="Thumbnail"
+                                className="w-20 h-20 object-cover rounded-lg border"
+                              />
+                            )}
+                            <label className="flex-1">
+                              <div className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:border-primary transition-colors">
+                                <Upload className="w-6 h-6 mx-auto mb-2 text-muted-foreground" />
+                                <p className="text-sm text-muted-foreground">
+                                  Click to upload thumbnail
+                                </p>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  JPEG, PNG, WebP, AVIF, GIF
+                                </p>
+                              </div>
+                              <input
+                                type="file"
+                                accept="image/jpeg,image/jpg,image/png,image/webp,image/avif,image/gif"
+                                onChange={(e) => {
+                                  if (e.target.files?.[0]) {
+                                    handleVariantImageSelect(index, e.target.files[0]);
+                                  }
+                                }}
+                                className="hidden"
+                              />
+                            </label>
+                          </div>
+                        </div>
+
+                        {/* Gallery */}
+                        <div className="space-y-2">
+                          <Label>Gallery Images</Label>
+                          <label>
+                            <div className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:border-primary transition-colors">
+                              <Upload className="w-6 h-6 mx-auto mb-2 text-muted-foreground" />
+                              <p className="text-sm text-muted-foreground">
+                                Click to add gallery images
+                              </p>
+                            </div>
+                            <input
+                              type="file"
+                              accept="image/jpeg,image/jpg,image/png,image/webp,image/avif,image/gif"
+                              multiple
+                              onChange={(e) => {
+                                if (e.target.files && e.target.files.length > 0) {
+                                  handleVariantGalleryImagesSelect(index, e.target.files);
+                                }
+                              }}
+                              className="hidden"
+                            />
+                          </label>
+                          {(variant.galleryPaths.length > 0 || variant.galleryPreviewUrls) && (
+                            <div className="grid grid-cols-4 gap-2 mt-2">
+                              {variant.galleryPaths.map((path, gIndex) => (
+                                <div key={`existing-${gIndex}`} className="relative group">
+                                  <img
+                                    src={path}
+                                    alt={`Gallery ${gIndex + 1}`}
+                                    className="w-full h-20 object-cover rounded-lg border"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => removeGalleryImage(index, gIndex)}
+                                    className="absolute top-1 right-1 p-1 bg-destructive text-destructive-foreground rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              ))}
+                              {variant.galleryPreviewUrls?.map((url, pIndex) => (
+                                <div key={`pending-${pIndex}`} className="relative group">
+                                  <img
+                                    src={url}
+                                    alt={`New ${pIndex + 1}`}
+                                    className="w-full h-20 object-cover rounded-lg border border-primary"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => removePendingGalleryImage(index, pIndex)}
+                                    className="absolute top-1 right-1 p-1 bg-destructive text-destructive-foreground rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {variants.length > 1 && (
+                        <>
+                          <Separator />
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => deleteVariant(index)}
+                          >
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Delete This Variant
+                          </Button>
+                        </>
+                      )}
+                    </TabsContent>
+                  ))}
+                </Tabs>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Right Column - Preview & Validation */}
+          <div className="space-y-6">
+            {/* Validation Summary */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  {validationErrors.length === 0 ? (
+                    <CheckCircle2 className="w-5 h-5 text-green-500" />
+                  ) : (
+                    <AlertCircle className="w-5 h-5 text-destructive" />
+                  )}
+                  Validation
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {validationErrors.length === 0 ? (
+                  <Alert>
+                    <CheckCircle2 className="w-4 h-4" />
+                    <AlertDescription>
+                      All required fields are filled. Ready to save!
+                    </AlertDescription>
+                  </Alert>
+                ) : (
+                  <Alert variant="destructive">
+                    <AlertCircle className="w-4 h-4" />
+                    <AlertDescription>
+                      <p className="font-semibold mb-2">
+                        {validationErrors.length} issue{validationErrors.length !== 1 ? 's' : ''} found:
+                      </p>
+                      <ul className="list-disc list-inside space-y-1 text-sm">
+                        {validationErrors.map((error, index) => (
+                          <li key={index}>{error}</li>
+                        ))}
+                      </ul>
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Preview Card */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Preview</CardTitle>
+                <CardDescription>How your product will appear</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {variants[0] && (variants[0].previewUrl || variants[0].imagePath) && (
+                  <div className="aspect-square rounded-lg overflow-hidden bg-muted">
+                    <img
+                      src={variants[0].previewUrl || variants[0].imagePath}
+                      alt="Preview"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                )}
+                <div>
+                  <h3 className="font-bold text-lg">
+                    {watchedValues.title || 'Product Title'}
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    {categories.find(c => c.id === watchedValues.categoryId)?.name || 'Category'}
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    {variants.length} variant{variants.length !== 1 ? 's' : ''}
+                  </p>
+                  <p className="text-2xl font-bold text-primary mt-2">
+                    ${variants[0]?.price || '0.00'}
+                  </p>
+                </div>
+                {features.length > 0 && (
+                  <div className="space-y-1">
+                    <p className="text-sm font-semibold">Features:</p>
+                    <ul className="list-disc list-inside text-sm text-muted-foreground">
+                      {features.slice(0, 3).map((feature, index) => (
+                        <li key={index}>{feature}</li>
+                      ))}
+                      {features.length > 3 && (
+                        <li>+{features.length - 3} more</li>
+                      )}
+                    </ul>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Quick Stats */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Quick Stats</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Variants:</span>
+                  <span className="font-semibold">{variants.length}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Total Stock:</span>
+                  <span className="font-semibold">
+                    {variants.reduce((sum, v) => sum + parseInt(v.stock || '0'), 0)}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Features:</span>
+                  <span className="font-semibold">{features.length}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Price Range:</span>
+                  <span className="font-semibold">
+                    ${Math.min(...variants.map(v => parseFloat(v.price || '0'))).toFixed(2)} -
+                    ${Math.max(...variants.map(v => parseFloat(v.price || '0'))).toFixed(2)}
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
+      </div>
 
-        {/* Product Variants */}
-        <div className="rounded-lg border bg-card p-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold">Product Variants</h2>
-            <Button type="button" onClick={addVariant} variant="outline" size="sm">
-              <Plus className="w-4 h-4 mr-2" />
-              Add Variant
+      {/* Sticky Bottom Actions */}
+      <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t py-4 px-6 z-20">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="text-sm text-muted-foreground">
+            {validationErrors.length === 0 ? (
+              <span className="text-green-600 flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4" />
+                Ready to save
+              </span>
+            ) : (
+              <span className="text-destructive flex items-center gap-2">
+                <AlertCircle className="w-4 h-4" />
+                {validationErrors.length} validation error{validationErrors.length !== 1 ? 's' : ''}
+              </span>
+            )}
+          </div>
+          <div className="flex gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => navigate('/products')}
+              disabled={submitting}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={submitting || validationErrors.length > 0}>
+              {submitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  {isEditMode ? 'Update Product' : 'Create Product'}
+                </>
+              )}
             </Button>
           </div>
-
-          <Tabs value={activeVariantTab} onValueChange={setActiveVariantTab} className="w-full">
-            <div className="flex items-center gap-2">
-              <TabsList className="flex-1 justify-start flex-wrap h-auto">
-                {variants.map((variant, index) => (
-                  <TabsTrigger key={index} value={`variant-${index}`}>
-                    {variant.name || `Variant ${index + 1}`}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-              {variants.length > 1 && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    const activeIndex = parseInt(activeVariantTab.split('-')[1]);
-                    removeVariant(activeIndex);
-                    // Switch to previous tab if last tab is deleted
-                    if (activeIndex > 0) {
-                      setActiveVariantTab(`variant-${activeIndex - 1}`);
-                    }
-                  }}
-                  className="hover:bg-destructive hover:text-white"
-                >
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Delete Current
-                </Button>
-              )}
-            </div>
-
-            {variants.map((variant, index) => (
-              <TabsContent key={index} value={`variant-${index}`} className="space-y-4 border rounded-lg p-4 mt-4">
-
-                <div className="grid grid-cols-2 gap-4">
-                  {/* Variant Name */}
-                  <div className="space-y-2">
-                    <Label>Variant Name *</Label>
-                    <Input
-                      value={variant.name}
-                      onChange={(e) => updateVariant(index, 'name', e.target.value)}
-                      placeholder="e.g., Black/Red, Ocean Blue"
-                    />
-                  </div>
-
-                  {/* SKU */}
-                  <div className="space-y-2">
-                    <Label>SKU *</Label>
-                    <Input
-                      value={variant.sku}
-                      onChange={(e) => updateVariant(index, 'sku', e.target.value)}
-                      placeholder="e.g., SHOE-BLK-41"
-                    />
-                  </div>
-
-                  {/* Price */}
-                  <div className="space-y-2">
-                    <Label>Price *</Label>
-                    <Input
-                      value={variant.price}
-                      onChange={(e) => updateVariant(index, 'price', e.target.value)}
-                      placeholder="0.00"
-                      type="text"
-                    />
-                  </div>
-
-                  {/* Original Price */}
-                  <div className="space-y-2">
-                    <Label>Original Price (optional)</Label>
-                    <Input
-                      value={variant.originalPrice || ''}
-                      onChange={(e) => updateVariant(index, 'originalPrice', e.target.value)}
-                      placeholder="0.00"
-                      type="text"
-                    />
-                  </div>
-
-                  {/* Stock */}
-                  <div className="space-y-2">
-                    <Label>Stock *</Label>
-                    <Input
-                      value={variant.stock}
-                      onChange={(e) => updateVariant(index, 'stock', e.target.value)}
-                      placeholder="0"
-                      type="text"
-                    />
-                  </div>
-
-                  {/* Sizes */}
-                  <div className="space-y-2">
-                    <Label>Sizes (comma separated)</Label>
-                    <Input
-                      value={variant.sizes.join(', ')}
-                      onChange={(e) => {
-                        const sizes = e.target.value.split(',').map(s => s.trim()).filter(Boolean);
-                        updateVariant(index, 'sizes', sizes);
-                      }}
-                      placeholder="e.g., 41, 42, 43"
-                    />
-                  </div>
-                </div>
-
-                {/* Variant Image */}
-                <div className="space-y-2">
-                  <Label>Variant Image (Thumbnail) *</Label>
-                  <div className="flex items-center gap-4">
-                    <div className="relative w-24 h-24 rounded border bg-muted overflow-hidden">
-                      {(variant.previewUrl || variant.imagePath) ? (
-                        <img
-                          src={variant.previewUrl || variant.imagePath}
-                          alt="Variant preview"
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                          <Upload className="w-8 h-8" />
-                        </div>
-                      )}
-                    </div>
-                    <input
-                      type="file"
-                      accept="image/jpeg,image/jpg,image/png,image/webp,image/avif,image/gif"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          handleVariantImageSelect(index, file);
-                        }
-                      }}
-                      className="text-sm"
-                    />
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    This image will be shown as variant thumbnail
-                  </p>
-                </div>
-
-                {/* Variant Gallery Images */}
-                <div className="space-y-2 col-span-2">
-                  <Label>Gallery Images (Optional)</Label>
-                  <div className="space-y-4">
-                    {/* Preview existing gallery images */}
-                    <div className="flex flex-wrap gap-2">
-                      {variant.galleryPaths?.map((path, imgIndex) => (
-                        <div key={`existing-${imgIndex}`} className="relative w-20 h-20 rounded border bg-muted overflow-hidden group">
-                          <img
-                            src={path}
-                            alt={`Gallery ${imgIndex + 1}`}
-                            className="w-full h-full object-cover"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => removeVariantGalleryImage(index, imgIndex)}
-                            className="absolute top-1 right-1 p-1 bg-destructive text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            <X className="w-3 h-3" />
-                          </button>
-                        </div>
-                      ))}
-                      {variant.galleryPreviewUrls?.map((url, imgIndex) => (
-                        <div key={`preview-${imgIndex}`} className="relative w-20 h-20 rounded border bg-muted overflow-hidden group">
-                          <img
-                            src={url}
-                            alt={`Preview ${imgIndex + 1}`}
-                            className="w-full h-full object-cover"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => removeVariantGalleryImage(index, variant.galleryPaths?.length || 0 + imgIndex)}
-                            className="absolute top-1 right-1 p-1 bg-destructive text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            <X className="w-3 h-3" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                    {/* Upload input */}
-                    <input
-                      type="file"
-                      accept="image/jpeg,image/jpg,image/png,image/webp,image/avif,image/gif"
-                      multiple
-                      onChange={(e) => {
-                        if (e.target.files && e.target.files.length > 0) {
-                          handleVariantGalleryImagesSelect(index, e.target.files);
-                        }
-                      }}
-                      className="text-sm"
-                    />
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    These images will be shown in the product gallery when this variant is selected
-                  </p>
-                </div>
-              </TabsContent>
-            ))}
-          </Tabs>
         </div>
-
-        {/* Actions */}
-        <div className="flex gap-4">
-          <Button type="submit" disabled={submitting}>
-            {submitting ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                {isEditMode ? 'Updating...' : 'Creating...'}
-              </>
-            ) : (
-              <>{isEditMode ? 'Update Product' : 'Create Product'}</>
-            )}
-          </Button>
-          <Button type="button" variant="outline" onClick={() => navigate('/products')}>
-            Cancel
-          </Button>
-        </div>
-      </form>
-    </div>
+      </div>
+    </form>
   );
 }
