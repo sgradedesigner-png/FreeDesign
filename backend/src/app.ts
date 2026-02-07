@@ -6,6 +6,7 @@ import { PrismaClient } from '@prisma/client';
 
 import { adminCategoryRoutes } from './routes/admin/categories';
 import { adminProductRoutes } from './routes/admin/products';
+import { adminPrefillRoutes } from './routes/admin/prefill';
 import { adminStatsRoutes } from './routes/admin/stats';
 import { adminUploadRoutes } from './routes/admin/upload';
 import { adminUploadPresignedRoutes } from './routes/admin/upload-presigned';
@@ -20,7 +21,7 @@ const prisma = new PrismaClient();
 // 1) Plugins
 const allowedOrigins = [
   'http://localhost:5173', // Store
-  'http://localhost:5175', // Admin Panel (alternative port)
+  'http://localhost:5174', // Admin Panel (alternative port)
   'http://localhost:3001', // Admin Panel (main port)
 ];
 if (process.env.CORS_ORIGIN) {
@@ -65,6 +66,7 @@ app.register(publicProductRoutes, { prefix: '/api/products' });
 // 5) Admin routes
 app.register(adminCategoryRoutes, { prefix: '/admin/categories' });
 app.register(adminProductRoutes, { prefix: '/admin/products' });
+app.register(adminPrefillRoutes, { prefix: '/admin/prefill' });
 app.register(adminStatsRoutes, { prefix: '/admin/stats' });
 app.register(adminUploadRoutes, { prefix: '/admin/upload' });
 app.register(adminUploadPresignedRoutes, { prefix: '/admin/upload' });

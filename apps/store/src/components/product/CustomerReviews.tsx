@@ -66,15 +66,15 @@ export default function CustomerReviews({
         ];
 
   return (
-    <div className="mt-16 border-t border-border pt-12">
-      <h2 className="text-2xl font-heading font-bold mb-8 text-foreground">
+    <div className="mt-12 sm:mt-16 border-t border-border pt-8 sm:pt-12">
+      <h2 className="text-xl sm:text-2xl font-heading font-bold mb-6 sm:mb-8 text-foreground">
         Хэрэглэгчийн үнэлгээ
       </h2>
 
       {/* Summary Box */}
-      <div className="rounded-2xl border border-border bg-card/50 backdrop-blur p-8 mb-10 flex flex-col md:flex-row items-center gap-8 md:gap-16">
+      <div className="rounded-2xl border border-border bg-card/50 backdrop-blur p-4 sm:p-8 mb-8 sm:mb-10 flex flex-col md:flex-row items-center gap-5 sm:gap-8 md:gap-16">
         <div className="text-center">
-          <div className="text-6xl font-bold text-foreground mb-2">
+          <div className="text-4xl sm:text-6xl font-bold text-foreground mb-2">
             {(averageRating ?? 4.5).toFixed(1)}
           </div>
 
@@ -116,7 +116,7 @@ export default function CustomerReviews({
         {dummyReviews.map((review) => (
           <div
             key={review.id}
-            className="rounded-2xl border border-border bg-card p-6 shadow-sm"
+            className="rounded-2xl border border-border bg-card p-4 sm:p-6 shadow-sm"
           >
             <div className="flex items-start justify-between mb-4 gap-4">
               <div className="flex items-center gap-3 min-w-0">

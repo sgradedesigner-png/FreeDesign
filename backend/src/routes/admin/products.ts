@@ -1,9 +1,11 @@
 import type { FastifyInstance } from 'fastify';
+import { randomUUID } from 'crypto';
 import { z } from 'zod';
 import { Prisma } from '@prisma/client';
 import { adminGuard } from '../../supabaseauth';
 import { prisma } from '../../lib/prisma';
 import { deleteProductImages } from '../../lib/r2';
+import { importRemoteImageToR2, isHttpUrl, isR2PublicUrl } from '../../lib/remote-image-import';
 
 // price Decimal-д зориулж number/string аль алиныг зөвшөөрнө
 const priceSchema = z.union([
@@ -25,6 +27,95 @@ const variantSchema = z.object({
   sortOrder: z.number().int().optional().default(0),
 });
 
+type VariantInput = z.infer<typeof variantSchema>;
+
+const REMOTE_IMAGE_IMPORT_CONCURRENCY = (() => {
+  const rawValue = Number(process.env.R2_REMOTE_IMPORT_CONCURRENCY ?? 4);
+  if (!Number.isFinite(rawValue)) return 4;
+  return Math.min(8, Math.max(1, Math.floor(rawValue)));
+})();
+
+async function runWithConcurrency<T>(
+  items: T[],
+  maxConcurrency: number,
+  worker: (item: T) => Promise<void>
+): Promise<void> {
+  if (items.length === 0) return;
+
+  const concurrency = Math.max(1, Math.min(maxConcurrency, items.length));
+  let cursor = 0;
+
+  const runners = Array.from({ length: concurrency }, async () => {
+    while (true) {
+      const currentIndex = cursor++;
+      if (currentIndex >= items.length) break;
+      await worker(items[currentIndex]!);
+    }
+  });
+
+  await Promise.all(runners);
+}
+
+async function normalizeVariantMediaForR2(
+  variants: VariantInput[],
+  productId: string
+): Promise<VariantInput[]> {
+  const cache = new Map<string, string>();
+
+  const collectRemoteUrls = (): string[] => {
+    const uniqueRemoteUrls = new Set<string>();
+
+    for (const variant of variants) {
+      if (variant.imagePath && isHttpUrl(variant.imagePath) && !isR2PublicUrl(variant.imagePath)) {
+        uniqueRemoteUrls.add(variant.imagePath);
+      }
+
+      for (const path of variant.galleryPaths ?? []) {
+        if (isHttpUrl(path) && !isR2PublicUrl(path)) {
+          uniqueRemoteUrls.add(path);
+        }
+      }
+    }
+
+    return Array.from(uniqueRemoteUrls);
+  };
+
+  const remoteUrls = collectRemoteUrls();
+
+  await runWithConcurrency(
+    remoteUrls,
+    REMOTE_IMAGE_IMPORT_CONCURRENCY,
+    async (url) => {
+      const imported = await importRemoteImageToR2({ imageUrl: url, productId });
+      cache.set(url, imported.publicUrl);
+    }
+  );
+
+  const mapUrl = (url: string): string => cache.get(url) ?? url;
+
+  const normalized: VariantInput[] = [];
+  for (const variant of variants) {
+    const imagePath = variant.imagePath ? mapUrl(variant.imagePath) : variant.imagePath;
+
+    const importedGallery: string[] = [];
+    const seen = new Set<string>();
+    for (const path of variant.galleryPaths ?? []) {
+      const mapped = mapUrl(path);
+      if (seen.has(mapped)) continue;
+      seen.add(mapped);
+      importedGallery.push(mapped);
+    }
+
+    normalized.push({
+      ...variant,
+      imagePath,
+      galleryPaths: importedGallery,
+    });
+  }
+
+  return normalized;
+}
+
 export async function adminProductRoutes(app: FastifyInstance) {
   // 🔐 Admin guard — бүх product route-д
   app.addHook('preHandler', adminGuard);
@@ -34,12 +125,16 @@ export async function adminProductRoutes(app: FastifyInstance) {
     const schema = z.object({
       title: z.string().min(1),
       slug: z.string().min(1),
+      is_published: z.boolean().optional().default(false),
+      subtitle: z.string().optional().nullable(),
       description: z.string().optional(),
       basePrice: priceSchema.optional().default(0),
       categoryId: z.string().uuid(),
       rating: z.number().min(0).max(5).optional().default(0),
       reviews: z.number().int().min(0).optional().default(0),
       features: z.array(z.string()).optional().default([]),
+      benefits: z.array(z.string()).optional().default([]),
+      productDetails: z.array(z.string()).optional().default([]),
       variants: z.array(variantSchema).min(1, 'At least one variant is required'),
     });
 
@@ -62,18 +157,26 @@ export async function adminProductRoutes(app: FastifyInstance) {
       return reply.status(409).send({ message: `SKU already exists: ${existingSku.sku}` });
     }
 
+    const productId = randomUUID();
+    const normalizedVariants = await normalizeVariantMediaForR2(body.variants, productId);
+
     const product = await prisma.product.create({
       data: {
+        id: productId,
         title: body.title,
         slug: body.slug,
+        is_published: body.is_published,
+        subtitle: body.subtitle ?? null,
         description: body.description,
         basePrice: body.basePrice,
         categoryId: body.categoryId,
         rating: body.rating,
         reviews: body.reviews,
         features: body.features,
+        benefits: body.benefits,
+        productDetails: body.productDetails,
         variants: {
-          create: body.variants.map((v, index) => ({
+          create: normalizedVariants.map((v, index) => ({
             name: v.name,
             sku: v.sku,
             price: v.price,
@@ -147,6 +250,7 @@ export async function adminProductRoutes(app: FastifyInstance) {
           id: true,
           title: true,
           slug: true,
+          is_published: true,
           categoryId: true,
           createdAt: true,
           updatedAt: true,
@@ -202,17 +306,22 @@ export async function adminProductRoutes(app: FastifyInstance) {
     const bodySchema = z.object({
       title: z.string().min(1).optional(),
       slug: z.string().min(1).optional(),
+      is_published: z.boolean().optional(),
+      subtitle: z.string().nullable().optional(),
       description: z.string().nullable().optional(),
       basePrice: priceSchema.optional(),
       categoryId: z.string().uuid().optional(),
       rating: z.number().min(0).max(5).optional(),
       reviews: z.number().int().min(0).optional(),
       features: z.array(z.string()).optional(),
+      benefits: z.array(z.string()).optional(),
+      productDetails: z.array(z.string()).optional(),
       variants: z.array(variantSchema).optional(),
     });
 
     const { id } = paramsSchema.parse(request.params);
     const data = bodySchema.parse(request.body);
+    let normalizedVariants: VariantInput[] | undefined;
 
     // slug uniqueness if changing
     if (data.slug) {
@@ -241,6 +350,8 @@ export async function adminProductRoutes(app: FastifyInstance) {
         return reply.status(409).send({ message: `SKU already exists: ${existingSku.sku}` });
       }
 
+      normalizedVariants = await normalizeVariantMediaForR2(data.variants, id);
+
       // Delete old variants and create new ones
       await prisma.productVariant.deleteMany({ where: { productId: id } });
     }
@@ -250,15 +361,19 @@ export async function adminProductRoutes(app: FastifyInstance) {
       data: {
         title: data.title,
         slug: data.slug,
+        is_published: data.is_published,
+        subtitle: data.subtitle,
         description: data.description,
         basePrice: data.basePrice,
         categoryId: data.categoryId,
         rating: data.rating,
         reviews: data.reviews,
         features: data.features,
-        ...(data.variants && {
+        benefits: data.benefits,
+        productDetails: data.productDetails,
+        ...(normalizedVariants && {
           variants: {
-            create: data.variants.map((v, index) => ({
+            create: normalizedVariants.map((v, index) => ({
               name: v.name,
               sku: v.sku,
               price: v.price,

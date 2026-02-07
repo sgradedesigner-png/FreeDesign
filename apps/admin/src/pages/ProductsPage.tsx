@@ -31,6 +31,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Edit, Plus, Search, Trash2, Download, Filter, ArrowUpDown } from 'lucide-react';
 import { useDebounce } from '@/hooks/useDebounce';
+import AddProductSkuDialog from '@/components/AddProductSkuDialog';
 
 type Category = {
   id: string;
@@ -59,6 +60,8 @@ type Product = {
   id: string;
   title: string;
   slug: string;
+  is_published?: boolean;
+  isPublished?: boolean;
   description: string | null;
   basePrice: string;
   categoryId: string;
@@ -79,8 +82,10 @@ type ProductsResponse = {
   pages: number;
 };
 
+type SortableProductKey = keyof Product | 'category' | 'price' | 'stock';
+
 type SortConfig = {
-  key: keyof Product | 'category';
+  key: SortableProductKey;
   direction: 'asc' | 'desc';
 } | null;
 
@@ -100,6 +105,7 @@ export default function ProductsPage() {
   });
   const [bulkDeleteDialog, setBulkDeleteDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [skuDialogOpen, setSkuDialogOpen] = useState(false);
 
   const debouncedSearch = useDebounce(search, 500);
 
@@ -146,6 +152,9 @@ export default function ProductsPage() {
   const totalPages = productsData?.pages ?? 1;
   const total = productsData?.total ?? 0;
 
+  const resolvePublished = (product: Product) =>
+    Boolean(product.is_published ?? product.isPublished ?? false);
+
   // Prefetch next page
   useEffect(() => {
     if (page < totalPages) {
@@ -168,7 +177,7 @@ export default function ProductsPage() {
     }
   }, [page, totalPages, debouncedSearch, selectedCategory, stockFilter, sortConfig, queryClient]);
 
-  const handleSort = (key: keyof Product | 'category') => {
+  const handleSort = (key: SortableProductKey) => {
     setSortConfig(current => {
       if (!current || current.key !== key) {
         return { key, direction: 'asc' };
@@ -258,12 +267,14 @@ export default function ProductsPage() {
 
   const SortableHeader = ({
     label,
-    sortKey
+    sortKey,
+    className,
   }: {
     label: string;
-    sortKey: keyof Product | 'category';
+    sortKey: SortableProductKey;
+    className?: string;
   }) => (
-    <TableHead>
+    <TableHead className={className}>
       <button
         onClick={() => handleSort(sortKey)}
         className="flex items-center gap-1 hover:text-foreground transition-colors"
@@ -277,17 +288,21 @@ export default function ProductsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Products</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold">Products</h1>
           <p className="text-muted-foreground">Manage your product catalog</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={exportToCSV} disabled={products.length === 0}>
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
+          <Button variant="outline" onClick={exportToCSV} disabled={products.length === 0} className="w-full sm:w-auto">
             <Download className="w-4 h-4 mr-2" />
             Export CSV
           </Button>
-          <Button onClick={() => navigate('/products/new')}>
+          <Button variant="outline" onClick={() => setSkuDialogOpen(true)} className="w-full sm:w-auto">
+            <Plus className="w-4 h-4 mr-2" />
+            Add Product SKU
+          </Button>
+          <Button onClick={() => navigate('/products/new')} className="w-full sm:w-auto">
             <Plus className="w-4 h-4 mr-2" />
             Add Product
           </Button>
@@ -295,8 +310,8 @@ export default function ProductsPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap items-center gap-4">
-        <div className="relative flex-1 max-w-sm">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+        <div className="relative w-full sm:max-w-sm sm:flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             placeholder="Search products..."
@@ -310,7 +325,7 @@ export default function ProductsPage() {
         </div>
 
         <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-full sm:w-[180px]">
             <SelectValue placeholder="All Categories" />
           </SelectTrigger>
           <SelectContent>
@@ -322,7 +337,7 @@ export default function ProductsPage() {
         </Select>
 
         <Select value={stockFilter} onValueChange={setStockFilter}>
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-full sm:w-[180px]">
             <SelectValue placeholder="Stock Status" />
           </SelectTrigger>
           <SelectContent>
@@ -333,7 +348,7 @@ export default function ProductsPage() {
           </SelectContent>
         </Select>
 
-        <p className="text-sm text-muted-foreground ml-auto">
+        <p className="text-sm text-muted-foreground sm:ml-auto">
           {isFetching && <span className="animate-spin mr-1">⟳</span>}
           {total} {total === 1 ? 'product' : 'products'}
         </p>
@@ -341,7 +356,7 @@ export default function ProductsPage() {
 
       {/* Bulk Actions */}
       {selectedIds.size > 0 && (
-        <div className="flex items-center gap-4 p-4 bg-muted rounded-lg">
+        <div className="flex flex-col gap-3 rounded-lg bg-muted p-4 sm:flex-row sm:items-center">
           <p className="text-sm font-medium">
             {selectedIds.size} {selectedIds.size === 1 ? 'product' : 'products'} selected
           </p>
@@ -360,8 +375,9 @@ export default function ProductsPage() {
       )}
 
       {/* Table */}
-      <div className="rounded-lg border bg-card">
-        <Table>
+      <div className="overflow-hidden rounded-lg border bg-card">
+        <div className="overflow-x-auto">
+          <Table className="w-full md:min-w-[920px]">
           <TableHeader>
             <TableRow>
               <TableHead className="w-12">
@@ -371,10 +387,11 @@ export default function ProductsPage() {
                 />
               </TableHead>
               <SortableHeader label="Product" sortKey="title" />
-              <SortableHeader label="Category" sortKey="category" />
-              <SortableHeader label="Price" sortKey="price" />
-              <SortableHeader label="Stock" sortKey="stock" />
-              <TableHead className="text-right">Actions</TableHead>
+              <SortableHeader label="Category" sortKey="category" className="hidden md:table-cell" />
+              <TableHead className="hidden md:table-cell">Status</TableHead>
+              <SortableHeader label="Price" sortKey="price" className="hidden md:table-cell" />
+              <SortableHeader label="Stock" sortKey="stock" className="hidden md:table-cell" />
+              <TableHead className="w-[88px] text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -392,9 +409,10 @@ export default function ProductsPage() {
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell><div className="h-6 w-20 bg-muted animate-pulse rounded" /></TableCell>
-                  <TableCell><div className="h-6 w-16 bg-muted animate-pulse rounded" /></TableCell>
-                  <TableCell><div className="h-6 w-12 bg-muted animate-pulse rounded" /></TableCell>
+                  <TableCell className="hidden md:table-cell"><div className="h-6 w-20 bg-muted animate-pulse rounded" /></TableCell>
+                  <TableCell className="hidden md:table-cell"><div className="h-6 w-16 bg-muted animate-pulse rounded" /></TableCell>
+                  <TableCell className="hidden md:table-cell"><div className="h-6 w-16 bg-muted animate-pulse rounded" /></TableCell>
+                  <TableCell className="hidden md:table-cell"><div className="h-6 w-12 bg-muted animate-pulse rounded" /></TableCell>
                   <TableCell className="text-right">
                     <div className="h-8 w-20 bg-muted animate-pulse rounded ml-auto" />
                   </TableCell>
@@ -402,7 +420,7 @@ export default function ProductsPage() {
               ))
             ) : products.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                   {search ? 'No products found' : 'No products yet. Create your first one!'}
                 </TableCell>
               </TableRow>
@@ -415,13 +433,13 @@ export default function ProductsPage() {
                       onCheckedChange={() => toggleSelectProduct(product.id)}
                     />
                   </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
+                  <TableCell className="max-w-0">
+                    <div className="flex min-w-0 items-start gap-3 md:items-center">
                       {product.variants[0]?.imagePath ? (
                         <img
                           src={product.variants[0].imagePath}
                           alt={product.title}
-                          className="w-12 h-12 rounded object-cover"
+                          className="h-12 w-12 rounded object-cover"
                           loading="lazy"
                         />
                       ) : (
@@ -429,35 +447,69 @@ export default function ProductsPage() {
                           No image
                         </div>
                       )}
-                      <div>
-                        <p className="font-medium">{product.title}</p>
-                        <p className="text-sm text-muted-foreground">{product.slug}</p>
+                      <div className="min-w-0">
+                        <p
+                          className="font-medium leading-tight md:hidden"
+                          style={{
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                          }}
+                          title={product.title}
+                        >
+                          {product.title}
+                        </p>
+                        <p className="hidden font-medium break-words leading-tight md:block">{product.title}</p>
+                        <p className="truncate text-xs text-muted-foreground md:hidden" title={product.slug}>
+                          {product.slug}
+                        </p>
+                        <p className="hidden text-sm text-muted-foreground break-all md:block">{product.slug}</p>
+                        <div className="mt-2 flex flex-wrap items-center gap-2 md:hidden">
+                          <Badge variant="secondary">{product.category.name}</Badge>
+                          <Badge variant={resolvePublished(product) ? 'default' : 'secondary'}>
+                            {resolvePublished(product) ? 'Published' : 'Draft'}
+                          </Badge>
+                          <Badge variant="outline">
+                            ${parseFloat(String(product.variants[0]?.price ?? 0)).toFixed(2)}
+                          </Badge>
+                          <Badge variant={(product.variants[0]?.stock ?? 0) > 0 ? 'default' : 'destructive'}>
+                            Stock {product.variants[0]?.stock ?? 0}
+                          </Badge>
+                        </div>
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden md:table-cell">
                     <Badge variant="secondary">{product.category.name}</Badge>
                   </TableCell>
-                  <TableCell className="font-medium">
+                  <TableCell className="hidden md:table-cell">
+                    <Badge variant={resolvePublished(product) ? 'default' : 'secondary'}>
+                      {resolvePublished(product) ? 'Published' : 'Draft'}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell font-medium">
                     ${parseFloat(String(product.variants[0]?.price ?? 0)).toFixed(2)}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden md:table-cell">
                     <Badge variant={(product.variants[0]?.stock ?? 0) > 0 ? 'default' : 'destructive'}>
                       {product.variants[0]?.stock ?? 0}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="align-top pt-4 text-right md:align-middle md:pt-2">
                     <div className="flex items-center justify-end gap-2">
                       <Button
                         variant="ghost"
-                        size="sm"
+                        size="icon"
+                        className="h-8 w-8"
                         onClick={() => navigate(`/products/${product.id}`)}
                       >
                         <Edit className="w-4 h-4" />
                       </Button>
                       <Button
                         variant="ghost"
-                        size="sm"
+                        size="icon"
+                        className="h-8 w-8"
                         onClick={() => setDeleteDialog({ open: true, product })}
                       >
                         <Trash2 className="w-4 h-4 text-destructive" />
@@ -468,16 +520,17 @@ export default function ProductsPage() {
               ))
             )}
           </TableBody>
-        </Table>
+          </Table>
+        </div>
       </div>
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-muted-foreground">
             Page {page} of {totalPages}
           </p>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button
               variant="outline"
               size="sm"
@@ -573,6 +626,8 @@ export default function ProductsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AddProductSkuDialog open={skuDialogOpen} onOpenChange={setSkuDialogOpen} />
     </div>
   );
 }

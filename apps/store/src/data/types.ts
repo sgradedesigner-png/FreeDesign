@@ -21,6 +21,7 @@ export type BackendProduct = {
   id: string;
   title: string;
   slug: string;
+  subtitle?: string;
   description: string | null;
   basePrice: number;
   categoryId: string;
@@ -33,6 +34,9 @@ export type BackendProduct = {
   rating: number;
   reviews: number;
   features: string[];
+  benefits?: string[];
+  productDetails?: string[];
+  shortDescription?: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -42,11 +46,17 @@ export type Product = {
   id: string;
   slug: string;
   name: string; // Maps to title
+  subtitle?: string;
   category: string;
+  categoryId?: string;
+  categorySlug?: string;
   description: string | null;
+  shortDescription?: string;
   rating: number;
   reviews: number;
   features: string[];
+  benefits: string[];
+  productDetails: string[];
 
   // Variant-based properties
   variants: ProductVariant[];

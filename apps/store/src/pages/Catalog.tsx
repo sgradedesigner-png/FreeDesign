@@ -20,6 +20,13 @@ type Filters = {
   categories: string[];
 };
 
+const normalizeCategoryKey = (value: string | null | undefined) =>
+  (value ?? '')
+    .toString()
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '-');
+
 export default function Catalog() {
   const { language } = useTheme();
   const [searchParams] = useSearchParams();
@@ -46,8 +53,16 @@ export default function Catalog() {
       const matchesPrice =
         product.price >= filters.priceRange[0] && product.price <= filters.priceRange[1];
 
+      const categoryKeys = [
+        normalizeCategoryKey(product.categorySlug),
+        normalizeCategoryKey(product.category),
+      ].filter(Boolean);
+
       const matchesCategory =
-        filters.categories.length === 0 || filters.categories.includes(product.category);
+        filters.categories.length === 0 ||
+        filters.categories.some((selectedKey) =>
+          categoryKeys.includes(normalizeCategoryKey(selectedKey))
+        );
 
       const matchesSize =
         filters.sizes.length === 0 || (product.sizes?.some((s) => filters.sizes.includes(s)) ?? false);
@@ -72,13 +87,13 @@ export default function Catalog() {
     : language === 'mn' ? 'Манай Бүтээгдэхүүнүүд' : 'Our Products';
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-10 pt-28">
-      <div className="flex gap-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10 pt-28">
+      <div className="flex flex-col lg:flex-row gap-8">
         <FilterSidebar onFilterChange={handleFilterChange} />
 
         <div className="flex-1 min-w-0">
           {/* Header хэсэг хэвээрээ... */}
-          <div className="flex items-end justify-between gap-4 mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-6">
             <div className="min-w-0">
               <h1 className="text-3xl font-heading font-bold text-foreground">{title}</h1>
               {!isLoading && !loadError && (
@@ -89,7 +104,7 @@ export default function Catalog() {
             </div>
 
             <Select value={sortBy} onValueChange={(val) => setSortBy(val as any)}>
-              <SelectTrigger className="h-10 w-[220px] rounded-xl border-white/10 bg-white/5 text-sm text-foreground">
+              <SelectTrigger className="h-10 w-full sm:w-[220px] rounded-xl border-white/10 bg-white/5 text-sm text-foreground">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

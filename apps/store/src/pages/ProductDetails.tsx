@@ -15,13 +15,13 @@ import { useTheme } from '../context/ThemeContext';
 type LocationState = { product?: Product } | null;
 
 export default function ProductDetails() {
-  // 👉 URL: /product/:slug
+  // URL: /product/:slug
   const params = useParams<{ slug?: string; id?: string }>();
   const slugParam = params.slug ?? params.id ?? null;
   const location = useLocation();
   const { language } = useTheme();
 
-  // Catalog / RelatedProducts-оос дамжсан product
+  // Product passed via location state (from catalog/related links)
   const initialProduct = (location.state as LocationState)?.product ?? null;
 
   const slug = slugParam ?? initialProduct?.slug ?? null;
@@ -63,12 +63,16 @@ export default function ProductDetails() {
     setSelectedVariant(variant);
   };
 
-  // ✅ Gallery images from selected variant or fallback to compatibility props
-  const images = selectedVariant
-    ? selectedVariant.galleryPaths?.length
-      ? selectedVariant.galleryPaths
-      : selectedVariant.imagePath
-      ? [selectedVariant.imagePath]
+  const activeVariant = selectedVariant?.id
+    ? product.variants?.find((variant) => variant.id === selectedVariant.id) ?? null
+    : null;
+
+  // Gallery images from selected variant or fallback compatibility fields.
+  const images = activeVariant
+    ? activeVariant.galleryPaths?.length
+      ? activeVariant.galleryPaths
+      : activeVariant.imagePath
+      ? [activeVariant.imagePath]
       : []
     : product.gallery_paths?.length
     ? product.gallery_paths
@@ -77,21 +81,25 @@ export default function ProductDetails() {
     : [];
 
   return (
-    <div className="container mx-auto px-4 py-8 pt-28 animate-in fade-in duration-500 pb-20">
+    <div className="container mx-auto px-3 sm:px-4 lg:px-6 py-6 sm:py-8 pt-24 sm:pt-28 animate-in fade-in duration-500 pb-16 sm:pb-20">
       {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-sm text-muted-foreground mb-8">
-        <Link to="/" className="hover:text-primary flex items-center gap-1">
+      <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground mb-5 sm:mb-8 min-w-0">
+        <Link to="/" className="hover:text-primary flex items-center gap-1 shrink-0">
           <ArrowLeft size={14} />
           {language === 'mn' ? 'Нүүр' : 'Home'}
         </Link>
-        <span>/</span>
-        <span className="text-foreground font-medium truncate">{product.name}</span>
+        <span className="shrink-0">/</span>
+        <span className="text-foreground font-medium truncate min-w-0 flex-1">{product.name}</span>
       </div>
 
       {/* Top */}
-      <div className="grid lg:grid-cols-2 gap-12 xl:gap-20">
-        <ProductGallery images={images} name={product.name} />
-        <ProductInfo product={product} onVariantChange={handleVariantChange} />
+      <div className="grid lg:grid-cols-2 items-start gap-6 sm:gap-8 lg:gap-12 xl:gap-16 [&>*]:min-w-0">
+        <ProductGallery key={`${product.id}-gallery`} images={images} name={product.name} />
+        <ProductInfo
+          key={`${product.id}-info`}
+          product={product}
+          onVariantChange={handleVariantChange}
+        />
       </div>
 
       <ProductTabs />

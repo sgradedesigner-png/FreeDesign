@@ -130,6 +130,7 @@ ALTER TABLE "products" ADD COLUMN "features" TEXT[] DEFAULT ARRAY[]::TEXT[];
 -- Update basePrice from existing price
 UPDATE "products" SET "basePrice" = "price";
 
+
 -- DropColumn: Remove old columns from products table
 ALTER TABLE "products" DROP COLUMN "colors";
 ALTER TABLE "products" DROP COLUMN "sizes";

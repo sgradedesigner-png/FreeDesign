@@ -47,6 +47,8 @@ model Product {
   id          String           @id @default(uuid())
   title       String
   slug        String           @unique
+  is_published Boolean         @default(false)
+  subtitle    String?
   description String?
   basePrice   Decimal          @default(0) // Base price (variants can override)
   categoryId  String
@@ -55,6 +57,8 @@ model Product {
   rating      Float            @default(0)
   reviews     Int              @default(0)
   features    String[]         @default([])
+  benefits    String[]         @default([])
+  productDetails String[]      @default([])
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
 

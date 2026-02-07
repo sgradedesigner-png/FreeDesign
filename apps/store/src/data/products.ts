@@ -32,11 +32,17 @@ export const mapProductFromBackend = (row: BackendProduct): Product => {
     id: row.id,
     slug: row.slug,
     name: row.title,
+    subtitle: row.subtitle || '',
     category: row.category?.name || 'Uncategorized',
+    categoryId: row.category?.id || row.categoryId,
+    categorySlug: row.category?.slug || '',
     description: row.description || '',
+    shortDescription: row.shortDescription || row.description || '',
     rating: row.rating || 0,
     reviews: row.reviews || 0,
     features: row.features || [],
+    benefits: row.benefits || [],
+    productDetails: row.productDetails || [],
 
     // Variant data
     variants: sortedVariants.map((v) => ({

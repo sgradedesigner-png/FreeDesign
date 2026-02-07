@@ -1,12 +1,18 @@
 import type { FastifyInstance } from 'fastify';
 import { adminGuard } from '../../supabaseauth';
 import { generateProductImageUploadUrl } from '../../lib/r2-presigned';
+import { importRemoteImageToR2 } from '../../lib/remote-image-import';
 import { z } from 'zod';
 
 const generatePresignedSchema = z.object({
   filename: z.string().min(1),
   contentType: z.string().regex(/^image\/(jpeg|jpg|png|webp|avif|gif)$/),
   productId: z.string().optional(),
+});
+
+const importImageFromUrlSchema = z.object({
+  imageUrl: z.string().url(),
+  productId: z.string().min(1),
 });
 
 export async function adminUploadPresignedRoutes(app: FastifyInstance) {
@@ -61,6 +67,46 @@ export async function adminUploadPresignedRoutes(app: FastifyInstance) {
       });
     } finally {
       console.log('[Presigned Upload] ========== REQUEST COMPLETE ==========\n');
+    }
+  });
+
+  // Import an external image URL and persist it in R2
+  app.post('/import-from-url', async (request, reply) => {
+    try {
+      const body = importImageFromUrlSchema.parse(request.body);
+      const imported = await importRemoteImageToR2({
+        imageUrl: body.imageUrl,
+        productId: body.productId,
+      });
+
+      return {
+        publicUrl: imported.publicUrl,
+        filename: imported.filename,
+        size: imported.size,
+        contentType: imported.contentType,
+      };
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return reply.status(400).send({
+          message: 'Invalid request',
+          errors: error.issues,
+        });
+      }
+
+      const message = error instanceof Error ? error.message : 'Failed to import image URL';
+      const statusCode =
+        message.includes('Unsupported remote image type') ||
+        message.includes('Only http/https') ||
+        message.includes('download image') ||
+        message.includes('size limit') ||
+        message.includes('empty')
+          ? 400
+          : 500;
+
+      return reply.status(statusCode).send({
+        message: 'Failed to import image URL',
+        error: message,
+      });
     }
   });
 }

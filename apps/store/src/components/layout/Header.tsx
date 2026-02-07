@@ -27,7 +27,6 @@ export default function Header() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const navigate = useNavigate();
 
-  // ✅ ЭНЭ ХЭСЭГ ДУТУУ БАЙСАН БАЙХ: Цэсний орчуулгууд
   const menuLabels = {
     products: { mn: 'Бүтээгдэхүүн', en: 'Products' },
     new: { mn: 'Шинэ бараа', en: 'New Arrivals' },
@@ -62,11 +61,11 @@ export default function Header() {
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border transition-colors duration-300">
-      <div className="container mx-auto px-4 h-20 flex items-center justify-between">
+      <div className="container mx-auto px-3 sm:px-4 h-20 flex items-center justify-between gap-2">
 
        {/* Logo */}
-        <Link to="/" className="flex items-center gap-3 group">
-  {/* ✅ REAL LOGO ICON */}
+        <Link to="/" className="flex items-center gap-2 sm:gap-3 group min-w-0">
+  {/* Real logo icon */}
   <div className="relative w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-cyan-500 
                   flex items-center justify-center font-black text-black text-lg
                   shadow-lg shadow-emerald-500/30 group-hover:scale-105 transition">
@@ -77,9 +76,10 @@ export default function Header() {
     <div className="absolute inset-0 rounded-xl blur-md bg-emerald-400/40 -z-10" />
   </div>
 
-  {/* ✅ BRAND NAME */}
-  <span className="font-heading text-2xl font-extrabold tracking-tight text-white">
-    Korean <span className="text-emerald-400">Goods</span>
+  {/* Brand name */}
+  <span className="font-heading text-xl sm:text-2xl font-extrabold tracking-tight text-foreground truncate">
+    <span className="hidden sm:inline">Korean </span>
+    <span className="text-emerald-500">Goods</span>
   </span>
 </Link>
 
@@ -99,13 +99,13 @@ export default function Header() {
         </nav>
 
         {/* Right Actions */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
 
           {/* Animated Search Box */}
           <div className="relative flex items-center justify-end">
              <div
                 className={`flex items-center overflow-hidden transition-all duration-500 ease-in-out ${
-                   isSearchOpen ? 'w-64 opacity-100 pr-2' : 'w-0 opacity-0'
+                   isSearchOpen ? 'w-[min(72vw,18rem)] sm:w-64 opacity-100 pr-2' : 'w-0 opacity-0'
                 }`}
              >
                 <form onSubmit={handleSearch} className="relative w-full">
@@ -113,7 +113,6 @@ export default function Header() {
                       type="text"
                       value={searchQuery}
                       onChange={(e: ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
-                      // ✅ Энд menuLabels ашиглаж байгаа тул дээр заавал зарласан байх ёстой
                       placeholder={t('search', menuLabels.search)}
                       className="w-full h-10 pl-4 pr-8 rounded-full border border-primary/30 bg-background text-foreground focus:ring-2 focus:ring-primary outline-none text-sm shadow-inner"
                     />
@@ -136,25 +135,25 @@ export default function Header() {
           </div>
 
           {/* Theme Toggle */}
-          <button onClick={toggleTheme} className="p-2 hover:bg-muted rounded-lg text-foreground transition-colors">
+          <button onClick={toggleTheme} className="hidden md:inline-flex p-2 hover:bg-muted rounded-lg text-foreground transition-colors">
             <Icon name={theme === 'dark' ? "SunIcon" : "MoonIcon"} size={20} />
           </button>
 
-          <span className="h-6 w-px bg-border mx-1"></span>
+          <span className="hidden md:block h-6 w-px bg-border mx-1"></span>
 
           {/* Language Toggle */}
-          <button onClick={toggleLanguage} className="px-3 py-1 text-sm font-bold text-foreground hover:bg-muted rounded-lg transition-colors uppercase">
+          <button onClick={toggleLanguage} className="hidden md:inline-flex px-3 py-1 text-sm font-bold text-foreground hover:bg-muted rounded-lg transition-colors uppercase">
             {language}
           </button>
 
-          <span className="h-6 w-px bg-border mx-1"></span>
+          <span className="hidden md:block h-6 w-px bg-border mx-1"></span>
 
           {/* Auth Section */}
           {user ? (
             // Logged in - show user dropdown
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="p-2 hover:bg-muted rounded-lg text-foreground transition-colors">
+                <button className="inline-flex p-2 hover:bg-muted rounded-lg text-foreground transition-colors">
                   <Icon name="UserCircleIcon" size={20} />
                 </button>
               </DropdownMenuTrigger>
@@ -189,17 +188,17 @@ export default function Header() {
               variant="ghost"
               size="sm"
               onClick={() => setShowAuthModal(true)}
-              className="text-foreground hover:bg-muted"
+              className="inline-flex text-foreground hover:bg-muted"
             >
-              <Icon name="UserCircleIcon" size={18} className="mr-2" />
-              {language === 'mn' ? 'Нэвтрэх' : 'Login'}
+              <Icon name="UserCircleIcon" size={18} className="md:mr-2" />
+              <span className="hidden md:inline">{language === 'mn' ? 'Нэвтрэх' : 'Login'}</span>
             </Button>
           )}
 
           {/* Wishlist */}
           <Link
             to="/wishlist"
-            className="flex items-center gap-2 px-4 py-2 border-2 border-border text-foreground hover:border-primary hover:text-primary hover:bg-primary/5 rounded-full transition-colors font-medium text-sm ml-2"
+            className="hidden lg:flex items-center gap-2 px-4 py-2 border-2 border-border text-foreground hover:border-primary hover:text-primary hover:bg-primary/5 rounded-full transition-colors font-medium text-sm ml-2"
           >
             <Icon name="HeartIcon" size={18} />
             <span className="hidden sm:inline">{language === 'mn' ? 'Wishlist' : 'Wishlist'}</span>
@@ -213,7 +212,7 @@ export default function Header() {
           {/* Cart */}
           <button
             onClick={() => setIsCartOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/90 rounded-full transition-colors font-medium text-sm shadow-lg shadow-primary/20"
+            className="flex items-center gap-2 px-2.5 sm:px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/90 rounded-full transition-colors font-medium text-sm shadow-lg shadow-primary/20"
           >
             <Icon name="ShoppingBagIcon" size={18} />
             <span className="hidden sm:inline">{language === 'mn' ? 'Сагс' : 'Cart'}</span>

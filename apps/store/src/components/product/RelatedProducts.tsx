@@ -33,7 +33,7 @@ export default function RelatedProducts({ currentSlug }: { currentSlug?: string 
         Танд таалагдаж магадгүй
       </h2>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         {related.map((product) => {
           const imgSrc =
             r2Url(product.image_path ?? product.gallery_paths?.[0] ?? "") || PLACEHOLDER_IMG;
@@ -46,8 +46,9 @@ export default function RelatedProducts({ currentSlug }: { currentSlug?: string 
               className="group block"
               onMouseEnter={() => handlePrefetch(product)}
               onFocus={() => handlePrefetch(product)}
+              onTouchStart={() => handlePrefetch(product)}
             >
-              <div className="relative aspect-[3/4] rounded-xl overflow-hidden bg-muted mb-3">
+              <div className="relative aspect-[4/5] rounded-xl overflow-hidden bg-muted mb-2 sm:mb-3">
                 <img
                   src={imgSrc}
                   alt={product.name}
@@ -72,7 +73,7 @@ export default function RelatedProducts({ currentSlug }: { currentSlug?: string 
               </div>
 
               <div>
-                <h3 className="font-heading font-bold text-base text-foreground line-clamp-1 group-hover:text-primary transition-colors">
+                <h3 className="font-heading font-bold text-sm sm:text-base text-foreground line-clamp-2 group-hover:text-primary transition-colors">
                   {product.name}
                 </h3>
                 <div className="flex items-center gap-1 mt-1">

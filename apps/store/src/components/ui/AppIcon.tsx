@@ -1,14 +1,32 @@
 import React from 'react';
 import {
-  ShoppingBag, Sparkles, Layers, Info, Search, // ✅ RectangleStack -> Layers болгов
-  Moon, Sun, Menu, X, ChevronDown, Check, Star,
-  Minus, Plus, Truck, RotateCw, ShieldCheck, ThumbsUp, Heart
+  ShoppingBag,
+  Sparkles,
+  Layers,
+  Info,
+  Search,
+  Moon,
+  Sun,
+  Menu,
+  X,
+  ChevronDown,
+  Check,
+  Star,
+  Minus,
+  Plus,
+  Truck,
+  RotateCw,
+  ShieldCheck,
+  ThumbsUp,
+  Heart,
+  CircleUser,
+  LogOut,
 } from 'lucide-react';
 
 const icons = {
   ShoppingBagIcon: ShoppingBag,
   SparklesIcon: Sparkles,
-  RectangleStackIcon: Layers, // ✅ Энд бас Layers болгож солино (Түлхүүр үг нь хэвээрээ байна)
+  RectangleStackIcon: Layers,
   InformationCircleIcon: Info,
   MagnifyingGlassIcon: Search,
   MoonIcon: Moon,
@@ -24,8 +42,10 @@ const icons = {
   ArrowPathIcon: RotateCw,
   ShieldCheckIcon: ShieldCheck,
   HandThumbUpIcon: ThumbsUp,
-  HeartIcon: Heart
-};
+  HeartIcon: Heart,
+  UserCircleIcon: CircleUser,
+  ArrowRightOnRectangleIcon: LogOut,
+} as const;
 
 export type IconName = keyof typeof icons;
 
@@ -36,7 +56,6 @@ type IconProps = {
 };
 
 export default function Icon({ name, size = 24, className = '' }: IconProps) {
-  // Хэрэв нэр буруу орж ирвэл алдаа гаргахгүйн тулд default icon ашиглана
-  const LucideIcon = icons[name] || icons.ShoppingBagIcon;
+  const LucideIcon = icons[name] ?? icons.ShoppingBagIcon;
   return <LucideIcon size={size} className={className} />;
 }

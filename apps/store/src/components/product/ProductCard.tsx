@@ -46,6 +46,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           className="block w-full h-full cursor-pointer"
           onMouseEnter={handlePrefetch}
           onFocus={handlePrefetch}
+          onTouchStart={handlePrefetch}
         >
           <img
             src={imgSrc}
@@ -67,6 +68,7 @@ export default function ProductCard({ product }: ProductCardProps) {
             className="flex-1 h-12 bg-white text-slate-900 rounded-xl flex items-center justify-center font-bold text-[11px] tracking-wider shadow-lg hover:bg-slate-100 transition-colors"
             onMouseEnter={handlePrefetch}
             onFocus={handlePrefetch}
+            onTouchStart={handlePrefetch}
           >
             {language === 'mn' ? 'ДЭЛГЭРЭНГҮЙ' : 'VIEW DETAILS'}
           </Link>

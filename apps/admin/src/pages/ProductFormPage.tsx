@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { api } from '@/lib/api';
+import { api, getNikePrefill } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -62,10 +62,16 @@ export default function ProductFormPage() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const isEditMode = !!id;
+  const [searchParams] = useSearchParams();
+  const prefill = searchParams.get('prefill');
+  const sku = searchParams.get('sku');
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(isEditMode);
   const [submitting, setSubmitting] = useState(false);
+  const [prefillLoading, setPrefillLoading] = useState(false);
+  const [prefillError, setPrefillError] = useState<string | null>(null);
+  const [prefilledSku, setPrefilledSku] = useState<string | null>(null);
   const [activeVariantTab, setActiveVariantTab] = useState('variant-0');
   const [variants, setVariants] = useState<ProductVariant[]>([
     {
@@ -82,12 +88,18 @@ export default function ProductFormPage() {
   ]);
   const [features, setFeatures] = useState<string[]>([]);
   const [featureInput, setFeatureInput] = useState('');
+  const [benefits, setBenefits] = useState<string[]>([]);
+  const [productDetails, setProductDetails] = useState<string[]>([]);
+  const [subtitle, setSubtitle] = useState('');
+  const [isPublished, setIsPublished] = useState(false);
+  const [prefillCategoryHint, setPrefillCategoryHint] = useState('');
 
   const {
     register,
     handleSubmit,
     formState: { errors },
     setValue,
+    getValues,
     watch,
   } = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
@@ -110,6 +122,126 @@ export default function ProductFormPage() {
       fetchProduct(id);
     }
   }, [id]);
+
+  useEffect(() => {
+    if (isEditMode) return;
+    if (prefill !== 'nike' || !sku) return;
+    if (prefilledSku === sku) return;
+
+    setPrefilledSku(sku);
+    setPrefillLoading(true);
+    setPrefillError(null);
+
+    getNikePrefill(sku)
+      .then((data) => {
+        if (!getValues('title')) setValue('title', data.title || '');
+        if (!getValues('slug')) setValue('slug', data.slug || '');
+        if (!getValues('description')) {
+          setValue('description', data.shortDescription || data.description || '');
+        }
+        if (!subtitle && data.subtitle) {
+          setSubtitle(data.subtitle);
+        }
+        if (data.subtitle || data.title) {
+          setPrefillCategoryHint(
+            [data.subtitle, data.title].filter(Boolean).join(' ')
+          );
+        }
+
+        setVariants((prev) => {
+          const next = prev.length > 0 ? [...prev] : [{
+            name: '',
+            sku: '',
+            price: '0',
+            sizes: [],
+            imagePath: '',
+            galleryPaths: [],
+            stock: '0',
+            isAvailable: true,
+            sortOrder: 0,
+          }];
+
+          const first = { ...next[0] };
+          if (!first.name) first.name = data.variantName || '';
+          if (!first.sku) first.sku = data.sku || sku;
+          if (
+            data.priceUsd != null &&
+            Number.isFinite(data.priceUsd) &&
+            data.priceUsd > 0 &&
+            (!first.price || parseFloat(first.price) <= 0)
+          ) {
+            first.price = data.priceUsd.toString();
+          }
+          if ((!first.originalPrice || first.originalPrice === '0' || first.originalPrice === '0.00') && data.priceUsd != null) {
+            first.originalPrice = data.priceUsd.toString();
+          }
+          if (!first.imagePath && data.thumbnailUrl) first.imagePath = data.thumbnailUrl;
+          if ((first.galleryPaths?.length ?? 0) === 0 && data.galleryImages?.length) {
+            first.galleryPaths = data.galleryImages;
+          }
+          first.sortOrder = 0;
+          next[0] = first;
+
+          return next;
+        });
+
+        if (benefits.length === 0 && data.benefits?.length) {
+          setBenefits(data.benefits);
+        }
+        if (productDetails.length === 0 && data.productDetails?.length) {
+          setProductDetails(data.productDetails);
+        }
+      })
+      .catch((error) => {
+        console.error('Failed to prefill Nike data:', error);
+        const backendMessage =
+          error?.response?.data?.message ||
+          error?.message ||
+          'Failed to load Nike data. Please try again.';
+        setPrefillError(backendMessage);
+      })
+      .finally(() => setPrefillLoading(false));
+  }, [
+    prefill,
+    sku,
+    prefilledSku,
+    isEditMode,
+    getValues,
+    setValue,
+    benefits.length,
+    productDetails.length,
+    subtitle,
+  ]);
+
+  useEffect(() => {
+    if (!prefillCategoryHint) return;
+    if (isEditMode) return;
+    if (getValues('categoryId')) return;
+    if (categories.length === 0) return;
+
+    const normalize = (value: string) =>
+      value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+
+    const hint = normalize(prefillCategoryHint);
+
+    const sorted = [...categories].sort(
+      (a, b) => normalize(b.name).length - normalize(a.name).length
+    );
+
+    const match = sorted.find((cat) => {
+      const name = normalize(cat.name);
+      const slug = normalize(cat.slug);
+      return (
+        (name && hint.includes(name)) ||
+        (slug && hint.includes(slug)) ||
+        (hint && name.includes(hint))
+      );
+    });
+
+    if (match) {
+      setValue('categoryId', match.id, { shouldValidate: true, shouldDirty: true });
+    }
+  }, [prefillCategoryHint, categories, isEditMode, getValues, setValue]);
 
   const fetchCategories = async () => {
     try {
@@ -134,6 +266,10 @@ export default function ProductFormPage() {
       setValue('reviews', data.reviews.toString());
 
       setFeatures(data.features || []);
+      setBenefits(data.benefits || []);
+      setProductDetails(data.productDetails || []);
+      setSubtitle(data.subtitle || '');
+      setIsPublished(Boolean(data.is_published ?? data.isPublished ?? false));
 
       if (data.variants && data.variants.length > 0) {
         setVariants(
@@ -215,12 +351,16 @@ export default function ProductFormPage() {
       const payload: any = {
         title: data.title,
         slug: data.slug,
+        is_published: isPublished,
         description: data.description || null,
         basePrice: parseFloat(data.basePrice || '0'),
         categoryId: data.categoryId,
         rating: parseFloat(data.rating || '0'),
         reviews: parseInt(data.reviews || '0'),
         features,
+        benefits,
+        productDetails,
+        subtitle: subtitle || null,
         variants: variants.map((v, idx) => ({
           ...(v.id && { id: v.id }),
           name: v.name,
@@ -246,13 +386,21 @@ export default function ProductFormPage() {
       }
 
       if (productId) {
-        for (let i = 0; i < variants.length; i++) {
-          const variant = variants[i];
+        const workingVariants = variants.map((variant) => ({
+          ...variant,
+          galleryPaths: [...(variant.galleryPaths || [])],
+        }));
+
+        let hasMediaChanges = false;
+
+        for (let i = 0; i < workingVariants.length; i++) {
+          const variant = workingVariants[i];
 
           if (variant.pendingImage) {
             const imageUrl = await uploadFileToR2(variant.pendingImage, productId);
-            if (imageUrl) {
+            if (imageUrl && imageUrl !== variant.imagePath) {
               variant.imagePath = imageUrl;
+              hasMediaChanges = true;
             }
           }
 
@@ -262,27 +410,31 @@ export default function ProductFormPage() {
               const url = await uploadFileToR2(galleryFile, productId);
               if (url) galleryUrls.push(url);
             }
-            variant.galleryPaths = [...variant.galleryPaths, ...galleryUrls];
+            if (galleryUrls.length > 0) {
+              variant.galleryPaths = [...variant.galleryPaths, ...galleryUrls];
+              hasMediaChanges = true;
+            }
           }
+
         }
 
-        if (variants.some(v => v.pendingImage || (v.pendingGalleryImages && v.pendingGalleryImages.length > 0))) {
+        if (hasMediaChanges) {
           const updatePayload = {
             ...payload,
-            variants: variants.map((v, idx) => ({
-              ...(v.id && { id: v.id }),
-              name: v.name,
-              sku: v.sku,
-              price: parseFloat(v.price),
-              originalPrice: v.originalPrice ? parseFloat(v.originalPrice) : null,
-              sizes: v.sizes,
-              imagePath: v.imagePath,
-              galleryPaths: v.galleryPaths,
-              stock: parseInt(v.stock),
-              isAvailable: v.isAvailable,
-              sortOrder: idx,
-            })),
-          };
+            variants: workingVariants.map((v, idx) => ({
+          ...(v.id && { id: v.id }),
+          name: v.name,
+          sku: v.sku,
+          price: parseFloat(v.price),
+          originalPrice: v.originalPrice ? parseFloat(v.originalPrice) : null,
+          sizes: v.sizes,
+          imagePath: v.imagePath,
+          galleryPaths: v.galleryPaths,
+          stock: parseInt(v.stock),
+          isAvailable: v.isAvailable,
+          sortOrder: idx,
+        })),
+      };
           await api.put(`/admin/products/${productId}`, updatePayload);
         }
       }
@@ -393,7 +545,7 @@ export default function ProductFormPage() {
     const errorsList: string[] = [];
     if (errors.title) errorsList.push('Title is required');
     if (errors.slug) errorsList.push('Slug is required');
-    if (errors.categoryId) errorsList.push('Category is required');
+    if (!watchedValues.categoryId) errorsList.push('Category is required');
     if (variants.length === 0) errorsList.push('At least one variant is required');
     variants.forEach((v, i) => {
       if (!v.name) errorsList.push(`Variant ${i + 1}: Name is required`);
@@ -414,11 +566,11 @@ export default function ProductFormPage() {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="pb-24">
+    <form onSubmit={handleSubmit(onSubmit)} className="pb-36 sm:pb-24">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-sm border-b mb-6 px-6 py-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-4">
+      <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-sm border-b mb-4 sm:mb-6 px-4 sm:px-6 py-3 sm:py-4">
+        <div className="max-w-7xl mx-auto flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3 sm:items-center sm:gap-4">
             <Button
               type="button"
               variant="ghost"
@@ -429,22 +581,31 @@ export default function ProductFormPage() {
               Back
             </Button>
             <div>
-              <h1 className="text-2xl font-bold">
+              <h1 className="text-xl sm:text-2xl font-bold">
                 {isEditMode ? 'Edit Product' : 'Create Product'}
               </h1>
               <p className="text-sm text-muted-foreground">
                 {isEditMode ? 'Update product details and variants' : 'Add a new product to your catalog'}
               </p>
+              {!isEditMode && prefill === 'nike' && sku && (
+                <p className={`text-sm ${prefillError ? 'text-destructive' : 'text-muted-foreground'}`}>
+                  {prefillLoading
+                    ? 'Prefilling details from Nike...'
+                    : prefillError
+                    ? prefillError
+                    : 'Nike prefill ready'}
+                </p>
+              )}
             </div>
           </div>
-          <Badge variant={validationErrors.length === 0 ? 'default' : 'destructive'}>
+          <Badge variant={validationErrors.length === 0 ? 'default' : 'destructive'} className="self-start sm:self-auto">
             {validationErrors.length === 0 ? 'Ready' : `${validationErrors.length} issues`}
           </Badge>
         </div>
       </div>
 
       {/* Two-Column Layout */}
-      <div className="max-w-7xl mx-auto px-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Column - Form */}
           <div className="lg:col-span-2 space-y-6">
@@ -455,8 +616,8 @@ export default function ProductFormPage() {
                 <CardDescription>Product name, description, and categorization</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="col-span-2 space-y-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="md:col-span-2 space-y-2">
                     <Label htmlFor="title">Product Title *</Label>
                     <Input
                       id="title"
@@ -469,8 +630,8 @@ export default function ProductFormPage() {
                     )}
                   </div>
 
-                  <div className="col-span-2 space-y-2">
-                    <div className="flex items-center justify-between">
+                  <div className="md:col-span-2 space-y-2">
+                    <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                       <Label htmlFor="slug">URL Slug *</Label>
                       <Button
                         type="button"
@@ -493,7 +654,7 @@ export default function ProductFormPage() {
                     )}
                   </div>
 
-                  <div className="col-span-2 space-y-2">
+                  <div className="md:col-span-2 space-y-2">
                     <Label htmlFor="description">Description</Label>
                     <Textarea
                       id="description"
@@ -504,10 +665,12 @@ export default function ProductFormPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="categoryId">Category *</Label>
-                    <Select
+                  <Label htmlFor="categoryId">Category *</Label>
+                  <Select
                       value={watchedValues.categoryId}
-                      onValueChange={(value) => setValue('categoryId', value)}
+                      onValueChange={(value) =>
+                        setValue('categoryId', value, { shouldValidate: true, shouldDirty: true })
+                      }
                     >
                       <SelectTrigger className={errors.categoryId ? 'border-destructive' : ''}>
                         <SelectValue placeholder="Select category" />
@@ -558,6 +721,24 @@ export default function ProductFormPage() {
                       placeholder="0"
                     />
                   </div>
+
+                  <div className="md:col-span-2">
+                    <div className="flex items-center justify-between rounded-lg border border-border p-3">
+                      <div>
+                        <Label htmlFor="is-published">Published</Label>
+                        <p className="text-xs text-muted-foreground">
+                          Store дээр харагдуулах бол асаана.
+                        </p>
+                      </div>
+                      <input
+                        id="is-published"
+                        type="checkbox"
+                        checked={isPublished}
+                        onChange={(e) => setIsPublished(e.target.checked)}
+                        className="h-5 w-5 rounded border-border"
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 <Separator />
@@ -603,7 +784,7 @@ export default function ProductFormPage() {
             {/* Variants Card */}
             <Card>
               <CardHeader>
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <CardTitle>Product Variants</CardTitle>
                     <CardDescription>Colors, sizes, and pricing options</CardDescription>
@@ -616,9 +797,14 @@ export default function ProductFormPage() {
               </CardHeader>
               <CardContent>
                 <Tabs value={activeVariantTab} onValueChange={setActiveVariantTab}>
-                  <TabsList className="w-full flex-wrap h-auto">
+                  <TabsList className="h-auto w-full justify-start gap-2 overflow-x-auto whitespace-nowrap p-1">
                     {variants.map((variant, index) => (
-                      <TabsTrigger key={index} value={`variant-${index}`} className="flex-1 min-w-[120px]">
+                      <TabsTrigger
+                        key={index}
+                        value={`variant-${index}`}
+                        className="max-w-[220px] flex-none truncate"
+                        title={variant.name || `Variant ${index + 1}`}
+                      >
                         {variant.name || `Variant ${index + 1}`}
                       </TabsTrigger>
                     ))}
@@ -626,8 +812,8 @@ export default function ProductFormPage() {
 
                   {variants.map((variant, index) => (
                     <TabsContent key={index} value={`variant-${index}`} className="space-y-4 mt-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="col-span-2 space-y-2">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="md:col-span-2 space-y-2">
                           <Label>Variant Name *</Label>
                           <Input
                             value={variant.name}
@@ -677,7 +863,7 @@ export default function ProductFormPage() {
                           />
                         </div>
 
-                        <div className="col-span-2 space-y-2">
+                        <div className="md:col-span-2 space-y-2">
                           <Label>Available Sizes</Label>
                           <div className="flex gap-2">
                             <Input
@@ -709,7 +895,7 @@ export default function ProductFormPage() {
                           )}
                         </div>
 
-                        <div className="col-span-2 space-y-2">
+                        <div className="md:col-span-2 space-y-2">
                           <div className="flex items-center gap-2">
                             <input
                               type="checkbox"
@@ -789,7 +975,7 @@ export default function ProductFormPage() {
                             />
                           </label>
                           {(variant.galleryPaths.length > 0 || variant.galleryPreviewUrls) && (
-                            <div className="grid grid-cols-4 gap-2 mt-2">
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
                               {variant.galleryPaths.map((path, gIndex) => (
                                 <div key={`existing-${gIndex}`} className="relative group">
                                   <img
@@ -914,6 +1100,9 @@ export default function ProductFormPage() {
                   <p className="text-sm text-muted-foreground mt-2">
                     {variants.length} variant{variants.length !== 1 ? 's' : ''}
                   </p>
+                  <p className="text-sm text-muted-foreground">
+                    {isPublished ? 'Published' : 'Draft'}
+                  </p>
                   <p className="text-2xl font-bold text-primary mt-2">
                     ${variants[0]?.price || '0.00'}
                   </p>
@@ -968,9 +1157,9 @@ export default function ProductFormPage() {
       </div>
 
       {/* Sticky Bottom Actions */}
-      <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t py-4 px-6 z-20">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="text-sm text-muted-foreground">
+      <div className="fixed bottom-0 left-0 right-0 z-20 border-t bg-background/95 px-4 py-3 backdrop-blur-sm sm:px-6">
+        <div className="mx-auto flex max-w-7xl flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="text-xs sm:text-sm text-muted-foreground">
             {validationErrors.length === 0 ? (
               <span className="text-green-600 flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4" />
@@ -983,16 +1172,17 @@ export default function ProductFormPage() {
               </span>
             )}
           </div>
-          <div className="flex gap-3">
+          <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:grid-cols-none sm:flex-row sm:gap-3">
             <Button
               type="button"
               variant="outline"
               onClick={() => navigate('/products')}
               disabled={submitting}
+              className="w-full sm:w-auto"
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={submitting || validationErrors.length > 0}>
+            <Button type="submit" disabled={submitting || validationErrors.length > 0} className="w-full sm:w-auto">
               {submitting ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />

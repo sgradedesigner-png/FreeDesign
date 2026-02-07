@@ -154,20 +154,21 @@ export default function CategoriesPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Categories</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold">Categories</h1>
           <p className="text-muted-foreground">Manage product categories</p>
         </div>
-        <Button onClick={openCreateDialog}>
+        <Button onClick={openCreateDialog} className="w-full sm:w-auto">
           <Plus className="w-4 h-4 mr-2" />
           Add Category
         </Button>
       </div>
 
       {/* Table */}
-      <div className="rounded-lg border bg-card">
-        <Table>
+      <div className="overflow-hidden rounded-lg border bg-card">
+        <div className="overflow-x-auto">
+          <Table className="min-w-[640px]">
           <TableHeader>
             <TableRow>
               <TableHead>Name</TableHead>
@@ -224,12 +225,13 @@ export default function CategoriesPage() {
               ))
             )}
           </TableBody>
-        </Table>
+          </Table>
+        </div>
       </div>
 
       {/* Create/Edit Dialog */}
       <Dialog open={formDialog.open} onOpenChange={(open) => !submitting && (open ? null : closeFormDialog())}>
-        <DialogContent>
+        <DialogContent className="max-w-[95vw] sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>
               {formDialog.category ? 'Edit Category' : 'Create Category'}
@@ -259,7 +261,7 @@ export default function CategoriesPage() {
               {errors.slug && <p className="text-sm text-destructive">{errors.slug.message}</p>}
             </div>
 
-            <DialogFooter>
+            <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-end">
               <Button type="button" variant="outline" onClick={closeFormDialog} disabled={submitting}>
                 Cancel
               </Button>
@@ -276,7 +278,7 @@ export default function CategoriesPage() {
         open={deleteDialog.open}
         onOpenChange={(open) => !deleting && setDeleteDialog({ open, category: null })}
       >
-        <DialogContent>
+        <DialogContent className="max-w-[95vw] sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Delete Category</DialogTitle>
             <DialogDescription>
@@ -284,7 +286,7 @@ export default function CategoriesPage() {
               undone. Categories with products cannot be deleted.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
+          <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-end">
             <Button
               variant="outline"
               onClick={() => setDeleteDialog({ open: false, category: null })}

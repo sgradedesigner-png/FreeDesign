@@ -26,6 +26,7 @@ export default function FilterSidebar({ onFilterChange }: FilterSidebarProps) {
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 2000]); // ✅ 500 → 2000
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
 
   const [openSections, setOpenSections] = useState<OpenSections>({
     categories: true,
@@ -52,10 +53,10 @@ export default function FilterSidebar({ onFilterChange }: FilterSidebarProps) {
     });
   }, [priceRange, selectedSizes, selectedCategories, onFilterChange]);
 
-  // ✅ Use categories from database
+  // Use category slug for stable filtering key.
   const categories = categoriesData.map(cat => ({
     name: cat.name,
-    id: cat.name, // Use name for filtering (matches product.category)
+    id: cat.slug || cat.id,
   }));
 
   const sizeGroups = [
@@ -92,15 +93,37 @@ export default function FilterSidebar({ onFilterChange }: FilterSidebarProps) {
   };
 
   return (
-    <aside className="w-72 flex-shrink-0 hidden lg:block sticky top-24 h-[calc(100vh-6rem)] overflow-y-auto pr-2 scrollbar-hide pb-10">
+    <aside className="w-full lg:w-72 lg:flex-shrink-0 lg:sticky lg:top-24 lg:h-[calc(100vh-6rem)] lg:overflow-y-auto lg:pr-2 lg:scrollbar-hide lg:pb-10 mb-6 lg:mb-0">
       
-      <div className="flex items-center gap-2 mb-6 text-foreground">
-        <div className="p-2 bg-primary/10 rounded-lg text-primary">
-            <Filter size={20} />
+      <button
+        type="button"
+        onClick={() => setIsMobileFiltersOpen((prev) => !prev)}
+        className="w-full flex items-center justify-between mb-4 lg:mb-6 text-foreground"
+        aria-expanded={isMobileFiltersOpen}
+        aria-controls="catalog-filters-panel"
+      >
+        <div className="flex items-center gap-2">
+          <div className="p-2 bg-primary/10 rounded-lg text-primary">
+              <Filter size={20} />
+          </div>
+          <h2 className="text-xl font-heading font-bold">{t.title}</h2>
         </div>
-        <h2 className="text-xl font-heading font-bold">{t.title}</h2> {/* ✅ Орчуулга */}
-      </div>
+        <ChevronDown
+          size={18}
+          className={`lg:hidden text-muted-foreground transition-transform duration-300 ${
+            isMobileFiltersOpen ? 'rotate-180' : ''
+          }`}
+        />
+      </button>
 
+      <div
+        id="catalog-filters-panel"
+        className={`overflow-hidden transition-all duration-300 lg:overflow-visible ${
+          isMobileFiltersOpen
+            ? 'max-h-[2200px] opacity-100'
+            : 'max-h-0 opacity-0 pointer-events-none lg:pointer-events-auto'
+        } lg:max-h-none lg:opacity-100`}
+      >
       <div className="space-y-6">
         
         {/* 1. Ангилал (Categories) */}
@@ -225,6 +248,7 @@ export default function FilterSidebar({ onFilterChange }: FilterSidebarProps) {
             </div>
         </div>
 
+      </div>
       </div>
     </aside>
   );

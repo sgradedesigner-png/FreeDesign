@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { FileText, Info, Sparkles } from 'lucide-react';
+import { useTheme } from '../../context/ThemeContext';
 
 type ProductTabsProps = {
   details?: unknown;
@@ -14,57 +15,93 @@ type Tab = {
 };
 
 export default function ProductTabs({ details }: ProductTabsProps) {
+  const { language } = useTheme();
   const [activeTab, setActiveTab] = useState<TabId>('description');
 
-  const tabs: Tab[] = [
-    { id: 'description', label: 'Тайлбар', icon: FileText },
-    { id: 'details', label: 'Дэлгэрэнгүй', icon: Info },
-    { id: 'care', label: 'Арчилгааны заавар', icon: Sparkles },
-  ];
+  const tabs: Tab[] = useMemo(
+    () => [
+      {
+        id: 'description',
+        label: language === 'mn' ? 'Тайлбар' : 'Description',
+        icon: FileText,
+      },
+      {
+        id: 'details',
+        label: language === 'mn' ? 'Дэлгэрэнгүй' : 'Details',
+        icon: Info,
+      },
+      {
+        id: 'care',
+        label: language === 'mn' ? 'Арчилгааны заавар' : 'Care Guide',
+        icon: Sparkles,
+      },
+    ],
+    [language]
+  );
 
   const content: Record<TabId, string | string[]> = {
     description:
-      'Манай Сонгодог хар хөх пиджакаар өөрийн ажлын хувцасны цуглуулгыг баяжуулаарай. Дээд зэргийн ноосон холимог даавуугаар хийгдсэн энэхүү олон талт хувцас нь цаг үеийн уламжлалт дэгжин байдал, орчин үеийн өдлөг хослуулсан.',
-    details: [
-      'Орчин үеийн дүр төрхийн тулд нарийхан биеийн хэлбэрийн загвар',
-      'Гараар оёсон нарийвчилсан дэлгэрэнгүй зүсэлттэй хацар',
-      'Урд талын хоёр товчтой',
-      'Ажиллах товчны нүхтэй функциональ ханцуйн товчнууд',
-      'Дотоод цээж, хажуугийн халаас',
-    ],
-    care: [
-      'Хамгийн сайн үр дүнд хүрэхийн тулд зөвхөн хуурай цэвэрлэгээ хийнэ',
-      'Шаардлагатай бол бага дулаанаар уураар индүүдэх',
-      'Хэлбэийг хадгалахын тулд дэвсгэртэй өлгүүрт хадгална',
-      'Шууд нарны гэрлд удаан хугацаагаар байлгахаас зайлсхийх',
-    ],
+      language === 'mn'
+        ? 'Энэ загвар нь өдөр тутмын хэрэглээнд эвтэйхэн, хөнгөн мэдрэмжтэй бөгөөд амьсгалах чадвартай материалтай.'
+        : 'Designed for everyday comfort with lightweight support and breathable materials.',
+    details:
+      language === 'mn'
+        ? [
+            'Орчин үеийн минимал загвар',
+            'Зөөлөн доторлогоотой тул удаан өмсөхөд эвтэйхэн',
+            'Өдөр тутмын болон спорт хэв маягт зохицно',
+            'Материалын боловсруулалт сайтай, цэвэрхэн өнгөлгөөтэй',
+          ]
+        : [
+            'Modern minimal silhouette',
+            'Comfortable inner cushioning for all-day wear',
+            'Works for both casual and active styling',
+            'Clean material finish with premium detailing',
+          ],
+    care:
+      language === 'mn'
+        ? [
+            'Зөөлөн алчуураар тогтмол арчиж цэвэрлэнэ',
+            'Шууд өндөр халуунд хатаахгүй байх',
+            'Хуурай, агаар сэлгэлттэй орчинд хадгална',
+            'Өнгө алдахаас сэргийлж нарны шууд тусгалаас хол байлгана',
+          ]
+        : [
+            'Wipe gently with a soft cloth',
+            'Avoid direct high-heat drying',
+            'Store in a cool, dry, ventilated area',
+            'Keep away from long direct sunlight exposure',
+          ],
   };
 
   const listItems = activeTab === 'description' ? [] : (content[activeTab] as string[]);
 
   return (
     <div className="mt-12">
-      {/* Tabs */}
-      <div className="flex border-b border-border mb-6 gap-2">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={[
-              'flex items-center gap-2 px-5 py-3 border-b-2 transition-colors font-semibold text-sm',
-              activeTab === tab.id
-                ? 'border-primary text-foreground'
-                : 'border-transparent text-muted-foreground hover:text-foreground',
-            ].join(' ')}
-          >
-            <tab.icon size={16} className={activeTab === tab.id ? 'text-primary' : 'text-muted-foreground'} />
-            {tab.label}
-          </button>
-        ))}
+      <div className="border-b border-border mb-6">
+        <div className="flex gap-2 overflow-x-auto scrollbar-hide -mx-1 px-1">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={[
+                'shrink-0 whitespace-nowrap flex items-center gap-2 px-4 sm:px-5 py-3 border-b-2 transition-colors font-semibold text-sm',
+                activeTab === tab.id
+                  ? 'border-primary text-foreground'
+                  : 'border-transparent text-muted-foreground hover:text-foreground',
+              ].join(' ')}
+            >
+              <tab.icon
+                size={16}
+                className={activeTab === tab.id ? 'text-primary' : 'text-muted-foreground'}
+              />
+              {tab.label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Content (FIXED for dark mode) */}
-      <div className="p-6 bg-card rounded-2xl border border-border">
+      <div className="p-4 sm:p-6 bg-card rounded-2xl border border-border">
         {activeTab === 'description' && (
           <p className="leading-relaxed text-muted-foreground">{content.description}</p>
         )}

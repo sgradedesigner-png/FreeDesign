@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../auth/AuthContext';
@@ -73,6 +73,15 @@ export default function DashboardPage() {
   const nav = useNavigate();
   const { user } = useAuth();
   const [revenueData] = useState(generateRevenueData());
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 640px)');
+    const onChange = (event: MediaQueryListEvent) => setIsMobile(event.matches);
+    setIsMobile(mq.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
 
   // Fetch stats with React Query (cached, fast)
   const { data: stats, isLoading: statsLoading } = useQuery({
@@ -104,14 +113,14 @@ export default function DashboardPage() {
     trend?: 'up' | 'down';
     trendValue?: string;
   }) => (
-    <div className="rounded-xl border bg-card p-6 shadow-sm hover:shadow-md transition-shadow">
-      <div className="flex items-center justify-between mb-4">
-        <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
-          <Icon className="w-6 h-6 text-primary" />
+    <div className="rounded-xl border bg-card p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow">
+      <div className="flex items-center justify-between mb-3 sm:mb-4">
+        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-primary/10 flex items-center justify-center">
+          <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
         </div>
         {trend && trendValue && (
           <div
-            className={`flex items-center gap-1 text-sm font-medium ${
+            className={`flex items-center gap-1 text-xs sm:text-sm font-medium ${
               trend === 'up' ? 'text-green-600' : 'text-red-600'
             }`}
           >
@@ -125,7 +134,7 @@ export default function DashboardPage() {
         )}
       </div>
       <p className="text-sm text-muted-foreground mb-1">{title}</p>
-      <p className="text-3xl font-bold">{statsLoading ? '—' : value}</p>
+      <p className="text-2xl sm:text-3xl font-bold">{statsLoading ? '—' : value}</p>
     </div>
   );
 
@@ -133,12 +142,12 @@ export default function DashboardPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold">Dashboard</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold">Dashboard</h1>
         <p className="text-muted-foreground">Welcome back, {user?.email?.split('@')[0] || 'Admin'}</p>
       </div>
 
       {/* Stats Grid */}
-      <div className="grid gap-6 md:grid-cols-3">
+      <div className="grid gap-4 sm:gap-6 sm:grid-cols-2 xl:grid-cols-3">
         <StatCard
           title="Total Products"
           value={stats?.productsCount ?? 0}
@@ -161,14 +170,14 @@ export default function DashboardPage() {
       </div>
 
       {/* Charts Row */}
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-6 xl:grid-cols-2">
         {/* Revenue Chart */}
         <div className="rounded-xl border bg-card p-6 shadow-sm">
           <div className="mb-6">
             <h3 className="text-lg font-semibold">Revenue Overview</h3>
             <p className="text-sm text-muted-foreground">Last 7 days revenue trend</p>
           </div>
-          <ResponsiveContainer width="100%" height={300}>
+          <ResponsiveContainer width="100%" height={isMobile ? 220 : 300}>
             <AreaChart data={revenueData}>
               <defs>
                 <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
@@ -177,8 +186,8 @@ export default function DashboardPage() {
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-              <XAxis dataKey="date" stroke="#6b7280" fontSize={12} />
-              <YAxis stroke="#6b7280" fontSize={12} />
+              <XAxis dataKey="date" stroke="#6b7280" fontSize={isMobile ? 10 : 12} />
+              <YAxis stroke="#6b7280" fontSize={isMobile ? 10 : 12} />
               <Tooltip
                 contentStyle={{
                   backgroundColor: 'white',
@@ -208,15 +217,22 @@ export default function DashboardPage() {
               Loading...
             </div>
           ) : stats.categoryDistribution.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={isMobile ? 240 : 300}>
               <PieChart>
                 <Pie
                   data={stats.categoryDistribution}
                   cx="50%"
                   cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={100}
+                  labelLine={!isMobile}
+                  label={
+                    isMobile
+                      ? undefined
+                      : ({ name, percent }) => {
+                          const safePercent = typeof percent === 'number' ? percent : 0;
+                          return `${name} ${(safePercent * 100).toFixed(0)}%`;
+                        }
+                  }
+                  outerRadius={isMobile ? 78 : 100}
                   fill="#8884d8"
                   dataKey="value"
                 >
@@ -225,6 +241,7 @@ export default function DashboardPage() {
                   ))}
                 </Pie>
                 <Tooltip />
+                {isMobile ? <Legend verticalAlign="bottom" height={32} /> : null}
               </PieChart>
             </ResponsiveContainer>
           ) : (
@@ -238,18 +255,18 @@ export default function DashboardPage() {
       {/* Recent Products */}
       {!statsLoading && stats && stats.recentProducts.length > 0 && (
         <div className="rounded-xl border bg-card p-6 shadow-sm">
-          <div className="flex items-center justify-between mb-6">
+          <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h3 className="text-lg font-semibold">Recent Products</h3>
               <p className="text-sm text-muted-foreground">Latest additions to your catalog</p>
             </div>
-            <Button variant="ghost" size="sm" onClick={() => nav('/products')}>
+            <Button variant="ghost" size="sm" className="self-start sm:self-auto" onClick={() => nav('/products')}>
               View all
               <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
           </div>
           <div className="space-y-3">
-            {stats.recentProducts.map((product) => {
+            {(isMobile ? stats.recentProducts.slice(0, 4) : stats.recentProducts).map((product) => {
               const firstVariant = product.variants[0];
               const totalStock = product.variants.reduce((sum, v) => sum + v.stock, 0);
               const avgPrice = product.variants.reduce((sum, v) => sum + v.price, 0) / product.variants.length;
@@ -257,7 +274,7 @@ export default function DashboardPage() {
               return (
                 <div
                   key={product.id}
-                  className="flex items-center gap-4 p-4 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer group"
+                  className="group flex flex-col gap-4 rounded-lg p-4 transition-colors hover:bg-muted/50 cursor-pointer sm:flex-row sm:items-center"
                   onClick={() => nav(`/products/${product.id}`)}
                 >
                   {firstVariant?.imagePath ? (
@@ -271,11 +288,11 @@ export default function DashboardPage() {
                       No image
                     </div>
                   )}
-                  <div className="flex-1 min-w-0">
+                  <div className="min-w-0 flex-1">
                     <p className="font-medium truncate group-hover:text-primary transition-colors">
                       {product.title}
                     </p>
-                    <div className="flex items-center gap-2 mt-1">
+                    <div className="mt-1 flex flex-wrap items-center gap-2">
                       <Badge variant="secondary" className="text-xs">
                         {product.category.name}
                       </Badge>
@@ -284,7 +301,7 @@ export default function DashboardPage() {
                       </span>
                     </div>
                   </div>
-                  <div className="text-right">
+                  <div className="text-left sm:text-right">
                     <p className="text-lg font-semibold">${avgPrice.toFixed(2)}</p>
                     <p className="text-xs text-muted-foreground">
                       {format(new Date(product.createdAt), 'MMM dd, yyyy')}
@@ -300,7 +317,7 @@ export default function DashboardPage() {
       {/* Quick Actions */}
       <div className="rounded-xl border bg-card p-6 shadow-sm">
         <h3 className="text-lg font-semibold mb-4">Quick Actions</h3>
-        <div className="grid gap-3 md:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           <Button variant="outline" className="justify-start" onClick={() => nav('/products/new')}>
             <Package className="w-4 h-4 mr-2" />
             Add New Product
@@ -318,3 +335,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+
