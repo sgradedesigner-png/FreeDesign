@@ -14,6 +14,7 @@ import { publicProductRoutes } from './routes/products';
 import { adminGuard } from './supabaseauth';
 import orderRoutes from './routes/orders';
 import profileRoutes from './routes/profile';
+import paymentRoutes from './routes/payment';
 import adminOrderRoutes from './routes/admin/orders';
 
 dotenv.config();
@@ -69,6 +70,7 @@ app.register(publicProductRoutes, { prefix: '/api/products' });
 // 5) Authenticated customer routes
 app.register(orderRoutes);
 app.register(profileRoutes);
+app.register(paymentRoutes);
 
 // 6) Admin routes
 app.register(adminCategoryRoutes, { prefix: '/admin/categories' });

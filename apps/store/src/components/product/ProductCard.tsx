@@ -18,7 +18,12 @@ export default function ProductCard({ product }: ProductCardProps) {
   const { language } = useTheme();
   const queryClient = useQueryClient();
 
-  const imgSrc = r2Url(product.image_path ?? product.gallery_paths?.[0] ?? '') || PLACEHOLDER_IMG;
+  // Get default variant (first available variant)
+  const defaultVariant = product.variants?.[0];
+  const imgSrc = r2Url(defaultVariant?.imagePath ?? product.image_path ?? '') || PLACEHOLDER_IMG;
+
+  // Get price from default variant or product
+  const displayPrice = defaultVariant?.price ?? product.price ?? 0;
 
   const handlePrefetch = () => {
     if (!product.slug) return;
@@ -29,7 +34,15 @@ export default function ProductCard({ product }: ProductCardProps) {
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    addItem(product, product.colors?.[0] ?? null, product.sizes?.[0] ?? null);
+
+    // Check if product has variants
+    if (!defaultVariant) {
+      console.error('Product has no variants:', product);
+      return;
+    }
+
+    // Add first variant to cart (user can change variant in product detail page)
+    addItem(product, defaultVariant, null);
   };
 
   return (
@@ -96,7 +109,16 @@ export default function ProductCard({ product }: ProductCardProps) {
           <h3 className="font-bold text-base truncate mb-2 text-foreground group-hover:text-primary transition-colors">
             {product.name}
           </h3>
-          <p className="text-foreground font-bold text-lg">${product.price.toLocaleString()}</p>
+          <div className="flex items-baseline gap-2">
+            <p className="text-foreground font-bold text-lg">
+              ₮{Number(displayPrice).toLocaleString()}
+            </p>
+            {defaultVariant?.originalPrice && Number(defaultVariant.originalPrice) > Number(displayPrice) && (
+              <p className="text-muted-foreground text-sm line-through">
+                ₮{Number(defaultVariant.originalPrice).toLocaleString()}
+              </p>
+            )}
+          </div>
         </div>
       </div>
     </div>

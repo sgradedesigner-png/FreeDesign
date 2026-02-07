@@ -96,8 +96,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
         productCategory: product.category,
         variantId: variant.id,
         variantName: variant.name,
-        variantPrice: variant.price,
-        variantOriginalPrice: variant.originalPrice,
+        variantPrice: Number(variant.price), // Convert Decimal/string to number
+        variantOriginalPrice: variant.originalPrice ? Number(variant.originalPrice) : null,
         variantImage: variant.imagePath,
         variantSku: variant.sku,
         size: selectedSize,

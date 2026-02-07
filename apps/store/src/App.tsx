@@ -30,7 +30,24 @@ function Layout() {
 
   return (
     <div className={`min-h-screen bg-background text-foreground font-sans transition-colors duration-300 ${isConfigurator ? 'overflow-hidden' : ''}`}>
-      <Toaster position="bottom-right" richColors />
+      <Toaster
+        position="top-right"
+        richColors
+        expand={false}
+        toastOptions={{
+          style: {
+            zIndex: 9999,
+            maxWidth: '400px',
+            pointerEvents: 'auto',
+          },
+          duration: 3000,
+          className: 'pointer-events-auto',
+        }}
+        style={{
+          right: '1rem',
+          top: '5rem',
+        }}
+      />
       <ScrollToTop />
       {/* Configurator дээр үндсэн Header болон Сагсыг НУУНА */}
       {!isConfigurator && <Header />}

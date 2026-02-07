@@ -106,11 +106,24 @@ model Order {
   status          OrderStatus @default(PENDING)
   items           Json        // Order items (snapshot)
   shippingAddress String?     // JSON string with shipping details
+
+  // QPay Payment Fields
+  qpayInvoiceId   String?     @unique  // QPay invoice_id
+  qpayPaymentId   String?     @unique  // QPay payment_id (after paid)
+  paymentStatus   String      @default("UNPAID") // UNPAID, PAID, REFUNDED
+  paymentMethod   String?     // "QPAY", "CASH", etc.
+  qrCode          String?     @db.Text // QR code text (base64 image)
+  qrCodeUrl       String?     // QPay short URL
+  paymentDate     DateTime?
+
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
   @@index([userId])
   @@index([status])
   @@index([createdAt])
+  @@index([qpayInvoiceId])
+  @@index([qpayPaymentId])
+  @@index([paymentStatus])
   @@map("orders")
 }
