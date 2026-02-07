@@ -38,6 +38,9 @@ type CartContextValue = {
   // Remove item
   removeItem: (cartKey: string) => void;
 
+  // Clear all items
+  clearCart: () => void;
+
   cartCount: number;
   cartTotal: number;
 
@@ -149,6 +152,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  // Clear all items from cart
+  const clearCart = () => {
+    setCart([]);
+  };
+
   const cartCount = useMemo(() => cart.reduce((acc, item) => acc + item.quantity, 0), [cart]);
   const cartTotal = useMemo(() => cart.reduce((acc, item) => acc + item.variantPrice * item.quantity, 0), [cart]);
 
@@ -160,6 +168,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         increaseQty,
         decreaseQty,
         removeItem,
+        clearCart,
         cartCount,
         cartTotal,
         isCartOpen,

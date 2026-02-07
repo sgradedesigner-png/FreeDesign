@@ -187,7 +187,7 @@ export default function Header() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setShowAuthModal(true)}
+              onClick={() => navigate('/login')}
               className="inline-flex text-foreground hover:bg-muted"
             >
               <Icon name="UserCircleIcon" size={18} className="md:mr-2" />

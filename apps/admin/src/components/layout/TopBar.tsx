@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/auth/AuthContext';
+import { useLanguage } from '@/context/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 import {
   DropdownMenu,
@@ -10,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
-import { LogOut, User, Moon, Sun, Menu } from 'lucide-react';
+import { LogOut, User, Moon, Sun, Menu, Globe } from 'lucide-react';
 
 type TopBarProps = {
   onMenuClick?: () => void;
@@ -18,6 +19,7 @@ type TopBarProps = {
 
 export function TopBar({ onMenuClick }: TopBarProps) {
   const { user, logout } = useAuth();
+  const { language, toggleLanguage, t } = useLanguage();
   const navigate = useNavigate();
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
 
@@ -55,6 +57,17 @@ export function TopBar({ onMenuClick }: TopBarProps) {
       </div>
 
       <div className="flex items-center gap-2 sm:gap-4">
+        {/* Language Toggle */}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={toggleLanguage}
+          className="hidden sm:flex items-center gap-1.5 font-medium"
+        >
+          <Globe className="w-4 h-4" />
+          <span className="text-xs uppercase">{language}</span>
+        </Button>
+
         {/* Dark Mode Toggle */}
         <Button variant="ghost" size="icon" onClick={toggleTheme}>
           {theme === 'light' ? (
@@ -77,16 +90,16 @@ export function TopBar({ onMenuClick }: TopBarProps) {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuLabel>My Account</DropdownMenuLabel>
+            <DropdownMenuLabel>{user?.email || 'admin'}</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem disabled>
-              <User className="w-4 h-4 mr-2" />
-              Profile
+            <DropdownMenuItem className="sm:hidden" onClick={toggleLanguage}>
+              <Globe className="w-4 h-4 mr-2" />
+              {language === 'en' ? 'English' : 'Монгол'}
             </DropdownMenuItem>
-            <DropdownMenuSeparator />
+            <DropdownMenuSeparator className="sm:hidden" />
             <DropdownMenuItem onClick={handleLogout} className="text-destructive">
               <LogOut className="w-4 h-4 mr-2" />
-              Logout
+              {t('nav.logout')}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

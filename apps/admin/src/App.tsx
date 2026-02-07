@@ -5,6 +5,8 @@ import DashboardPage from './pages/DashboardPage';
 import ProductsPage from './pages/ProductsPage';
 import ProductFormPage from './pages/ProductFormPage';
 import CategoriesPage from './pages/CategoriesPage';
+import OrdersPage from './pages/OrdersPage';
+import SettingsPage from './pages/SettingsPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AdminLayout } from './components/layout/AdminLayout';
 import { useAuth } from './auth/AuthContext';
@@ -33,6 +35,8 @@ export default function App() {
         <Route path="/products/new" element={<ProductFormPage />} />
         <Route path="/products/:id" element={<ProductFormPage />} />
         <Route path="/categories" element={<CategoriesPage />} />
+        <Route path="/orders" element={<OrdersPage />} />
+        <Route path="/settings" element={<SettingsPage />} />
         {/* More routes will be added here */}
       </Route>
 

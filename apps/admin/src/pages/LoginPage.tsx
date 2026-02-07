@@ -1,19 +1,24 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Mail, Lock, ShoppingBag, Loader2, AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Mail, Lock, ShoppingBag, Loader2, AlertCircle, ShieldAlert } from 'lucide-react';
 
 export default function LoginPage() {
   const nav = useNavigate();
   const { login, ok } = useAuth();
+  const [searchParams] = useSearchParams();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [err, setErr] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // Check if user was denied access
+  const accessDenied = searchParams.get('denied') === 'true';
 
   useEffect(() => {
     if (ok) nav('/', { replace: true });
@@ -56,6 +61,16 @@ export default function LoginPage() {
               Sign in to manage your e-commerce store
             </p>
           </div>
+
+          {/* Access Denied Warning */}
+          {accessDenied && (
+            <Alert variant="destructive" className="border-red-200 dark:border-red-900">
+              <ShieldAlert className="h-4 w-4" />
+              <AlertDescription className="font-medium">
+                Access Denied: You do not have permission to access the admin panel. Only users with admin privileges can sign in.
+              </AlertDescription>
+            </Alert>
+          )}
 
           {/* Form */}
           <form onSubmit={onSubmit} className="space-y-4">

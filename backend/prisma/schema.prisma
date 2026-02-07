@@ -13,6 +13,7 @@ datasource db {
 enum Role {
   ADMIN
   EDITOR
+  CUSTOMER
 }
 
 enum OrderStatus {
@@ -25,9 +26,15 @@ enum OrderStatus {
 
 model Profile {
   id        String   @id  // = auth.users.id
-  role      Role     @default(ADMIN)
+  role      Role     @default(CUSTOMER)
   createdAt DateTime @default(now())
-  email     String?  // ✅ nullable болго
+  updatedAt DateTime @default(now()) @updatedAt
+  email     String?
+  name      String?  // User full name
+  phone     String?  // User phone number
+  address   String?  // JSON string for multiple addresses
+
+  @@index([email])
   @@map("profiles")
 }
 
@@ -93,13 +100,16 @@ model ProductVariant {
 }
 
 model Order {
-  id        String      @id @default(uuid())
-  total     Decimal
-  status    OrderStatus @default(PENDING)
-  items     Json        // Order items (snapshot)
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
+  id              String      @id @default(uuid())
+  userId          String      // Link to auth.users.id
+  total           Decimal
+  status          OrderStatus @default(PENDING)
+  items           Json        // Order items (snapshot)
+  shippingAddress String?     // JSON string with shipping details
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
 
+  @@index([userId])
   @@index([status])
   @@index([createdAt])
   @@map("orders")

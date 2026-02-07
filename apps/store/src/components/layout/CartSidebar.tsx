@@ -196,10 +196,14 @@ export default function CartSidebar() {
               <Eye size={18} />
               {language === 'mn' ? 'Сагс үзэх' : 'VIEW CART'}
             </Link>
-            <button className="w-full rounded-xl bg-primary px-6 py-3 text-white font-bold flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors">
+            <Link
+              to="/checkout"
+              onClick={() => setIsCartOpen(false)}
+              className="w-full rounded-xl bg-primary px-6 py-3 text-white font-bold flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors"
+            >
               {language === 'mn' ? 'Худалдан авах' : 'CHECKOUT'}
               <ArrowRight size={18} />
-            </button>
+            </Link>
           </div>
         )}
       </SheetContent>

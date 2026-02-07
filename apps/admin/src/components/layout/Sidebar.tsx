@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { useLanguage } from '@/context/LanguageContext';
 import {
   LayoutDashboard,
   Package,
@@ -10,11 +11,11 @@ import {
 } from 'lucide-react';
 
 const menuItems = [
-  { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
-  { path: '/products', icon: Package, label: 'Products' },
-  { path: '/categories', icon: FolderTree, label: 'Categories' },
-  { path: '/orders', icon: ShoppingCart, label: 'Orders' },
-  { path: '/settings', icon: Settings, label: 'Settings' },
+  { path: '/', icon: LayoutDashboard, labelKey: 'nav.dashboard' },
+  { path: '/products', icon: Package, labelKey: 'nav.products' },
+  { path: '/categories', icon: FolderTree, labelKey: 'nav.categories' },
+  { path: '/orders', icon: ShoppingCart, labelKey: 'nav.orders' },
+  { path: '/settings', icon: Settings, labelKey: 'nav.settings' },
 ];
 
 type SidebarProps = {
@@ -24,6 +25,7 @@ type SidebarProps = {
 
 export function Sidebar({ isMobileOpen = false, onMobileClose }: SidebarProps) {
   const location = useLocation();
+  const { t } = useLanguage();
 
   return (
     <>
@@ -54,7 +56,7 @@ export function Sidebar({ isMobileOpen = false, onMobileClose }: SidebarProps) {
                 )}
               >
                 <Icon className="w-5 h-5" />
-                <span className="font-medium">{item.label}</span>
+                <span className="font-medium">{t(item.labelKey)}</span>
               </Link>
             );
           })}
@@ -116,7 +118,7 @@ export function Sidebar({ isMobileOpen = false, onMobileClose }: SidebarProps) {
                   )}
                 >
                   <Icon className="w-5 h-5" />
-                  <span className="font-medium">{item.label}</span>
+                  <span className="font-medium">{t(item.labelKey)}</span>
                 </Link>
               );
             })}

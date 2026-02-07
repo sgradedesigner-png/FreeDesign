@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
 import { useCart } from '@/context/CartContext'
@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import Icon from '@/components/ui/AppIcon'
 import { toast } from 'sonner'
+import { supabase } from '@/lib/supabase'
 
 export default function CheckoutPage() {
   const { user } = useAuth()
@@ -18,13 +19,88 @@ export default function CheckoutPage() {
   const navigate = useNavigate()
 
   const [loading, setLoading] = useState(false)
-  const [shippingInfo, setShippingInfo] = useState({
-    fullName: '',
-    phone: '',
-    address: '',
-    city: '',
-    zipCode: '',
-  })
+  const [loadingProfile, setLoadingProfile] = useState(false)
+
+  // Try to restore shipping info from sessionStorage (preserves guest input)
+  const getInitialShippingInfo = () => {
+    const saved = sessionStorage.getItem('checkout-shipping-info')
+    if (saved) {
+      try {
+        return JSON.parse(saved)
+      } catch {
+        return { fullName: '', phone: '', address: '', city: '', zipCode: '' }
+      }
+    }
+    return { fullName: '', phone: '', address: '', city: '', zipCode: '' }
+  }
+
+  const [shippingInfo, setShippingInfo] = useState(getInitialShippingInfo())
+  const [savedAddress, setSavedAddress] = useState<any>(null)
+
+  // Save shipping info to sessionStorage whenever it changes (preserve guest input)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      sessionStorage.setItem('checkout-shipping-info', JSON.stringify(shippingInfo))
+    }, 500)
+    return () => clearTimeout(timer)
+  }, [shippingInfo])
+
+  // Fetch user's saved profile address when logged in
+  useEffect(() => {
+    if (user) {
+      fetchProfileAddress()
+    }
+  }, [user])
+
+  const fetchProfileAddress = async () => {
+    if (!user) return
+
+    setLoadingProfile(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) return
+
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/profile`, {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`
+        }
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        if (data.profile?.address && data.profile?.phone && data.profile?.name) {
+          // Parse address if it's a JSON string
+          let addressValue = data.profile.address
+          try {
+            const parsed = JSON.parse(data.profile.address)
+            addressValue = parsed.street || parsed.address || data.profile.address
+          } catch {
+            // If not JSON, use as-is
+            addressValue = data.profile.address
+          }
+
+          setSavedAddress({
+            fullName: data.profile.name,
+            phone: data.profile.phone,
+            address: addressValue,
+            city: '',
+            zipCode: ''
+          })
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch profile:', error)
+    } finally {
+      setLoadingProfile(false)
+    }
+  }
+
+  const useSavedAddress = () => {
+    if (savedAddress) {
+      setShippingInfo(savedAddress)
+      toast.success(language === 'mn' ? 'Хадгалагдсан хаяг ашиглагдлаа' : 'Saved address loaded')
+    }
+  }
 
   // If cart is empty, redirect to cart page
   if (cart.length === 0) {
@@ -64,24 +140,68 @@ export default function CheckoutPage() {
       return
     }
 
-    // TODO: Call backend API to create order
-    // For now, just simulate order creation
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000))
+      // Get access token
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) {
+        toast.error(language === 'mn' ? 'Нэвтэрч орно уу' : 'Please login')
+        navigate('/login?returnTo=/checkout')
+        setLoading(false)
+        return
+      }
+
+      // Prepare order items
+      const items = cart.map(item => ({
+        productId: item.productId,
+        variantId: item.variantId,
+        productName: item.productName,
+        variantName: item.variantName,
+        variantPrice: item.variantPrice,
+        quantity: item.quantity,
+        imagePath: item.imagePath
+      }))
+
+      // Call backend API to create order
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/orders`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          items,
+          shippingAddress: shippingInfo,
+          total: cartTotal
+        })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to create order')
+      }
+
+      const { order } = await response.json()
 
       // Clear cart
       clearCart()
 
+      // Clear saved shipping info from sessionStorage
+      sessionStorage.removeItem('checkout-shipping-info')
+
       // Show success message
       toast.success(
-        language === 'mn' ? 'Захиалга амжилттай илгээгдлээ!' : 'Order placed successfully!'
+        language === 'mn' ? 'Захиалга амжилттай үүслээ!' : 'Order created successfully!'
       )
 
-      // Redirect to home or order confirmation page
-      navigate('/')
-    } catch (error) {
-      toast.error(language === 'mn' ? 'Алдаа гарлаа. Дахин оролдоно уу.' : 'An error occurred. Please try again.')
+      // Redirect to order detail page
+      navigate(`/orders/${order.id}`)
+    } catch (error: any) {
+      console.error('Order creation error:', error)
+      toast.error(
+        language === 'mn'
+          ? `Алдаа гарлаа: ${error.message}`
+          : `Error: ${error.message}`
+      )
       setLoading(false)
     }
   }
@@ -108,8 +228,22 @@ export default function CheckoutPage() {
               <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <Alert>
-                    <AlertDescription>
-                      <strong>{language === 'mn' ? 'Нэвтэрсэн:' : 'Logged in as:'}</strong> {user?.email}
+                    <AlertDescription className="flex items-center justify-between">
+                      <div>
+                        <strong>{language === 'mn' ? 'Нэвтэрсэн:' : 'Logged in as:'}</strong> {user?.email}
+                      </div>
+                      {savedAddress && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={useSavedAddress}
+                          disabled={loadingProfile}
+                        >
+                          <Icon name="MapPinIcon" size={14} className="mr-1" />
+                          {language === 'mn' ? 'Хадгалсан хаяг' : 'Use saved address'}
+                        </Button>
+                      )}
                     </AlertDescription>
                   </Alert>
 

@@ -45,6 +45,14 @@ api.interceptors.response.use(
       | undefined;
     const status = error?.response?.status;
 
+    // Handle 403 Forbidden - user is not admin
+    if (status === 403) {
+      console.error('403 Forbidden: User is not an admin');
+      localStorage.removeItem('sb-access-token');
+      // Don't redirect here - let ProtectedRoute handle it
+      return Promise.reject(error);
+    }
+
     if (status !== 401 || !originalRequest || originalRequest._retryAuth) {
       return Promise.reject(error);
     }

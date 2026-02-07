@@ -12,6 +12,9 @@ import { adminUploadRoutes } from './routes/admin/upload';
 import { adminUploadPresignedRoutes } from './routes/admin/upload-presigned';
 import { publicProductRoutes } from './routes/products';
 import { adminGuard } from './supabaseauth';
+import orderRoutes from './routes/orders';
+import profileRoutes from './routes/profile';
+import adminOrderRoutes from './routes/admin/orders';
 
 dotenv.config();
 
@@ -63,15 +66,20 @@ app.get('/admin/ping', { preHandler: adminGuard }, async (req) => {
 // 4) Public API routes
 app.register(publicProductRoutes, { prefix: '/api/products' });
 
-// 5) Admin routes
+// 5) Authenticated customer routes
+app.register(orderRoutes);
+app.register(profileRoutes);
+
+// 6) Admin routes
 app.register(adminCategoryRoutes, { prefix: '/admin/categories' });
 app.register(adminProductRoutes, { prefix: '/admin/products' });
 app.register(adminPrefillRoutes, { prefix: '/admin/prefill' });
 app.register(adminStatsRoutes, { prefix: '/admin/stats' });
 app.register(adminUploadRoutes, { prefix: '/admin/upload' });
 app.register(adminUploadPresignedRoutes, { prefix: '/admin/upload' });
+app.register(adminOrderRoutes);
 
-// 6) Start Server
+// 7) Start Server
 const start = async () => {
   try {
     const port = Number(process.env.PORT) || 3000;
