@@ -6,10 +6,18 @@ interface AuthContextType {
   user: User | null
   session: Session | null
   loading: boolean
-  login: (email: string, password: string) => Promise<{ error: AuthError | null }>
-  signup: (email: string, password: string) => Promise<{ error: AuthError | null }>
+  login: (
+    email: string,
+    password: string,
+    captchaToken?: string
+  ) => Promise<{ error: AuthError | null }>
+  signup: (
+    email: string,
+    password: string,
+    captchaToken?: string
+  ) => Promise<{ error: AuthError | null }>
   logout: () => Promise<void>
-  resetPassword: (email: string) => Promise<{ error: AuthError | null }>
+  resetPassword: (email: string, captchaToken?: string) => Promise<{ error: AuthError | null }>
   updatePassword: (newPassword: string) => Promise<{ error: AuthError | null }>
 }
 
@@ -40,18 +48,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe()
   }, [])
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string, captchaToken?: string) => {
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
+      options: {
+        captchaToken,
+      },
     })
     return { error }
   }
 
-  const signup = async (email: string, password: string) => {
+  const signup = async (email: string, password: string, captchaToken?: string) => {
     const { error } = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        captchaToken,
+      },
     })
     return { error }
   }
@@ -60,9 +74,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut()
   }
 
-  const resetPassword = async (email: string) => {
+  const resetPassword = async (email: string, captchaToken?: string) => {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/auth/reset`,
+      captchaToken,
     })
     return { error }
   }

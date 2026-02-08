@@ -16,6 +16,7 @@ import CheckoutPage from './pages/CheckoutPage';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import AuthResetPassword from './pages/AuthResetPassword';
+import AuthCallbackPage from './pages/AuthCallbackPage';
 import OrdersPage from './pages/OrdersPage';
 import OrderDetailPage from './pages/OrderDetailPage';
 import ProfilePage from './pages/ProfilePage';
@@ -66,6 +67,7 @@ function Layout() {
           <Route path="/orders" element={<OrdersPage />} />
           <Route path="/orders/:id" element={<OrderDetailPage />} />
           <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/auth/callback" element={<AuthCallbackPage />} />
           <Route path="/auth/reset" element={<AuthResetPassword />} />
         </Routes>
       </main>

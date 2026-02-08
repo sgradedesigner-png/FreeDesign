@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import TurnstileCaptcha from '@/components/auth/TurnstileCaptcha'
 import { AuthError } from '@supabase/supabase-js'
 
 interface LoginFormProps {
@@ -18,6 +19,8 @@ export default function LoginForm({ onSuccess, onForgotPassword }: LoginFormProp
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null)
+  const [captchaRefreshKey, setCaptchaRefreshKey] = useState(0)
   const [error, setError] = useState<string | null>(null)
 
   const getErrorMessage = (error: AuthError) => {
@@ -61,11 +64,21 @@ export default function LoginForm({ onSuccess, onForgotPassword }: LoginFormProp
       return
     }
 
+    if (!captchaToken) {
+      setError(
+        language === 'mn'
+          ? 'Captcha баталгаажуулалт хийж үргэлжлүүлнэ үү.'
+          : 'Please complete CAPTCHA verification.'
+      )
+      return
+    }
+
     setLoading(true)
 
-    const { error: loginError } = await login(email, password)
+    const { error: loginError } = await login(email, password, captchaToken)
 
     if (loginError) {
+      setCaptchaRefreshKey((prev) => prev + 1)
       setError(getErrorMessage(loginError))
       setLoading(false)
     } else {
@@ -124,6 +137,12 @@ export default function LoginForm({ onSuccess, onForgotPassword }: LoginFormProp
           autoComplete="current-password"
         />
       </div>
+
+      <TurnstileCaptcha
+        token={captchaToken}
+        onTokenChange={setCaptchaToken}
+        refreshKey={captchaRefreshKey}
+      />
 
       <Button type="submit" className="w-full" disabled={loading}>
         {loading

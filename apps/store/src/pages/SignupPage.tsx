@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import TurnstileCaptcha from '@/components/auth/TurnstileCaptcha';
 import Icon from '@/components/ui/AppIcon';
 import { toast } from 'sonner';
 
@@ -19,6 +20,8 @@ export default function SignupPage() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaRefreshKey, setCaptchaRefreshKey] = useState(0);
   const [error, setError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -37,13 +40,23 @@ export default function SignupPage() {
       return;
     }
 
+    if (!captchaToken) {
+      setError(
+        language === 'mn'
+          ? 'Captcha баталгаажуулалт хийж үргэлжлүүлнэ үү.'
+          : 'Please complete CAPTCHA verification.'
+      );
+      return;
+    }
+
     setLoading(true);
 
-    const { error: signupError } = await signup(email, password);
+    const { error: signupError } = await signup(email, password, captchaToken);
 
     if (signupError) {
       console.error('Signup error:', signupError);
       setError(signupError.message || (language === 'mn' ? 'Бүртгэл үүсгэхэд алдаа гарлаа' : 'Signup failed'));
+      setCaptchaRefreshKey((prev) => prev + 1);
       setLoading(false);
       return;
     }
@@ -126,6 +139,12 @@ export default function SignupPage() {
                 required
               />
             </div>
+
+            <TurnstileCaptcha
+              token={captchaToken}
+              onTokenChange={setCaptchaToken}
+              refreshKey={captchaRefreshKey}
+            />
 
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? (

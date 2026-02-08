@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import TurnstileCaptcha from '@/components/auth/TurnstileCaptcha'
 import { AuthError } from '@supabase/supabase-js'
 
 interface SignupFormProps {
@@ -18,6 +19,8 @@ export default function SignupForm({ onSuccess }: SignupFormProps) {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null)
+  const [captchaRefreshKey, setCaptchaRefreshKey] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
 
@@ -92,11 +95,20 @@ export default function SignupForm({ onSuccess }: SignupFormProps) {
       return
     }
 
+    if (!captchaToken) {
+      setError(
+        language === 'mn'
+          ? 'Captcha баталгаажуулалт хийж үргэлжлүүлнэ үү.'
+          : 'Please complete CAPTCHA verification.'
+      )
+      return
+    }
     setLoading(true)
 
-    const { error: signupError } = await signup(email, password)
+    const { error: signupError } = await signup(email, password, captchaToken)
 
     if (signupError) {
+      setCaptchaRefreshKey((prev) => prev + 1)
       setError(getErrorMessage(signupError))
       setLoading(false)
     } else {
@@ -213,6 +225,11 @@ export default function SignupForm({ onSuccess }: SignupFormProps) {
         />
       </div>
 
+      <TurnstileCaptcha
+        token={captchaToken}
+        onTokenChange={setCaptchaToken}
+        refreshKey={captchaRefreshKey}
+      />
       <Button type="submit" className="w-full" disabled={loading}>
         {loading
           ? language === 'mn'

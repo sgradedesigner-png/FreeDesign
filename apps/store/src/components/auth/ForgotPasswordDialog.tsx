@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import TurnstileCaptcha from '@/components/auth/TurnstileCaptcha'
 
 interface ForgotPasswordDialogProps {
   isOpen: boolean
@@ -23,6 +24,8 @@ export default function ForgotPasswordDialog({ isOpen, onClose }: ForgotPassword
   const { language } = useTheme()
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null)
+  const [captchaRefreshKey, setCaptchaRefreshKey] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
 
@@ -37,9 +40,16 @@ export default function ForgotPasswordDialog({ isOpen, onClose }: ForgotPassword
       return
     }
 
-    const { error: resetError } = await resetPassword(email)
+    if (!captchaToken) {
+      setError('Please complete CAPTCHA verification.')
+      setLoading(false)
+      return
+    }
+
+    const { error: resetError } = await resetPassword(email, captchaToken)
 
     if (resetError) {
+      setCaptchaRefreshKey((prev) => prev + 1)
       setError(language === 'mn' ? 'Алдаа гарлаа. Дахин оролдоно уу.' : 'An error occurred. Please try again.')
       setLoading(false)
     } else {
@@ -60,6 +70,8 @@ export default function ForgotPasswordDialog({ isOpen, onClose }: ForgotPassword
       setEmail('')
       setError(null)
       setSuccess(false)
+      setCaptchaToken(null)
+      setCaptchaRefreshKey(0)
     }
   }
 
@@ -107,6 +119,12 @@ export default function ForgotPasswordDialog({ isOpen, onClose }: ForgotPassword
                 required
               />
             </div>
+
+            <TurnstileCaptcha
+              token={captchaToken}
+              onTokenChange={setCaptchaToken}
+              refreshKey={captchaRefreshKey}
+            />
 
             <div className="flex gap-3">
               <Button

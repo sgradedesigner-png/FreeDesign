@@ -23,14 +23,22 @@ const app = fastify({ logger: true });
 const prisma = new PrismaClient();
 
 // 1) Plugins
-const allowedOrigins = [
-  'http://localhost:5173', // Store
-  'http://localhost:5174', // Admin Panel (alternative port)
+const defaultAllowedOrigins = [
+  'http://localhost:5173', // Store (default Vite port)
+  'http://localhost:5174', // Store/Admin (next Vite port)
+  'http://localhost:5175', // Store/Admin (next Vite port)
+  'http://localhost:5176', // Store/Admin (next Vite port)
   'http://localhost:3001', // Admin Panel (main port)
 ];
-if (process.env.CORS_ORIGIN) {
-  allowedOrigins.push(process.env.CORS_ORIGIN);
-}
+
+const envAllowedOrigins = (process.env.CORS_ORIGIN || '')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+const allowedOrigins = Array.from(
+  new Set([...defaultAllowedOrigins, ...envAllowedOrigins])
+);
 
 app.register(cors, {
   origin: allowedOrigins,
