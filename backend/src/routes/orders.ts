@@ -12,6 +12,8 @@ export default async function orderRoutes(fastify: FastifyInstance) {
   }, async (request, reply) => {
     const userId = (request as any).user.id;
     const { items, shippingAddress, total } = request.body as any;
+    const callbackUrl = process.env.QPAY_CALLBACK_URL || '';
+    const isMockMode = process.env.QPAY_MOCK_MODE === 'true';
 
     try {
       // Validate request body
@@ -21,6 +23,20 @@ export default async function orderRoutes(fastify: FastifyInstance) {
 
       if (!total || total <= 0) {
         return reply.code(400).send({ error: 'Invalid total amount' });
+      }
+
+      if (!isMockMode) {
+        if (!callbackUrl) {
+          return reply.code(500).send({
+            error: 'QPAY_CALLBACK_URL is required when QPAY_MOCK_MODE=false'
+          });
+        }
+
+        if (/localhost|127\.0\.0\.1/i.test(callbackUrl)) {
+          return reply.code(500).send({
+            error: 'QPAY_CALLBACK_URL must be a public HTTPS URL (localhost is not allowed for QPay sandbox callback).'
+          });
+        }
       }
 
       // 1. Create order in database (status: PENDING, paymentStatus: UNPAID)
@@ -36,13 +52,20 @@ export default async function orderRoutes(fastify: FastifyInstance) {
         }
       });
 
-      // 2. Create QPay invoice
-      const qpayInvoice = await qpayService.createInvoice({
-        orderNumber: order.id,
-        amount: Number(total),
-        description: `Order #${order.id.substring(0, 8)} - ${items.length} items`,
-        callbackUrl: `${process.env.QPAY_CALLBACK_URL || 'http://localhost:3000/api/payment/callback'}`
-      });
+      let qpayInvoice;
+      try {
+        // 2. Create QPay invoice
+        qpayInvoice = await qpayService.createInvoice({
+          orderNumber: order.id,
+          amount: Number(total),
+          description: `Order #${order.id.substring(0, 8)} - ${items.length} items`,
+          callbackUrl
+        });
+      } catch (invoiceError) {
+        // If invoice fails, remove the pending order to avoid orphan checkout records.
+        await prisma.order.delete({ where: { id: order.id } }).catch(() => null);
+        throw invoiceError;
+      }
 
       // 3. Update order with QPay invoice details
       const updatedOrder = await prisma.order.update({

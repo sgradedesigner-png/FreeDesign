@@ -25,6 +25,23 @@ interface PaymentInfo {
   invoiceId: string
 }
 
+const normalizeQrCodeSrc = (raw: string): string => {
+  const value = (raw || '').trim()
+  if (!value) return ''
+  if (/^data:image\//i.test(value)) return value
+  if (/^https?:\/\//i.test(value)) return value
+  return `data:image/png;base64,${value}`
+}
+
+const normalizeBankLogoUrl = (raw: string): string => {
+  const value = (raw || '').trim()
+  if (!value) return ''
+  if (value.startsWith('//')) return `https:${value}`
+  if (/^http:\/\//i.test(value)) return value.replace(/^http:\/\//i, 'https://')
+  if (/^https?:\/\//i.test(value)) return value
+  return ''
+}
+
 export default function CheckoutPage() {
   const navigate = useNavigate()
   const { cart, cartTotal, clearCart } = useCart()
@@ -36,6 +53,7 @@ export default function CheckoutPage() {
   const [orderId, setOrderId] = useState<string | null>(null)
   const [paymentInfo, setPaymentInfo] = useState<PaymentInfo | null>(null)
   const [paymentStatus, setPaymentStatus] = useState<'pending' | 'checking' | 'paid' | 'failed'>('pending')
+  const [brokenBankLogos, setBrokenBankLogos] = useState<Record<string, boolean>>({})
 
   // Try to restore shipping info from sessionStorage
   const getInitialShippingInfo = () => {
@@ -183,7 +201,7 @@ export default function CheckoutPage() {
 
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to create order')
+        throw new Error(errorData.details || errorData.error || 'Failed to create order')
       }
 
       const { order, payment } = await response.json()
@@ -338,7 +356,7 @@ export default function CheckoutPage() {
                     paymentStatus === 'paid' ? 'border-green-500' : 'border-primary'
                   } transition-all duration-500`}>
                     <img
-                      src={paymentInfo.qrCode}
+                      src={normalizeQrCodeSrc(paymentInfo.qrCode)}
                       alt="Payment QR Code"
                       className="w-64 h-64 md:w-80 md:h-80 rounded-lg"
                     />
@@ -377,22 +395,41 @@ export default function CheckoutPage() {
                       {language === 'en' ? 'Quick Pay with Banking App:' : 'Банкны апп-аар шууд төлөх:'}
                     </p>
                     <div className="grid grid-cols-2 gap-2 md:gap-3">
-                      {paymentInfo.bankUrls.map((bank, index) => (
-                        <a
-                          key={index}
-                          href={bank.link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex flex-col items-center gap-2 p-3 md:p-4 border-2 rounded-xl hover:border-primary hover:bg-primary/5 transition-all duration-300 hover:scale-105 cursor-pointer active:scale-95"
-                        >
-                          <div className="w-10 h-10 md:w-12 md:h-12 bg-white dark:bg-gray-800 rounded-full flex items-center justify-center shadow-md">
-                            <span className="text-xl md:text-2xl font-bold text-primary">
-                              {bank.name.charAt(0)}
-                            </span>
-                          </div>
-                          <span className="text-xs md:text-sm font-semibold text-center">{bank.name}</span>
-                        </a>
-                      ))}
+                      {paymentInfo.bankUrls.map((bank, index) => {
+                        const bankKey = `${bank.name}-${index}`
+                        const logoSrc = normalizeBankLogoUrl(bank.logo)
+                        const showLogo = Boolean(logoSrc) && !brokenBankLogos[bankKey]
+
+                        return (
+                          <a
+                            key={bankKey}
+                            href={bank.link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex flex-col items-center gap-2 p-3 md:p-4 border-2 rounded-xl hover:border-primary hover:bg-primary/5 transition-all duration-300 hover:scale-105 cursor-pointer active:scale-95"
+                          >
+                            <div className="w-10 h-10 md:w-12 md:h-12 bg-white dark:bg-gray-800 rounded-full flex items-center justify-center shadow-md overflow-hidden">
+                              {showLogo ? (
+                                <img
+                                  src={logoSrc}
+                                  alt={bank.name}
+                                  className="w-full h-full object-contain"
+                                  loading="lazy"
+                                  referrerPolicy="no-referrer"
+                                  onError={() => {
+                                    setBrokenBankLogos((prev) => ({ ...prev, [bankKey]: true }))
+                                  }}
+                                />
+                              ) : (
+                                <span className="text-xl md:text-2xl font-bold text-primary">
+                                  {(bank.name || '?').charAt(0).toUpperCase()}
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-xs md:text-sm font-semibold text-center">{bank.name}</span>
+                          </a>
+                        )
+                      })}
                     </div>
                   </div>
                 )}
