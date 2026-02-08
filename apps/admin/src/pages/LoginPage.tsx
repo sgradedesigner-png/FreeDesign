@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Mail, Lock, ShoppingBag, Loader2, AlertCircle, ShieldAlert } from 'lucide-react';
+import TurnstileCaptcha from '../components/auth/TurnstileCaptcha';
 
 export default function LoginPage() {
   const nav = useNavigate();
@@ -16,6 +17,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [err, setErr] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaRefreshKey, setCaptchaRefreshKey] = useState(0);
 
   // Check if user was denied access
   const accessDenied = searchParams.get('denied') === 'true';
@@ -28,10 +31,27 @@ export default function LoginPage() {
     e.preventDefault();
     setErr(null);
     setSubmitting(true);
+
+    if (!captchaToken) {
+      setErr('Please complete CAPTCHA verification.');
+      setSubmitting(false);
+      return;
+    }
+
     try {
-      await login(email, password);
-    } catch {
-      setErr('Email эсвэл password буруу байна');
+      await login(email, password, captchaToken);
+    } catch (error) {
+      const message = (error as { message?: string })?.message?.toLowerCase() ?? '';
+
+      if (message.includes('captcha')) {
+        setErr('CAPTCHA verification failed. Please try again.');
+      } else if (message.includes('invalid login credentials')) {
+        setErr('Email эсвэл password буруу байна');
+      } else {
+        setErr('Login failed. Please try again.');
+      }
+
+      setCaptchaRefreshKey((k) => k + 1);
     } finally {
       setSubmitting(false);
     }
@@ -113,6 +133,12 @@ export default function LoginPage() {
                 />
               </div>
             </div>
+
+            <TurnstileCaptcha
+              token={captchaToken}
+              onTokenChange={setCaptchaToken}
+              refreshKey={captchaRefreshKey}
+            />
 
             {/* Error Message */}
             {err && (

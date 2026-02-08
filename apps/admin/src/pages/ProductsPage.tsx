@@ -448,16 +448,7 @@ export default function ProductsPage() {
                         </div>
                       )}
                       <div className="min-w-0">
-                        <p
-                          className="font-medium leading-tight md:hidden"
-                          style={{
-                            display: '-webkit-box',
-                            WebkitLineClamp: 2,
-                            WebkitBoxOrient: 'vertical',
-                            overflow: 'hidden',
-                          }}
-                          title={product.title}
-                        >
+                        <p className="font-medium leading-tight md:hidden" title={product.title}>
                           {product.title}
                         </p>
                         <p className="hidden font-medium break-words leading-tight md:block">{product.title}</p>
