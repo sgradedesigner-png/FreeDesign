@@ -253,6 +253,28 @@ function CheckoutPage() {
         return
       }
 
+      // Validate address length (minimum 5 characters)
+      if (shippingInfo.address.trim().length < 5) {
+        toast.error(
+          language === 'en'
+            ? 'Address is too short. Please enter at least 5 characters'
+            : 'Хаяг хэт богино байна. Доод тал нь 5 тэмдэгт оруулна уу'
+        )
+        setLoading(false)
+        return
+      }
+
+      // Validate phone number (8 digits for Mongolia)
+      if (!/^\d{8}$/.test(shippingInfo.phone)) {
+        toast.error(
+          language === 'en'
+            ? 'Phone number must be 8 digits'
+            : 'Утасны дугаар 8 оронтой байх ёстой'
+        )
+        setLoading(false)
+        return
+      }
+
       // Check if user is logged in
       const { data: { session } } = await supabase.auth.getSession()
       if (!session?.access_token) {
@@ -288,6 +310,15 @@ function CheckoutPage() {
 
       if (!response.ok) {
         const errorData = await response.json()
+
+        // Handle validation errors with specific field messages
+        if (errorData.error === 'Validation failed' && errorData.details) {
+          const validationErrors = errorData.details
+            .map((err: any) => err.message || `${err.field}: validation error`)
+            .join(', ')
+          throw new Error(validationErrors)
+        }
+
         throw new Error(errorData.details || errorData.error || 'Failed to create order')
       }
 
@@ -782,10 +813,20 @@ function CheckoutPage() {
                 id="address"
                 value={shippingInfo.address}
                 onChange={(e) => setShippingInfo({ ...shippingInfo, address: e.target.value })}
-                placeholder={language === 'en' ? 'Street address, apartment, suite, etc.' : 'Гудамж, байр, тоот'}
+                placeholder={
+                  language === 'en'
+                    ? 'e.g., Bayangol District, 5th Khoroo, Peace Avenue 123'
+                    : 'Жишээ: Баянгол дүүрэг, 5-р хороо, Энхтайвны өргөн чөлөө 123'
+                }
                 required
+                minLength={5}
                 className="h-11"
               />
+              <p className="text-xs text-muted-foreground mt-1">
+                {language === 'en'
+                  ? 'Minimum 5 characters required'
+                  : 'Доод тал нь 5 тэмдэгт шаардлагатай'}
+              </p>
             </div>
 
             {/* City & Zip Code */}

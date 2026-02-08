@@ -26,13 +26,25 @@ export default async function orderRoutes(fastify: FastifyInstance) {
     const isMockMode = process.env.QPAY_MOCK_MODE === 'true';
 
     try {
+      // Log request body for debugging
+      console.log('[Order Creation] Request body:', JSON.stringify(request.body, null, 2));
+
       // Validate request body with Zod
       const validation = validateData(createOrderSchema, request.body, reply);
       if (!validation.success) {
+        console.log('[Order Creation] Validation failed:', JSON.stringify(validation.error, null, 2));
         return; // Error response already sent by validateData
       }
 
-      const { items, shippingAddress, total } = validation.data;
+      console.log('[Order Creation] Validation passed');
+
+      const { items: rawItems, shippingAddress, total } = validation.data;
+
+      // Normalize items to ensure price field exists
+      const items = rawItems.map(item => ({
+        ...item,
+        price: item.price || item.variantPrice || 0
+      }));
 
       if (!isMockMode) {
         if (!callbackUrl) {
@@ -352,3 +364,4 @@ export default async function orderRoutes(fastify: FastifyInstance) {
     }
   });
 }
+

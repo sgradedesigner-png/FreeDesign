@@ -1,4 +1,5 @@
 import axios, { AxiosInstance } from 'axios'
+import https from 'https'
 
 interface QPayConfig {
   baseURL: string
@@ -103,18 +104,44 @@ export class QPayService {
       callbackUrl: process.env.QPAY_CALLBACK_URL || ''
     })
 
+    // Create HTTPS agent for better SSL/TLS handling
+    const httpsAgent = new https.Agent({
+      rejectUnauthorized: false, // Accept self-signed certificates
+      keepAlive: true,
+      keepAliveMsecs: 1000,
+      timeout: 60000,
+      // Force TLS 1.2+
+      minVersion: 'TLSv1.2',
+      maxSockets: 10,
+      maxFreeSockets: 5
+    })
+
     this.client = axios.create({
       baseURL: this.config.baseURL,
       timeout: this.config.requestTimeoutMs,
+      httpsAgent: httpsAgent,
       headers: {
-        'Content-Type': 'application/json'
-      }
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) QPay-Node-Client'
+      },
+      // Disable proxy to avoid connection issues
+      proxy: false,
+      // Force IPv4 to avoid IPv6 connection delays
+      family: 4,
+      // Increase max redirects
+      maxRedirects: 5,
+      // Decompress response
+      decompress: true,
+      // Validate status
+      validateStatus: (status) => status >= 200 && status < 500
     })
 
     // Request interceptor to add auth token
     this.client.interceptors.request.use(async (config) => {
       // Skip auth for token endpoint
       if (config.url?.includes('/auth/token')) {
+        console.log(`[QPay Request] ${config.method?.toUpperCase()} ${config.url} (no auth)`)
         return config
       }
 
@@ -125,14 +152,21 @@ export class QPayService {
         config.headers.Authorization = `Bearer ${this.accessToken}`
       }
 
+      console.log(`[QPay Request] ${config.method?.toUpperCase()} ${config.url} (with Bearer token)`)
+      console.log(`[QPay Request Body]`, JSON.stringify(config.data).substring(0, 200))
+
       return config
     })
 
     // Response interceptor for token refresh
     this.client.interceptors.response.use(
-      (response) => response,
+      (response) => {
+        console.log(`[QPay Response] ${response.status} ${response.config.url} (${(response.headers['content-length'] || '0')} bytes)`)
+        return response
+      },
       async (error) => {
         const originalRequest = error.config
+        console.log(`[QPay Error] ${error.code || error.message} on ${originalRequest?.method?.toUpperCase()} ${originalRequest?.url}`)
 
         // If 401 and haven't retried yet, refresh token
         if (error.response?.status === 401 && !originalRequest._retry) {
