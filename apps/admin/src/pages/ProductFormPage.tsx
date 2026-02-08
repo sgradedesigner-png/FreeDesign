@@ -92,6 +92,7 @@ export default function ProductFormPage() {
   const [productDetails, setProductDetails] = useState<string[]>([]);
   const [subtitle, setSubtitle] = useState('');
   const [isPublished, setIsPublished] = useState(false);
+  const [isSavingPublishStatus, setIsSavingPublishStatus] = useState(false);
   const [prefillCategoryHint, setPrefillCategoryHint] = useState('');
 
   const {
@@ -253,6 +254,7 @@ export default function ProductFormPage() {
   };
 
   const fetchProduct = async (productId: string) => {
+    console.log('🔄 fetchProduct called for:', productId);
     try {
       setLoading(true);
       const { data } = await api.get(`/admin/products/${productId}`);
@@ -269,7 +271,16 @@ export default function ProductFormPage() {
       setBenefits(data.benefits || []);
       setProductDetails(data.productDetails || []);
       setSubtitle(data.subtitle || '');
-      setIsPublished(Boolean(data.is_published ?? data.isPublished ?? false));
+
+      const publishedValue = Boolean(data.is_published ?? data.isPublished ?? false);
+      console.log('📥 fetchProduct setting isPublished to:', publishedValue, { is_published: data.is_published, isPublished: data.isPublished, isSavingPublishStatus });
+
+      // Only update isPublished if we're not currently saving it
+      if (!isSavingPublishStatus) {
+        setIsPublished(publishedValue);
+      } else {
+        console.log('⏭️ Skipping isPublished update (save in progress)');
+      }
 
       if (data.variants && data.variants.length > 0) {
         setVariants(
@@ -734,7 +745,43 @@ export default function ProductFormPage() {
                         id="is-published"
                         type="checkbox"
                         checked={isPublished}
-                        onChange={(e) => setIsPublished(e.target.checked)}
+                        disabled={isSavingPublishStatus}
+                        onChange={async (e) => {
+                          const newValue = e.target.checked;
+                          const previousValue = isPublished;
+
+                          // Optimistically update UI
+                          setIsPublished(newValue);
+
+                          // Auto-save publish status
+                          if (isEditMode && id) {
+                            setIsSavingPublishStatus(true);
+                            try {
+                              const response = await api.put(`/admin/products/${id}`, {
+                                is_published: newValue,
+                              });
+
+                              // Update state from server response to ensure consistency
+                              const serverValue = response.data?.is_published ?? response.data?.isPublished;
+                              if (serverValue !== undefined) {
+                                setIsPublished(Boolean(serverValue));
+                              }
+
+                              console.log('✅ Publish status updated:', { newValue, serverValue });
+                            } catch (error: any) {
+                              console.error('❌ Failed to update publish status:', error);
+                              console.error('Error details:', error.response?.data);
+
+                              // Revert to previous value on error
+                              setIsPublished(previousValue);
+
+                              const errorMsg = error.response?.data?.message || 'Failed to update publish status';
+                              alert(errorMsg);
+                            } finally {
+                              setIsSavingPublishStatus(false);
+                            }
+                          }
+                        }}
                         className="h-5 w-5 rounded border-border"
                       />
                     </div>

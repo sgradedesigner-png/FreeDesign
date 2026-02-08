@@ -7,7 +7,10 @@
     "dev": "nodemon --watch src --ext ts --exec ts-node src/app.ts",
     "build": "tsc",
     "start": "node dist/app.js",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest run --coverage",
     "migrate:fix-paths": "ts-node scripts/fix-double-path.ts"
   },
   "keywords": [],
@@ -29,7 +32,6 @@
     "@supabase/supabase-js": "^2.93.3",
     "axios": "^1.13.4",
     "bcryptjs": "^3.0.3",
-    "dotenv": "^17.2.3",
     "fastify": "^5.7.2",
     "jose": "^6.1.3",
     "jsonwebtoken": "^9.0.3",
@@ -45,9 +47,16 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^25.1.0",
     "@types/opossum": "^8.1.9",
+    "@types/supertest": "^6.0.3",
+    "@vitest/coverage-v8": "^4.0.18",
+    "@vitest/ui": "^4.0.18",
+    "c8": "^10.1.3",
+    "dotenv": "^17.2.4",
     "nodemon": "^3.1.11",
     "prisma": "^5.19.1",
+    "supertest": "^7.2.2",
     "ts-node": "^10.9.2",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18"
   }
 }

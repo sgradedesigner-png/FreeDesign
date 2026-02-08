@@ -356,38 +356,41 @@ export async function adminProductRoutes(app: FastifyInstance) {
       await prisma.productVariant.deleteMany({ where: { productId: id } });
     }
 
+    // Build update data - only include fields that are provided (not undefined)
+    const updateData: any = {};
+    if (data.title !== undefined) updateData.title = data.title;
+    if (data.slug !== undefined) updateData.slug = data.slug;
+    if (data.is_published !== undefined) updateData.is_published = data.is_published;
+    if (data.subtitle !== undefined) updateData.subtitle = data.subtitle;
+    if (data.description !== undefined) updateData.description = data.description;
+    if (data.basePrice !== undefined) updateData.basePrice = data.basePrice;
+    if (data.categoryId !== undefined) updateData.categoryId = data.categoryId;
+    if (data.rating !== undefined) updateData.rating = data.rating;
+    if (data.reviews !== undefined) updateData.reviews = data.reviews;
+    if (data.features !== undefined) updateData.features = data.features;
+    if (data.benefits !== undefined) updateData.benefits = data.benefits;
+    if (data.productDetails !== undefined) updateData.productDetails = data.productDetails;
+
+    if (normalizedVariants) {
+      updateData.variants = {
+        create: normalizedVariants.map((v, index) => ({
+          name: v.name,
+          sku: v.sku,
+          price: v.price,
+          originalPrice: v.originalPrice || null,
+          sizes: v.sizes,
+          imagePath: v.imagePath,
+          galleryPaths: v.galleryPaths,
+          stock: v.stock,
+          isAvailable: v.isAvailable,
+          sortOrder: v.sortOrder ?? index,
+        })),
+      };
+    }
+
     const updated = await prisma.product.update({
       where: { id },
-      data: {
-        title: data.title,
-        slug: data.slug,
-        is_published: data.is_published,
-        subtitle: data.subtitle,
-        description: data.description,
-        basePrice: data.basePrice,
-        categoryId: data.categoryId,
-        rating: data.rating,
-        reviews: data.reviews,
-        features: data.features,
-        benefits: data.benefits,
-        productDetails: data.productDetails,
-        ...(normalizedVariants && {
-          variants: {
-            create: normalizedVariants.map((v, index) => ({
-              name: v.name,
-              sku: v.sku,
-              price: v.price,
-              originalPrice: v.originalPrice || null,
-              sizes: v.sizes,
-              imagePath: v.imagePath,
-              galleryPaths: v.galleryPaths,
-              stock: v.stock,
-              isAvailable: v.isAvailable,
-              sortOrder: v.sortOrder ?? index,
-            })),
-          },
-        }),
-      },
+      data: updateData,
       include: {
         category: true,
         variants: { orderBy: { sortOrder: 'asc' } },

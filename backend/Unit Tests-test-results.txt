@@ -1,0 +1,126 @@
+
+> backend@1.0.0 test
+> vitest run --reporter=verbose
+
+
+[1m[46m RUN [49m[22m [36mv4.0.18 [39m[90mC:/Users/hitech/Desktop/Full Stack React Project/AdminUI/AllDone-Ecommerce-Platform/ecommerce-platform/backend[39m
+
+[90mstdout[2m | src/tests/payment.test.ts
+[22m[39m🧪 Setting up test environment...
+
+[90mstdout[2m | src/tests/orders.test.ts
+[22m[39m🧪 Setting up test environment...
+
+[90mstdout[2m | src/tests/validation.test.ts
+[22m[39m🧪 Setting up test environment...
+
+[90mstdout[2m | src/tests/payment.test.ts
+[22m[39m✅ Database connected
+
+[90mstdout[2m | src/tests/validation.test.ts
+[22m[39m✅ Database connected
+
+[90mstdout[2m | src/tests/orders.test.ts
+[22m[39m✅ Database connected
+
+ [32m✓[39m src/tests/validation.test.ts[2m > [22mInput Validation[2m > [22mOrder Validation[2m > [22mshould accept valid order data[33m 3812[2mms[22m[39m
+[90mstdout[2m | src/tests/payment.test.ts[2m > [22m[2mPayment Webhook[2m > [22m[2mWebhook Idempotency[2m > [22m[2mshould handle duplicate webhooks correctly
+[22m[39mprisma:error 
+Invalid `tx.order.update()` invocation in
+C:/Users/hitech/Desktop/Full Stack React Project/AdminUI/AllDone-Ecommerce-Platform/ecommerce-platform/backend/src/tests/payment.test.ts:60:24
+
+  57 });
+  58 
+  59 // Update order
+→ 60 await tx.order.update(
+An operation failed because it depends on one or more records that were required but not found. Record to update not found.
+
+ [31m×[39m src/tests/payment.test.ts[2m > [22mPayment Webhook[2m > [22mWebhook Idempotency[2m > [22mshould handle duplicate webhooks correctly[33m 6016[2mms[22m[39m
+[31m   → 
+Invalid `tx.order.update()` invocation in
+C:/Users/hitech/Desktop/Full Stack React Project/AdminUI/AllDone-Ecommerce-Platform/ecommerce-platform/backend/src/tests/payment.test.ts:60:24
+
+  57 });
+  58 
+  59 // Update order
+→ 60 await tx.order.update(
+An operation failed because it depends on one or more records that were required but not found. Record to update not found.[39m
+ [32m✓[39m src/tests/validation.test.ts[2m > [22mInput Validation[2m > [22mOrder Validation[2m > [22mshould reject order with invalid UUID[33m 3692[2mms[22m[39m
+ [31m×[39m src/tests/orders.test.ts[2m > [22mOrder Creation[2m > [22mRace Condition Prevention[2m > [22mshould prevent duplicate orders from concurrent requests[33m 7672[2mms[22m[39m
+[31m   → expected undefined to be 'PENDING' // Object.is equality[39m
+ [32m✓[39m src/tests/payment.test.ts[2m > [22mPayment Webhook[2m > [22mWebhook Idempotency[2m > [22mshould reject webhook with missing payment_id[33m 4877[2mms[22m[39m
+ [32m✓[39m src/tests/validation.test.ts[2m > [22mInput Validation[2m > [22mOrder Validation[2m > [22mshould reject order with negative quantity[33m 3691[2mms[22m[39m
+ [32m✓[39m src/tests/validation.test.ts[2m > [22mInput Validation[2m > [22mOrder Validation[2m > [22mshould reject order with invalid phone number[33m 3701[2mms[22m[39m
+ [31m×[39m src/tests/payment.test.ts[2m > [22mPayment Webhook[2m > [22mWebhook Idempotency[2m > [22mshould handle webhook for non-existent order[33m 6715[2mms[22m[39m
+[31m   → expected undefined to be 'Order not found' // Object.is equality[39m
+ [32m✓[39m src/tests/validation.test.ts[2m > [22mInput Validation[2m > [22mOrder Validation[2m > [22mshould reject order with too many items[33m 3810[2mms[22m[39m
+ [32m✓[39m src/tests/validation.test.ts[2m > [22mInput Validation[2m > [22mProfile Validation[2m > [22mshould accept valid profile update[33m 3688[2mms[22m[39m
+[90mstdout[2m | src/tests/payment.test.ts[2m > [22m[2mPayment Webhook[2m > [22m[2mPayment Status Updates[2m > [22m[2mshould update order status from PENDING to PAID
+[22m[39mprisma:error 
+Invalid `tx.order.update()` invocation in
+C:/Users/hitech/Desktop/Full Stack React Project/AdminUI/AllDone-Ecommerce-Platform/ecommerce-platform/backend/src/tests/payment.test.ts:207:24
+
+  204   }
+  205 });
+  206 
+→ 207 await tx.order.update(
+An operation failed because it depends on one or more records that were required but not found. Record to update not found.
+
+ [31m×[39m src/tests/payment.test.ts[2m > [22mPayment Webhook[2m > [22mPayment Status Updates[2m > [22mshould update order status from PENDING to PAID[33m 6355[2mms[22m[39m
+[31m   → 
+Invalid `tx.order.update()` invocation in
+C:/Users/hitech/Desktop/Full Stack React Project/AdminUI/AllDone-Ecommerce-Platform/ecommerce-platform/backend/src/tests/payment.test.ts:207:24
+
+  204   }
+  205 });
+  206 
+→ 207 await tx.order.update(
+An operation failed because it depends on one or more records that were required but not found. Record to update not found.[39m
+ [32m✓[39m src/tests/validation.test.ts[2m > [22mInput Validation[2m > [22mProfile Validation[2m > [22mshould reject profile with invalid phone[33m 3689[2mms[22m[39m
+[90mstdout[2m | src/tests/validation.test.ts
+[22m[39m🧹 Cleaning up test environment...
+
+[90mstdout[2m | src/tests/validation.test.ts
+[22m[39m✅ Database disconnected
+
+ [32m✓[39m src/tests/validation.test.ts[2m > [22mInput Validation[2m > [22mProfile Validation[2m > [22mshould trim whitespace from inputs[33m 3684[2mms[22m[39m
+ [32m✓[39m src/tests/payment.test.ts[2m > [22mPayment Webhook[2m > [22mPayment Status Updates[2m > [22mshould not update already paid order[33m 7086[2mms[22m[39m
+[90mstdout[2m | src/tests/orders.test.ts[2m > [22m[2mOrder Creation[2m > [22m[2mRace Condition Prevention[2m > [22m[2mshould handle transaction timeout gracefully
+[22m[39mprisma:error 
+Invalid `prisma.order.create()` invocation:
+
+
+Transaction API error: Transaction already closed: A query cannot be executed on an expired transaction. The timeout for this transaction was 15000 ms, however 20003 ms passed since the start of the transaction. Consider increasing the interactive transaction timeout or doing less work in the transaction.
+
+ [32m✓[39m src/tests/orders.test.ts[2m > [22mOrder Creation[2m > [22mRace Condition Prevention[2m > [22mshould handle transaction timeout gracefully[33m 25480[2mms[22m[39m
+ [32m✓[39m src/tests/payment.test.ts[2m > [22mPayment Webhook[2m > [22mWebhook Logging[2m > [22mshould log all webhook attempts[33m 7323[2mms[22m[39m
+ [32m✓[39m src/tests/orders.test.ts[2m > [22mOrder Creation[2m > [22mRace Condition Prevention[2m > [22mshould rollback on error[33m 5586[2mms[22m[39m
+ [32m✓[39m src/tests/orders.test.ts[2m > [22mOrder Creation[2m > [22mOrder Status Management[2m > [22mshould create order with correct initial status[33m 4970[2mms[22m[39m
+ [32m✓[39m src/tests/payment.test.ts[2m > [22mPayment Webhook[2m > [22mWebhook Logging[2m > [22mshould include payload in webhook log[33m 6097[2mms[22m[39m
+[90mstdout[2m | src/tests/payment.test.ts
+[22m[39m🧹 Cleaning up test environment...
+
+[90mstdout[2m | src/tests/payment.test.ts
+[22m[39m✅ Database disconnected
+
+ [32m✓[39m src/tests/orders.test.ts[2m > [22mOrder Creation[2m > [22mOrder Status Management[2m > [22mshould support all order statuses[33m 9476[2mms[22m[39m
+ [32m✓[39m src/tests/orders.test.ts[2m > [22mOrder Creation[2m > [22mOrder Status Management[2m > [22mshould transition from PENDING to PAID correctly[33m 5638[2mms[22m[39m
+ [32m✓[39m src/tests/orders.test.ts[2m > [22mOrder Creation[2m > [22mOrder Status Management[2m > [22mshould handle CANCELLING to CANCELLED transition[33m 5737[2mms[22m[39m
+ [32m✓[39m src/tests/orders.test.ts[2m > [22mOrder Creation[2m > [22mOrder Status Management[2m > [22mshould handle CANCELLATION_FAILED status[33m 5630[2mms[22m[39m
+ [32m✓[39m src/tests/orders.test.ts[2m > [22mOrder Creation[2m > [22mOrder Queries[2m > [22mshould fetch user orders[33m 6853[2mms[22m[39m
+ [32m✓[39m src/tests/orders.test.ts[2m > [22mOrder Creation[2m > [22mOrder Queries[2m > [22mshould filter orders by status[33m 7611[2mms[22m[39m
+ [32m✓[39m src/tests/orders.test.ts[2m > [22mOrder Creation[2m > [22mOrder Queries[2m > [22mshould find order by QPay invoice ID[33m 7463[2mms[22m[39m
+ [32m✓[39m src/tests/orders.test.ts[2m > [22mOrder Creation[2m > [22mOrder Data Integrity[2m > [22mshould store items as JSON[33m 5712[2mms[22m[39m
+ [32m✓[39m src/tests/orders.test.ts[2m > [22mOrder Creation[2m > [22mOrder Data Integrity[2m > [22mshould store shipping address as JSON string[33m 5599[2mms[22m[39m
+[90mstdout[2m | src/tests/orders.test.ts
+[22m[39m🧹 Cleaning up test environment...
+
+[90mstdout[2m | src/tests/orders.test.ts
+[22m[39m✅ Database disconnected
+
+
+[2m Test Files [22m [1m[31m2 failed[39m[22m[2m | [22m[1m[32m1 passed[39m[22m[90m (3)[39m
+[2m      Tests [22m [1m[31m4 failed[39m[22m[2m | [22m[1m[32m24 passed[39m[22m[90m (28)[39m
+[2m   Start at [22m 21:40:31
+[2m   Duration [22m 104.68s[2m (transform 219ms, setup 309ms, import 157ms, tests 180.51s, environment 0ms)[22m
+
