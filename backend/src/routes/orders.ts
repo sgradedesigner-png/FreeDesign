@@ -39,6 +39,47 @@ export default async function orderRoutes(fastify: FastifyInstance) {
         }
       }
 
+      // Cleanup old pending orders for this user before creating a new invoice
+      const existingPendingOrders = await prisma.order.findMany({
+        where: {
+          userId,
+          status: 'PENDING'
+        },
+        select: {
+          id: true,
+          qpayInvoiceId: true
+        }
+      });
+
+      console.log(`[QPay Cleanup] userId=${userId} foundPending=${existingPendingOrders.length}`);
+      let cancelledCount = 0;
+
+      for (const oldOrder of existingPendingOrders) {
+        if (oldOrder.qpayInvoiceId && !isMockMode) {
+          try {
+            await qpayService.cancelInvoiceWithTimeout(oldOrder.qpayInvoiceId, 5000);
+          } catch (cancelError: any) {
+            console.warn(
+              `[QPay Cleanup] cancel failed orderId=${oldOrder.id} invoiceId=${oldOrder.qpayInvoiceId} reason=${cancelError?.message || 'unknown'}`
+            );
+          }
+        }
+
+        await prisma.order.update({
+          where: { id: oldOrder.id },
+          data: {
+            status: 'CANCELLED',
+            qpayInvoiceId: null,
+            qrCode: null,
+            qrCodeUrl: null
+          }
+        });
+
+        cancelledCount += 1;
+      }
+
+      console.log(`[QPay Cleanup] userId=${userId} cancelled=${cancelledCount}`);
+
       // 1. Create order in database (status: PENDING, paymentStatus: UNPAID)
       const order = await prisma.order.create({
         data: {
@@ -51,17 +92,22 @@ export default async function orderRoutes(fastify: FastifyInstance) {
           items: items, // Prisma will handle JSON serialization
         }
       });
+      console.log(`[Order Create] newOrderId=${order.id} userId=${userId}`);
 
       let qpayInvoice;
       try {
         // 2. Create QPay invoice
+        console.log(`[QPay Invoice] start orderId=${order.id}`);
         qpayInvoice = await qpayService.createInvoice({
           orderNumber: order.id,
           amount: Number(total),
           description: `Order #${order.id.substring(0, 8)} - ${items.length} items`,
           callbackUrl
         });
+        console.log(`[QPay Invoice] success orderId=${order.id} invoiceId=${qpayInvoice.invoice_id}`);
       } catch (invoiceError) {
+        const errorMessage = invoiceError instanceof Error ? invoiceError.message : String(invoiceError);
+        console.error(`[QPay Invoice] failed orderId=${order.id} reason=${errorMessage}`);
         // If invoice fails, remove the pending order to avoid orphan checkout records.
         await prisma.order.delete({ where: { id: order.id } }).catch(() => null);
         throw invoiceError;

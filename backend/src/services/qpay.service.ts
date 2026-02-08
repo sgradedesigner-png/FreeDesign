@@ -609,6 +609,36 @@ export class QPayService {
   }
 
   /**
+   * Cancel invoice with timeout (best-effort wrapper)
+   */
+  async cancelInvoiceWithTimeout(invoiceId: string, timeoutMs: number = 5000): Promise<void> {
+    const startedAt = Date.now()
+    let timeoutHandle: ReturnType<typeof setTimeout> | null = null
+
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timeoutHandle = setTimeout(() => {
+        reject(new Error(`cancel timeout after ${timeoutMs}ms`))
+      }, timeoutMs)
+    })
+
+    try {
+      console.log(`[QPay Cancel] start invoiceId=${invoiceId} timeoutMs=${timeoutMs}`)
+      await Promise.race([this.cancelInvoice(invoiceId), timeoutPromise])
+      console.log(`[QPay Cancel] success invoiceId=${invoiceId} elapsedMs=${Date.now() - startedAt}`)
+    } catch (error: any) {
+      console.warn(
+        `[QPay Cancel] failed invoiceId=${invoiceId} elapsedMs=${Date.now() - startedAt} reason=${error?.message || 'unknown'}`
+      )
+      throw error
+    } finally {
+      if (timeoutHandle) {
+        clearTimeout(timeoutHandle)
+        timeoutHandle = null
+      }
+    }
+  }
+
+  /**
    * Refund payment
    */
   async refundPayment(paymentId: string): Promise<void> {
