@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx prisma migrate dev:*)",
+      "Bash(npx prisma migrate:*)",
+      "Bash(npx prisma db push:*)",
+      "Bash(npx prisma generate:*)",
+      "Bash(ls:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(npm run dev:*)",
+      "Bash(timeout:*)",
+      "Bash(powershell:*)",
+      "Bash(curl:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm install:*)",
+      "Bash(npx tsc:*)",
+      "Bash(lsof:*)",
+      "Bash(python -m json.tool:*)",
+      "Bash(taskkill:*)"
+    ]
+  }
+}

@@ -3,27 +3,36 @@ import { FastifyInstance } from 'fastify';
 import { userGuard } from '../middleware/userGuard';
 import { prisma } from '../lib/prisma';
 import { qpayService } from '../services/qpay.service';
+import { qpayCircuitBreaker } from '../services/qpay-circuit-breaker.service';
+import { createOrderSchema } from '../schemas/order.schema';
+import { orderIdParamSchema } from '../schemas/payment.schema';
+import { validateData } from '../utils/validation';
+import { NotFoundError, ServiceUnavailableError, BadRequestError, PaymentServiceError } from '../utils/errors';
 
 export default async function orderRoutes(fastify: FastifyInstance) {
 
   // Create new order with QPay invoice (authenticated customers only)
   fastify.post('/api/orders', {
-    preHandler: [userGuard]
+    preHandler: [userGuard],
+    config: {
+      rateLimit: {
+        max: 5, // 5 orders per minute max
+        timeWindow: '1 minute'
+      }
+    }
   }, async (request, reply) => {
     const userId = (request as any).user.id;
-    const { items, shippingAddress, total } = request.body as any;
     const callbackUrl = process.env.QPAY_CALLBACK_URL || '';
     const isMockMode = process.env.QPAY_MOCK_MODE === 'true';
 
     try {
-      // Validate request body
-      if (!items || !Array.isArray(items) || items.length === 0) {
-        return reply.code(400).send({ error: 'Items are required' });
+      // Validate request body with Zod
+      const validation = validateData(createOrderSchema, request.body, reply);
+      if (!validation.success) {
+        return; // Error response already sent by validateData
       }
 
-      if (!total || total <= 0) {
-        return reply.code(400).send({ error: 'Invalid total amount' });
-      }
+      const { items, shippingAddress, total } = validation.data;
 
       if (!isMockMode) {
         if (!callbackUrl) {
@@ -39,81 +48,153 @@ export default async function orderRoutes(fastify: FastifyInstance) {
         }
       }
 
-      // Cleanup old pending orders for this user before creating a new invoice
-      const existingPendingOrders = await prisma.order.findMany({
-        where: {
-          userId,
-          status: 'PENDING'
-        },
-        select: {
-          id: true,
-          qpayInvoiceId: true
-        }
-      });
-
-      console.log(`[QPay Cleanup] userId=${userId} foundPending=${existingPendingOrders.length}`);
-      let cancelledCount = 0;
-
-      for (const oldOrder of existingPendingOrders) {
-        if (oldOrder.qpayInvoiceId && !isMockMode) {
-          try {
-            await qpayService.cancelInvoiceWithTimeout(oldOrder.qpayInvoiceId, 5000);
-          } catch (cancelError: any) {
-            console.warn(
-              `[QPay Cleanup] cancel failed orderId=${oldOrder.id} invoiceId=${oldOrder.qpayInvoiceId} reason=${cancelError?.message || 'unknown'}`
-            );
-          }
-        }
-
-        await prisma.order.update({
-          where: { id: oldOrder.id },
-          data: {
-            status: 'CANCELLED',
-            qpayInvoiceId: null,
-            qrCode: null,
-            qrCodeUrl: null
+      // Use transaction to prevent race condition when user double-clicks checkout
+      const { order, oldPendingOrders } = await prisma.$transaction(async (tx) => {
+        // 1. Find existing pending orders INSIDE transaction
+        const existingPending = await tx.order.findMany({
+          where: {
+            userId,
+            status: 'PENDING',
+            paymentStatus: {
+              in: ['UNPAID', 'PENDING']
+            }
+          },
+          select: {
+            id: true,
+            qpayInvoiceId: true
           }
         });
 
-        cancelledCount += 1;
+        console.log(`[QPay Cleanup] userId=${userId} foundPending=${existingPending.length}`);
+
+        // 2. Mark old orders as CANCELLING to prevent race condition
+        // This blocks other concurrent requests from seeing these orders as PENDING
+        if (existingPending.length > 0) {
+          await tx.order.updateMany({
+            where: {
+              id: {
+                in: existingPending.map(o => o.id)
+              }
+            },
+            data: {
+              status: 'CANCELLING',
+              updatedAt: new Date()
+            }
+          });
+
+          console.log(`[QPay Cleanup] userId=${userId} marked ${existingPending.length} as CANCELLING`);
+        }
+
+        // 3. Create new order INSIDE transaction (prevents duplicate creation)
+        const newOrder = await tx.order.create({
+          data: {
+            userId,
+            total,
+            status: 'PENDING',
+            paymentStatus: 'UNPAID',
+            paymentMethod: 'QPAY',
+            shippingAddress: shippingAddress ? JSON.stringify(shippingAddress) : null,
+            items: items,
+          }
+        });
+
+        console.log(`[Order Create] newOrderId=${newOrder.id} userId=${userId}`);
+
+        return {
+          order: newOrder,
+          oldPendingOrders: existingPending
+        };
+      }, {
+        timeout: 15000, // 15 second timeout for transaction
+        isolationLevel: 'Serializable' // Highest isolation level to prevent race conditions
+      });
+
+      // 4. Cancel old QPay invoices in BACKGROUND (outside transaction)
+      // This prevents transaction from blocking on slow QPay API calls
+      if (oldPendingOrders.length > 0) {
+        setImmediate(() => {
+          oldPendingOrders.forEach(oldOrder => {
+            if (oldOrder.qpayInvoiceId && !isMockMode) {
+              qpayService.cancelInvoiceWithTimeout(oldOrder.qpayInvoiceId, 5000)
+                .then(() => {
+                  console.log(`[QPay Cleanup] Cancelled invoice ${oldOrder.qpayInvoiceId}`);
+                  // Mark as CANCELLED after successful cancellation
+                  prisma.order.update({
+                    where: { id: oldOrder.id },
+                    data: {
+                      status: 'CANCELLED',
+                      qpayInvoiceId: null,
+                      qrCode: null,
+                      qrCodeUrl: null
+                    }
+                  }).catch(err => console.error('Failed to update cancelled order:', err));
+                })
+                .catch(err => {
+                  console.warn(`[QPay Cleanup] Failed to cancel invoice ${oldOrder.qpayInvoiceId}:`, err.message);
+                  // Mark as CANCELLATION_FAILED if QPay cancellation failed
+                  prisma.order.update({
+                    where: { id: oldOrder.id },
+                    data: { status: 'CANCELLATION_FAILED' }
+                  }).catch(e => console.error('Failed to mark cancellation failed:', e));
+                });
+            } else {
+              // No invoice to cancel, just mark as CANCELLED
+              prisma.order.update({
+                where: { id: oldOrder.id },
+                data: {
+                  status: 'CANCELLED',
+                  qpayInvoiceId: null,
+                  qrCode: null,
+                  qrCodeUrl: null
+                }
+              }).catch(err => console.error('Failed to update cancelled order:', err));
+            }
+          });
+        });
       }
 
-      console.log(`[QPay Cleanup] userId=${userId} cancelled=${cancelledCount}`);
-
-      // 1. Create order in database (status: PENDING, paymentStatus: UNPAID)
-      const order = await prisma.order.create({
-        data: {
-          userId,
-          total,
-          status: 'PENDING',
-          paymentStatus: 'UNPAID',
-          paymentMethod: 'QPAY',
-          shippingAddress: shippingAddress ? JSON.stringify(shippingAddress) : null,
-          items: items, // Prisma will handle JSON serialization
-        }
-      });
-      console.log(`[Order Create] newOrderId=${order.id} userId=${userId}`);
-
+      // 5. Create QPay invoice with Circuit Breaker (OUTSIDE transaction to avoid blocking)
       let qpayInvoice;
       try {
-        // 2. Create QPay invoice
         console.log(`[QPay Invoice] start orderId=${order.id}`);
-        qpayInvoice = await qpayService.createInvoice({
+        qpayInvoice = await qpayCircuitBreaker.createInvoice({
           orderNumber: order.id,
           amount: Number(total),
           description: `Order #${order.id.substring(0, 8)} - ${items.length} items`,
           callbackUrl
         });
         console.log(`[QPay Invoice] success orderId=${order.id} invoiceId=${qpayInvoice.invoice_id}`);
-      } catch (invoiceError) {
+      } catch (invoiceError: any) {
         const errorMessage = invoiceError instanceof Error ? invoiceError.message : String(invoiceError);
         console.error(`[QPay Invoice] failed orderId=${order.id} reason=${errorMessage}`);
-        // If invoice fails, remove the pending order to avoid orphan checkout records.
-        await prisma.order.delete({ where: { id: order.id } }).catch(() => null);
+
+        // Mark order as PENDING for circuit open or service unavailable
+        const isCircuitOpen = invoiceError.code === 'CIRCUIT_OPEN';
+        const isTimeout = invoiceError.code === 'TIMEOUT';
+
+        await prisma.order.update({
+          where: { id: order.id },
+          data: {
+            status: isCircuitOpen || isTimeout ? 'PENDING' : 'CANCELLED',
+            paymentStatus: isCircuitOpen || isTimeout ? 'PENDING' : 'FAILED'
+          }
+        }).catch(() => null);
+
+        // For circuit open, throw PaymentServiceError
+        if (isCircuitOpen) {
+          throw new PaymentServiceError('Төлбөрийн систем түр ашиглах боломжгүй байна. Та дараа дахин оролдоно уу.');
+        }
+
+        // For timeout, throw ServiceUnavailableError
+        if (isTimeout) {
+          throw new ServiceUnavailableError('Төлбөрийн систем хариу өгөх хугацаа хэтэрсэн. Та дараа дахин оролдоно уу.');
+        }
+
+        // Other errors
         throw invoiceError;
       }
 
-      // 3. Update order with QPay invoice details
+      // 6. Update order with QPay invoice details
       const updatedOrder = await prisma.order.update({
         where: { id: order.id },
         data: {
@@ -137,6 +218,23 @@ export default async function orderRoutes(fastify: FastifyInstance) {
       });
     } catch (error: any) {
       console.error('Order creation error:', error);
+
+      // Check if it's a transaction timeout
+      if (error.message && error.message.includes('timeout')) {
+        return reply.code(408).send({
+          error: 'Order creation timeout',
+          details: 'Захиалга үүсгэх хугацаа хэтэрсэн. Дахин оролдоно уу.'
+        });
+      }
+
+      // Check if it's a database connection error
+      if (error.code === 'P1001' || error.code === 'P1002') {
+        return reply.code(503).send({
+          error: 'Database connection error',
+          details: 'Өгөгдлийн санд холбогдож чадсангүй. Түр хүлээгээд дахин оролдоно уу.'
+        });
+      }
+
       return reply.code(500).send({
         error: 'Failed to create order',
         details: error.message
@@ -150,17 +248,13 @@ export default async function orderRoutes(fastify: FastifyInstance) {
   }, async (request, reply) => {
     const userId = (request as any).user.id;
 
-    try {
-      const orders = await prisma.order.findMany({
-        where: { userId },
-        orderBy: { createdAt: 'desc' }
-      });
+    // No N+1 problem: items are stored as JSON in the Order model
+    const orders = await prisma.order.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' }
+    });
 
-      return reply.send({ orders });
-    } catch (error: any) {
-      console.error('Fetch orders error:', error);
-      return reply.code(500).send({ error: 'Failed to fetch orders' });
-    }
+    return reply.send({ orders });
   });
 
   // Get specific order details
@@ -168,25 +262,28 @@ export default async function orderRoutes(fastify: FastifyInstance) {
     preHandler: [userGuard]
   }, async (request, reply) => {
     const userId = (request as any).user.id;
-    const { id } = request.params as any;
 
-    try {
-      const order = await prisma.order.findFirst({
-        where: {
-          id,
-          userId // Ensure user can only see their own orders
-        }
-      });
-
-      if (!order) {
-        return reply.code(404).send({ error: 'Order not found' });
-      }
-
-      return reply.send({ order });
-    } catch (error: any) {
-      console.error('Fetch order error:', error);
-      return reply.code(500).send({ error: 'Failed to fetch order' });
+    // Validate order ID parameter
+    const paramValidation = validateData(orderIdParamSchema, request.params, reply);
+    if (!paramValidation.success) {
+      return;
     }
+
+    const { id } = paramValidation.data;
+
+    // No N+1 problem: items are stored as JSON in the Order model
+    const order = await prisma.order.findFirst({
+      where: {
+        id,
+        userId // Ensure user can only see their own orders
+      }
+    });
+
+    if (!order) {
+      throw new NotFoundError('Захиалга олдсонгүй');
+    }
+
+    return reply.send({ order });
   });
 
   // Check order payment status (NEW)
@@ -194,7 +291,14 @@ export default async function orderRoutes(fastify: FastifyInstance) {
     preHandler: [userGuard]
   }, async (request, reply) => {
     const userId = (request as any).user.id;
-    const { id } = request.params as any;
+
+    // Validate order ID parameter
+    const paramValidation = validateData(orderIdParamSchema, request.params, reply);
+    if (!paramValidation.success) {
+      return;
+    }
+
+    const { id } = paramValidation.data;
 
     try {
       const order = await prisma.order.findFirst({
@@ -214,9 +318,9 @@ export default async function orderRoutes(fastify: FastifyInstance) {
         });
       }
 
-      // Check with QPay if payment completed
+      // Check with QPay Circuit Breaker if payment completed
       if (order.qpayInvoiceId) {
-        const paymentCheck = await qpayService.checkPayment(order.qpayInvoiceId);
+        const paymentCheck = await qpayCircuitBreaker.checkPayment(order.qpayInvoiceId);
 
         if (paymentCheck.count > 0 && paymentCheck.rows[0].payment_status === 'PAID') {
           // Payment found! Update order

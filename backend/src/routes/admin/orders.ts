@@ -17,6 +17,8 @@ export default async function adminOrderRoutes(fastify: FastifyInstance) {
     const where = status ? { status } : {};
 
     try {
+      // No N+1 problem: items are stored as JSON in Order model
+      // User data is in Supabase Auth, not Prisma
       const [orders, total] = await Promise.all([
         prisma.order.findMany({
           where,
@@ -49,6 +51,7 @@ export default async function adminOrderRoutes(fastify: FastifyInstance) {
     const { id } = request.params as any;
 
     try {
+      // No N+1 problem: items are stored as JSON in Order model
       const order = await prisma.order.findUnique({
         where: { id }
       });

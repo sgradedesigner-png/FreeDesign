@@ -6,6 +6,7 @@ import { ThemeProvider } from './context/ThemeContext';
 import { Toaster } from 'sonner';
 import Header from './components/layout/Header';
 import CartSidebar from './components/layout/CartSidebar';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 import HomePage from './pages/HomePage';
 import Catalog from './pages/Catalog';
@@ -77,17 +78,19 @@ function Layout() {
 
 function App() {
   return (
-    <AuthProvider>
-      <ThemeProvider>
-        <WishlistProvider>
-          <CartProvider>
-            <Router>
-              <Layout />
-            </Router>
-          </CartProvider>
-        </WishlistProvider>
-      </ThemeProvider>
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <ThemeProvider>
+          <WishlistProvider>
+            <CartProvider>
+              <Router>
+                <Layout />
+              </Router>
+            </CartProvider>
+          </WishlistProvider>
+        </ThemeProvider>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
 

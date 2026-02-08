@@ -22,6 +22,8 @@ enum OrderStatus {
   SHIPPED
   COMPLETED
   CANCELLED
+  CANCELLING           // Order is being cancelled (QPay invoice cancellation in progress)
+  CANCELLATION_FAILED  // QPay invoice cancellation failed
 }
 
 model Profile {
@@ -126,4 +128,22 @@ model Order {
   @@index([qpayPaymentId])
   @@index([paymentStatus])
   @@map("orders")
+}
+
+model PaymentWebhookLog {
+  id          String   @id @default(uuid())
+  paymentId   String   @unique  // QPay payment_id (idempotency key)
+  invoiceId   String?              // QPay invoice_id
+  orderId     String?              // Associated order ID
+  status      String               // success, failed, duplicate, invalid
+  payload     Json                 // Full webhook payload for debugging
+  receivedAt  DateTime @default(now())
+  processedAt DateTime?            // When processing completed
+  error       String?  @db.Text    // Error message if processing failed
+
+  @@index([invoiceId])
+  @@index([orderId])
+  @@index([receivedAt])
+  @@index([status])
+  @@map("payment_webhook_logs")
 }

@@ -56,25 +56,33 @@ const makeCartKey = (productId: string, variantId: string, size: string | null) 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
 
-  // LocalStorage-оос сэргээх
+  // LocalStorage-оос сэргээх (mount хийхэд 1 удаа)
   useEffect(() => {
     const savedCart = localStorage.getItem('shopping-cart');
-    if (!savedCart) return;
 
-    try {
-      const parsed = JSON.parse(savedCart) as CartItem[];
-      setCart(parsed);
-    } catch (error) {
-      console.error('Failed to load cart from localStorage:', error);
-      localStorage.removeItem('shopping-cart');
+    if (savedCart) {
+      try {
+        const parsed = JSON.parse(savedCart) as CartItem[];
+        setCart(parsed);
+      } catch (error) {
+        console.error('Failed to load cart from localStorage:', error);
+        localStorage.removeItem('shopping-cart');
+      }
     }
+
+    // Loading дууссан гэж тэмдэглэх
+    setIsInitialized(true);
   }, []);
 
-  // LocalStorage-д хадгалах
+  // LocalStorage-д хадгалах (initialized болсны дараа л)
   useEffect(() => {
+    // Initialized болтол бүү хадгала (race condition сэргийлэх)
+    if (!isInitialized) return;
+
     localStorage.setItem('shopping-cart', JSON.stringify(cart));
-  }, [cart]);
+  }, [cart, isInitialized]);
 
   // Add new item (or increase if exists)
   const addItem = (product: Product, variant: ProductVariant, selectedSize: string | null = null) => {

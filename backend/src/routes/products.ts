@@ -1,31 +1,37 @@
 // Public product routes (no auth required)
 import type { FastifyInstance } from 'fastify';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '../lib/prisma'; // Use shared singleton instance
 
 export async function publicProductRoutes(app: FastifyInstance) {
   // GET /api/categories - List categories with product count
   app.get('/categories', async (request, reply) => {
     try {
-      const categories = await prisma.category.findMany({
-        orderBy: {
-          name: 'asc',
-        },
-      });
-
-      // Get product count for each category
-      const categoriesWithCount = await Promise.all(
-        categories.map(async (category) => {
-          const productCount = await prisma.product.count({
-            where: { categoryId: category.id },
-          });
-          return {
-            ...category,
-            productCount,
-          };
+      // Fetch categories and product counts in parallel (optimized)
+      const [categories, productCounts] = await Promise.all([
+        prisma.category.findMany({
+          orderBy: {
+            name: 'asc',
+          },
+        }),
+        // Get product counts grouped by category in a single query
+        prisma.product.groupBy({
+          by: ['categoryId'],
+          _count: {
+            id: true
+          }
         })
+      ]);
+
+      // Create a map of categoryId -> count for O(1) lookup
+      const countMap = new Map(
+        productCounts.map(item => [item.categoryId, item._count.id])
       );
+
+      // Merge categories with their product counts
+      const categoriesWithCount = categories.map(category => ({
+        ...category,
+        productCount: countMap.get(category.id) || 0,
+      }));
 
       return reply.send(categoriesWithCount);
     } catch (error) {

@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useCart } from '@/context/CartContext'
 import { useAuth } from '@/context/AuthContext'
 import { useTheme } from '@/context/ThemeContext'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { supabase } from '@/lib/supabase'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -42,7 +43,7 @@ const normalizeBankLogoUrl = (raw: string): string => {
   return ''
 }
 
-export default function CheckoutPage() {
+function CheckoutPage() {
   const navigate = useNavigate()
   const { cart, cartTotal, clearCart } = useCart()
   const { user } = useAuth()
@@ -52,7 +53,7 @@ export default function CheckoutPage() {
   const [loadingProfile, setLoadingProfile] = useState(false)
   const [orderId, setOrderId] = useState<string | null>(null)
   const [paymentInfo, setPaymentInfo] = useState<PaymentInfo | null>(null)
-  const [paymentStatus, setPaymentStatus] = useState<'pending' | 'checking' | 'paid' | 'failed'>('pending')
+  const [paymentStatus, setPaymentStatus] = useState<'pending' | 'checking' | 'paid' | 'failed' | 'timeout'>('pending')
   const [brokenBankLogos, setBrokenBankLogos] = useState<Record<string, boolean>>({})
 
   // Try to restore shipping info from sessionStorage
@@ -86,16 +87,102 @@ export default function CheckoutPage() {
     }
   }, [user])
 
-  // Poll for payment status
-  useEffect(() => {
-    if (orderId && paymentStatus === 'pending') {
-      const interval = setInterval(() => {
-        checkPaymentStatus()
-      }, 5000) // Check every 5 seconds
+  // Define checkPaymentStatus before it's used in useEffect
+  const checkPaymentStatus = useCallback(async () => {
+    if (!orderId) return
 
-      return () => clearInterval(interval)
+    setPaymentStatus('checking')
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) {
+        console.warn('No session token available')
+        return
+      }
+
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/orders/${orderId}/payment-status`,
+        {
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`
+          }
+        }
+      )
+
+      if (!response.ok) {
+        throw new Error('Payment status check failed')
+      }
+
+      const data = await response.json()
+
+      if (data.paid) {
+        setPaymentStatus('paid')
+        toast.success(language === 'en' ? 'Payment successful!' : 'Төлбөр амжилттай!')
+
+        // Clear cart
+        try {
+          clearCart()
+        } catch (error) {
+          console.error('Failed to clear cart:', error)
+        }
+
+        sessionStorage.removeItem('checkout-shipping-info')
+
+        // Redirect to order details after 2 seconds
+        setTimeout(() => {
+          if (orderId) {
+            navigate(`/orders/${orderId}`)
+          }
+        }, 2000)
+      } else {
+        setPaymentStatus('pending')
+      }
+
+    } catch (error) {
+      console.error('Payment check error:', error)
+      setPaymentStatus('failed')
+      toast.error(language === 'en' ? 'Failed to check payment status' : 'Төлбөрийн төлөв шалгахад алдаа гарлаа')
     }
-  }, [orderId, paymentStatus])
+  }, [orderId, language, clearCart, navigate])
+
+  // Poll for payment status with timeout protection
+  useEffect(() => {
+    if (!orderId || paymentStatus !== 'pending') return
+
+    let pollCount = 0
+    const MAX_POLLS = 60 // 60 polls × 5 seconds = 5 minutes max
+    const startTime = Date.now()
+    const MAX_DURATION = 5 * 60 * 1000 // 5 minutes in milliseconds
+
+    const interval = setInterval(async () => {
+      pollCount++
+      const elapsed = Date.now() - startTime
+
+      // Check if we've exceeded the maximum polling time
+      if (pollCount >= MAX_POLLS || elapsed >= MAX_DURATION) {
+        clearInterval(interval)
+        setPaymentStatus('timeout')
+        toast.error(
+          language === 'en'
+            ? 'Payment verification timed out. Please check your order status manually.'
+            : 'Төлбөрийн баталгаажуулалт хугацаа хэтэрсэн. Захиалгын төлвийг гараар шалгана уу.'
+        )
+        console.warn(`Payment polling timed out after ${pollCount} attempts (${Math.round(elapsed / 1000)}s)`)
+        return
+      }
+
+      try {
+        await checkPaymentStatus()
+      } catch (error) {
+        console.error('Payment polling error:', error)
+        // Continue polling even if one check fails
+      }
+    }, 5000)
+
+    return () => {
+      clearInterval(interval)
+    }
+  }, [orderId, paymentStatus, checkPaymentStatus, language])
 
   const fetchProfileAddress = async () => {
     if (!user) return
@@ -221,48 +308,6 @@ export default function CheckoutPage() {
     }
   }
 
-  const checkPaymentStatus = async () => {
-    if (!orderId) return
-
-    setPaymentStatus('checking')
-
-    try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session?.access_token) return
-
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/orders/${orderId}/payment-status`,
-        {
-          headers: {
-            'Authorization': `Bearer ${session.access_token}`
-          }
-        }
-      )
-
-      const data = await response.json()
-
-      if (data.paid) {
-        setPaymentStatus('paid')
-        toast.success(language === 'en' ? 'Payment successful!' : 'Төлбөр амжилттай!')
-
-        // Clear cart
-        clearCart()
-        sessionStorage.removeItem('checkout-shipping-info')
-
-        // Redirect to order details after 2 seconds
-        setTimeout(() => {
-          navigate(`/orders/${orderId}`)
-        }, 2000)
-      } else {
-        setPaymentStatus('pending')
-      }
-
-    } catch (error) {
-      console.error('Payment check error:', error)
-      setPaymentStatus('failed')
-    }
-  }
-
   // Show payment QR code screen
   if (paymentInfo && orderId) {
     return (
@@ -301,7 +346,7 @@ export default function CheckoutPage() {
               onClick={() => {
                 setPaymentInfo(null)
                 setOrderId(null)
-                setPaymentStatus('idle')
+                setPaymentStatus('pending')
               }}
               size="sm"
             >
@@ -321,6 +366,11 @@ export default function CheckoutPage() {
               <div className="inline-flex items-center gap-2 md:gap-3 px-4 md:px-6 py-2 md:py-3 bg-green-500 text-white rounded-full font-semibold text-sm md:text-lg animate-pulse">
                 <Icon name="CheckCircle2" className="h-5 w-5 md:h-6 md:w-6" />
                 {language === 'en' ? 'Payment Confirmed!' : 'Төлбөр баталгаажлаа!'}
+              </div>
+            ) : paymentStatus === 'timeout' ? (
+              <div className="inline-flex items-center gap-2 md:gap-3 px-4 md:px-6 py-2 md:py-3 bg-orange-500 text-white rounded-full font-semibold text-sm md:text-lg">
+                <Icon name="AlertCircle" className="h-5 w-5 md:h-6 md:w-6" />
+                {language === 'en' ? 'Verification Timed Out' : 'Хугацаа хэтэрсэн'}
               </div>
             ) : paymentStatus === 'checking' ? (
               <div className="inline-flex items-center gap-2 md:gap-3 px-4 md:px-6 py-2 md:py-3 bg-blue-500 text-white rounded-full font-semibold text-sm md:text-lg">
@@ -436,8 +486,32 @@ export default function CheckoutPage() {
 
                 {/* Action Buttons */}
                 <div className="space-y-2 md:space-y-3">
+                  {/* Timeout Message */}
+                  {paymentStatus === 'timeout' && (
+                    <Alert className="bg-orange-50 dark:bg-orange-950 border-orange-200 dark:border-orange-800">
+                      <AlertDescription className="text-sm text-orange-800 dark:text-orange-200">
+                        <div className="flex items-start gap-2">
+                          <Icon name="AlertCircle" className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <p className="font-semibold mb-1">
+                              {language === 'en' ? 'Verification Timeout' : 'Баталгаажуулалт хугацаа хэтэрсэн'}
+                            </p>
+                            <p className="text-xs">
+                              {language === 'en'
+                                ? 'Automatic verification has timed out after 5 minutes. If you completed the payment, please click "Check Payment Status" below or check your order history.'
+                                : '5 минутын дараа автомат шалгалт зогссон. Хэрэв та төлбөрөө төлсөн бол "Төлбөрийн төлөв шалгах" товчийг дарах эсвэл захиалгын түүхээ шалгана уу.'}
+                            </p>
+                          </div>
+                        </div>
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
                   <Button
-                    onClick={checkPaymentStatus}
+                    onClick={() => {
+                      setPaymentStatus('pending')
+                      checkPaymentStatus()
+                    }}
                     disabled={paymentStatus === 'checking' || paymentStatus === 'paid'}
                     className="w-full h-11 md:h-12"
                   >
@@ -583,8 +657,8 @@ export default function CheckoutPage() {
                   <Icon name="Clock" className="h-3 w-3 md:h-4 md:w-4 flex-shrink-0" />
                   <span className="text-center">
                     {language === 'en'
-                      ? 'Payment status is automatically checked every 5 seconds'
-                      : 'Төлбөрийн төлөв 5 секунд тутамд автоматаар шалгагдаж байна'}
+                      ? 'Payment status is automatically checked every 5 seconds (max 5 minutes)'
+                      : 'Төлбөрийн төлөв 5 секунд тутамд автоматаар шалгагдаж байна (дээд тал нь 5 минут)'}
                   </span>
                 </p>
               </Card>
@@ -954,5 +1028,52 @@ export default function CheckoutPage() {
       </div>
       </div>
     </div>
+  )
+}
+
+// Wrap CheckoutPage with ErrorBoundary to handle errors gracefully
+export default function CheckoutPageWithErrorBoundary() {
+  return (
+    <ErrorBoundary
+      fallback={
+        <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-primary/5 pt-20 md:pt-24 pb-8 md:pb-12">
+          <div className="container max-w-2xl px-4 mx-auto">
+            <div className="bg-red-50 dark:bg-red-950 border-2 border-red-200 dark:border-red-800 rounded-lg p-6 md:p-8">
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0">
+                  <svg className="h-8 w-8 text-red-600 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <h2 className="text-xl font-bold text-red-800 dark:text-red-200 mb-2">
+                    Checkout алдаа
+                  </h2>
+                  <p className="text-red-700 dark:text-red-300 mb-4">
+                    Төлбөрийн хуудас ачаалахад алдаа гарлаа. Таны сагсан дахь бараанууд хадгалагдсан байгаа.
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <button
+                      onClick={() => window.location.reload()}
+                      className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition-colors"
+                    >
+                      Дахин оролдох
+                    </button>
+                    <button
+                      onClick={() => window.location.href = '/cart'}
+                      className="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-lg font-semibold transition-colors"
+                    >
+                      Сагс руу буцах
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+    >
+      <CheckoutPage />
+    </ErrorBoundary>
   )
 }

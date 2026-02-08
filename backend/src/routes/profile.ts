@@ -38,7 +38,13 @@ export default async function profileRoutes(fastify: FastifyInstance) {
 
   // Update user profile
   fastify.put('/api/profile', {
-    preHandler: [userGuard]
+    preHandler: [userGuard],
+    config: {
+      rateLimit: {
+        max: 10, // 10 profile updates per minute
+        timeWindow: '1 minute'
+      }
+    }
   }, async (request, reply) => {
     const userId = (request as any).user.id;
     const { name, phone, address } = request.body as any;
