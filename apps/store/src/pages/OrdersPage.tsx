@@ -21,6 +21,8 @@ export default function OrdersPage() {
   const { language } = useTheme()
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
+  const [activeExpanded, setActiveExpanded] = useState(true) // Active section expanded by default
+  const [completedExpanded, setCompletedExpanded] = useState(false) // Completed section collapsed
 
   useEffect(() => {
     fetchOrders()
@@ -93,6 +95,13 @@ export default function OrdersPage() {
         label: 'Cancelled',
         labelMn: 'Цуцлагдсан'
       },
+      EXPIRED: {
+        color: 'text-orange-700 dark:text-orange-400',
+        bgColor: 'bg-orange-100 dark:bg-orange-900/30',
+        icon: 'AlertTriangleIcon',
+        label: 'Expired',
+        labelMn: 'Хугацаа дууссан'
+      },
     }
 
     const config = statusConfig[status] || statusConfig.PENDING
@@ -147,6 +156,68 @@ export default function OrdersPage() {
     )
   }
 
+  // Split orders into active and completed
+  const activeOrders = orders.filter(order =>
+    ['PENDING', 'PAID', 'SHIPPED'].includes(order.status)
+  )
+  const completedOrders = orders.filter(order =>
+    ['COMPLETED', 'EXPIRED', 'CANCELLED'].includes(order.status)
+  )
+
+  const renderOrderCard = (order: Order) => {
+    const items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items
+    const itemCount = Array.isArray(items) ? items.length : 0
+
+    return (
+      <Card key={order.id} className="hover:shadow-lg transition-shadow">
+        <CardContent className="p-6">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-2">
+                <h3 className="font-semibold text-lg">
+                  {language === 'mn' ? 'Захиалга' : 'Order'} #{order.id.substring(0, 8).toUpperCase()}
+                </h3>
+                {getStatusBadge(order.status)}
+              </div>
+              <div className="text-sm text-muted-foreground space-y-1">
+                <p>
+                  <Icon name="CalendarIcon" size={14} className="inline mr-1" />
+                  {new Date(order.createdAt).toLocaleDateString(language === 'mn' ? 'mn-MN' : 'en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                  })}
+                </p>
+                <p>
+                  <Icon name="ShoppingBagIcon" size={14} className="inline mr-1" />
+                  {itemCount} {language === 'mn' ? 'бараа' : 'items'}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <div className="text-right">
+                <p className="text-sm text-muted-foreground mb-1">
+                  {language === 'mn' ? 'Нийт дүн' : 'Total'}
+                </p>
+                <p className="text-2xl font-bold text-primary">
+                  ₮{Number(order.total).toLocaleString()}
+                </p>
+              </div>
+
+              <Button asChild>
+                <Link to={`/orders/${order.id}`}>
+                  <Icon name="EyeIcon" size={18} className="mr-2" />
+                  {language === 'mn' ? 'Дэлгэрэнгүй' : 'View Details'}
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
   return (
     <div className="container mx-auto px-4 py-32 min-h-screen">
       <div className="max-w-4xl mx-auto">
@@ -162,60 +233,72 @@ export default function OrdersPage() {
           </Button>
         </div>
 
-        <div className="space-y-4">
-          {orders.map((order) => {
-            const items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items
-            const itemCount = Array.isArray(items) ? items.length : 0
+        <div className="space-y-6">
+          {/* Active Orders Section */}
+          {activeOrders.length > 0 && (
+            <div>
+              <button
+                onClick={() => setActiveExpanded(!activeExpanded)}
+                className="w-full flex items-center justify-between p-4 bg-primary/5 hover:bg-primary/10 rounded-lg transition-colors mb-4"
+              >
+                <div className="flex items-center gap-3">
+                  <Icon
+                    name={activeExpanded ? "ChevronDownIcon" : "ChevronRightIcon"}
+                    size={20}
+                    className="text-primary"
+                  />
+                  <h2 className="text-xl font-semibold">
+                    {language === 'mn' ? '✓ Идэвхтэй захиалгууд' : '✓ Active Orders'}
+                  </h2>
+                  <Badge variant="secondary" className="ml-2">
+                    {activeOrders.length}
+                  </Badge>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {language === 'mn' ? 'Хүлээгдэж буй, Төлөгдсөн, Илгээгдсэн' : 'Pending, Paid, Shipped'}
+                </p>
+              </button>
 
-            return (
-              <Card key={order.id} className="hover:shadow-lg transition-shadow">
-                <CardContent className="p-6">
-                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h3 className="font-semibold text-lg">
-                          {language === 'mn' ? 'Захиалга' : 'Order'} #{order.id.substring(0, 8).toUpperCase()}
-                        </h3>
-                        {getStatusBadge(order.status)}
-                      </div>
-                      <div className="text-sm text-muted-foreground space-y-1">
-                        <p>
-                          <Icon name="CalendarIcon" size={14} className="inline mr-1" />
-                          {new Date(order.createdAt).toLocaleDateString(language === 'mn' ? 'mn-MN' : 'en-US', {
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric'
-                          })}
-                        </p>
-                        <p>
-                          <Icon name="ShoppingBagIcon" size={14} className="inline mr-1" />
-                          {itemCount} {language === 'mn' ? 'бараа' : 'items'}
-                        </p>
-                      </div>
-                    </div>
+              {activeExpanded && (
+                <div className="space-y-4 pl-4">
+                  {activeOrders.map(renderOrderCard)}
+                </div>
+              )}
+            </div>
+          )}
 
-                    <div className="flex items-center gap-4">
-                      <div className="text-right">
-                        <p className="text-sm text-muted-foreground mb-1">
-                          {language === 'mn' ? 'Нийт дүн' : 'Total'}
-                        </p>
-                        <p className="text-2xl font-bold text-primary">
-                          ₮{Number(order.total).toLocaleString()}
-                        </p>
-                      </div>
+          {/* Completed Orders Section */}
+          {completedOrders.length > 0 && (
+            <div>
+              <button
+                onClick={() => setCompletedExpanded(!completedExpanded)}
+                className="w-full flex items-center justify-between p-4 bg-muted/50 hover:bg-muted rounded-lg transition-colors mb-4"
+              >
+                <div className="flex items-center gap-3">
+                  <Icon
+                    name={completedExpanded ? "ChevronDownIcon" : "ChevronRightIcon"}
+                    size={20}
+                    className="text-muted-foreground"
+                  />
+                  <h2 className="text-xl font-semibold">
+                    {language === 'mn' ? '⊖ Дууссан захиалгууд' : '⊖ Completed Orders'}
+                  </h2>
+                  <Badge variant="outline" className="ml-2">
+                    {completedOrders.length}
+                  </Badge>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {language === 'mn' ? 'Дууссан, Хугацаа дууссан, Цуцлагдсан' : 'Completed, Expired, Cancelled'}
+                </p>
+              </button>
 
-                      <Button asChild>
-                        <Link to={`/orders/${order.id}`}>
-                          <Icon name="EyeIcon" size={18} className="mr-2" />
-                          {language === 'mn' ? 'Дэлгэрэнгүй' : 'View Details'}
-                        </Link>
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )
-          })}
+              {completedExpanded && (
+                <div className="space-y-4 pl-4">
+                  {completedOrders.map(renderOrderCard)}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>
