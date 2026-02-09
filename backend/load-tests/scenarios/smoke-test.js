@@ -34,14 +34,14 @@ export default function () {
 
   sleep(SLEEP.SHORT);
 
-  // Test 2: Get Products (Public API)
-  response = http.get(`${BASE_URL}/api/products`);
+  // Test 2: Get Products (Public API) - Now returns paginated response
+  response = http.get(`${BASE_URL}/api/products?page=1&limit=20`);
   check(response, {
     'get products status is 200': (r) => r.status === 200,
-    'products response is array': (r) => {
+    'products response has pagination': (r) => {
       try {
         const body = JSON.parse(r.body);
-        return Array.isArray(body) && body.length >= 0;
+        return body.products && Array.isArray(body.products) && body.pagination;
       } catch {
         return false;
       }
@@ -52,13 +52,13 @@ export default function () {
 
   // Test 3: Get Single Product (use existing product slug from first request)
   // For smoke test, just verify the endpoint works
-  response = http.get(`${BASE_URL}/api/products`, { tags: { name: 'list_for_slug' } });
+  response = http.get(`${BASE_URL}/api/products?page=1&limit=1`, { tags: { name: 'list_for_slug' } });
   if (response.status === 200) {
     try {
-      const products = JSON.parse(response.body);
-      if (Array.isArray(products) && products.length > 0) {
+      const data = JSON.parse(response.body);
+      if (data.products && Array.isArray(data.products) && data.products.length > 0) {
         // Get first product's slug
-        const firstProduct = products[0];
+        const firstProduct = data.products[0];
         const slug = firstProduct.slug || firstProduct.id;
 
         // Now get that specific product

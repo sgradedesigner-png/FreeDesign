@@ -87,14 +87,14 @@ export default function () {
 
   // Group 2: Public API
   group('Public API', function () {
-    // Get all products
-    let response = http.get(`${BASE_URL}/api/products`);
+    // Get paginated products (default page)
+    let response = http.get(`${BASE_URL}/api/products?page=1&limit=10`);
     const productsSuccess = check(response, {
       'get products is 200': (r) => r.status === 200,
-      'products is array': (r) => {
+      'products has pagination structure': (r) => {
         try {
           const body = JSON.parse(r.body);
-          return Array.isArray(body);
+          return body.products && Array.isArray(body.products) && body.pagination;
         } catch {
           return false;
         }
@@ -105,18 +105,18 @@ export default function () {
 
     sleep(1);
 
-    // Get products with pagination
-    response = http.get(`${BASE_URL}/api/products?page=1&limit=10`);
+    // Get products with larger page size
+    response = http.get(`${BASE_URL}/api/products?page=1&limit=20`);
     check(response, {
       'get products with pagination is 200': (r) => r.status === 200,
     });
 
     sleep(1);
 
-    // Get products with category filter
-    response = http.get(`${BASE_URL}/api/products?category_id=1`);
+    // Get products page 2
+    response = http.get(`${BASE_URL}/api/products?page=2&limit=10`);
     check(response, {
-      'get products with filter is 200': (r) => r.status === 200,
+      'get products page 2 is 200': (r) => r.status === 200,
     });
 
     sleep(1);

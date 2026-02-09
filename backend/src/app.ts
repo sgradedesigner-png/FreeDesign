@@ -2,6 +2,7 @@ import fastify from 'fastify';
 import cors from '@fastify/cors';
 import multipart from '@fastify/multipart';
 import rateLimit from '@fastify/rate-limit';
+import compress from '@fastify/compress';
 import dotenv from 'dotenv';
 
 import { adminCategoryRoutes } from './routes/admin/categories';
@@ -79,6 +80,14 @@ app.register(multipart, {
   limits: {
     fileSize: 5 * 1024 * 1024, // 5MB
   },
+});
+
+// Register compression (Phase 3.4 - Performance Optimization)
+// Compresses responses > 1KB using gzip/brotli
+app.register(compress, {
+  global: true, // Apply to all routes
+  threshold: 1024, // Only compress responses > 1KB
+  encodings: ['gzip', 'deflate'], // Support both gzip and deflate
 });
 
 // Register rate limiting

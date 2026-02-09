@@ -77,16 +77,16 @@ function testHealthEndpoint() {
 
 function testProductList() {
   const startTime = Date.now();
-  const response = http.get(`${BASE_URL}/api/products`);
+  const response = http.get(`${BASE_URL}/api/products?page=1&limit=20`);
   productViewDuration.add(Date.now() - startTime);
   apiCallCounter.add(1);
 
   const success = check(response, {
     'product list is 200': (r) => r.status === 200,
-    'product list is array': (r) => {
+    'product list has pagination': (r) => {
       try {
         const body = JSON.parse(r.body);
-        return Array.isArray(body);
+        return body.products && Array.isArray(body.products) && body.pagination;
       } catch {
         return false;
       }

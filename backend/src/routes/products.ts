@@ -102,30 +102,75 @@ export async function publicProductRoutes(app: FastifyInstance) {
     }
   });
 
-  // GET /api/products - List all products with variants
+  // GET /api/products - List all products with variants (Phase 3.4 - Pagination)
+  // Query params: ?page=1&limit=20&category_id=xxx&is_published=true
   app.get('/', async (request, reply) => {
     try {
-      const products = await prisma.product.findMany({
-        include: {
-          category: {
-            select: {
-              id: true,
-              name: true,
-              slug: true,
+      const query = request.query as {
+        page?: string;
+        limit?: string;
+        category_id?: string;
+        is_published?: string;
+      };
+
+      // Parse pagination parameters
+      const page = Math.max(1, parseInt(query.page || '1', 10));
+      const limit = Math.min(100, Math.max(1, parseInt(query.limit || '20', 10))); // Max 100, min 1, default 20
+      const skip = (page - 1) * limit;
+
+      // Build where clause for filtering
+      const where: any = {};
+      if (query.category_id) {
+        where.categoryId = query.category_id;
+      }
+      if (query.is_published !== undefined) {
+        where.is_published = query.is_published === 'true';
+      }
+
+      // Fetch products and total count in parallel (optimized)
+      const [products, totalCount] = await Promise.all([
+        prisma.product.findMany({
+          where,
+          skip,
+          take: limit,
+          include: {
+            category: {
+              select: {
+                id: true,
+                name: true,
+                slug: true,
+              },
+            },
+            variants: {
+              orderBy: {
+                sortOrder: 'asc',
+              },
             },
           },
-          variants: {
-            orderBy: {
-              sortOrder: 'asc',
-            },
+          orderBy: {
+            createdAt: 'desc',
           },
-        },
-        orderBy: {
-          createdAt: 'desc',
+        }),
+        prisma.product.count({ where }),
+      ]);
+
+      // Calculate pagination metadata
+      const totalPages = Math.ceil(totalCount / limit);
+      const hasNextPage = page < totalPages;
+      const hasPrevPage = page > 1;
+
+      // Return paginated response
+      return reply.send({
+        products,
+        pagination: {
+          page,
+          limit,
+          totalCount,
+          totalPages,
+          hasNextPage,
+          hasPrevPage,
         },
       });
-
-      return reply.send(products);
     } catch (error) {
       app.log.error(error);
       return reply.status(500).send({ error: 'Failed to fetch products' });
