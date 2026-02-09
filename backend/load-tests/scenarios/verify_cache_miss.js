@@ -25,8 +25,9 @@ export const options = {
 };
 
 export default function () {
-  // Vary page number across 1-50 to force cache MISSes
-  const page = Math.floor(Math.random() * 50) + 1;
+  // Vary page number across 1-500 to force cache MISSes
+  // With 100 cache entries and 500 possible pages, hit rate should be <20%
+  const page = Math.floor(Math.random() * 500) + 1;
   const url = `${BASE_URL}/api/products?page=${page}&limit=20`;
 
   const headers = {
