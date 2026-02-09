@@ -7,7 +7,8 @@
       "Bash(ls:*)",
       "Bash(npm info:*)",
       "Bash(timeout 5 npx:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "WebSearch"
     ]
   }
 }
