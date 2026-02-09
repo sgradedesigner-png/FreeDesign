@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -92,7 +92,8 @@ export default function ProductFormPage() {
   const [productDetails, setProductDetails] = useState<string[]>([]);
   const [subtitle, setSubtitle] = useState('');
   const [isPublished, setIsPublished] = useState(false);
-  const [isSavingPublishStatus, setIsSavingPublishStatus] = useState(false);
+  const [isSavingPublishStatus, setIsSavingPublishStatus] = useState(false); // UI state (triggers re-render)
+  const isSavingPublishStatusRef = useRef(false); // Guard flag (no re-render)
   const [prefillCategoryHint, setPrefillCategoryHint] = useState('');
 
   const {
@@ -123,6 +124,14 @@ export default function ProductFormPage() {
       fetchProduct(id);
     }
   }, [id]);
+
+  // Cleanup: Reset saving flags on unmount
+  useEffect(() => {
+    return () => {
+      isSavingPublishStatusRef.current = false;
+      setIsSavingPublishStatus(false);
+    };
+  }, []);
 
   useEffect(() => {
     if (isEditMode) return;
@@ -273,10 +282,10 @@ export default function ProductFormPage() {
       setSubtitle(data.subtitle || '');
 
       const publishedValue = Boolean(data.is_published ?? data.isPublished ?? false);
-      console.log('📥 fetchProduct setting isPublished to:', publishedValue, { is_published: data.is_published, isPublished: data.isPublished, isSavingPublishStatus });
+      console.log('📥 fetchProduct setting isPublished to:', publishedValue, { is_published: data.is_published, isPublished: data.isPublished, isSavingPublishStatus: isSavingPublishStatusRef.current });
 
       // Only update isPublished if we're not currently saving it
-      if (!isSavingPublishStatus) {
+      if (!isSavingPublishStatusRef.current) {
         setIsPublished(publishedValue);
       } else {
         console.log('⏭️ Skipping isPublished update (save in progress)');
@@ -755,8 +764,12 @@ export default function ProductFormPage() {
 
                           // Auto-save publish status
                           if (isEditMode && id) {
-                            setIsSavingPublishStatus(true);
+                            // Set BOTH state and ref
+                            setIsSavingPublishStatus(true);  // UI disabled state
+                            isSavingPublishStatusRef.current = true;  // Guard flag
+
                             try {
+                              console.log('💾 Saving publish status:', newValue);
                               const response = await api.put(`/admin/products/${id}`, {
                                 is_published: newValue,
                               });
@@ -778,7 +791,10 @@ export default function ProductFormPage() {
                               const errorMsg = error.response?.data?.message || 'Failed to update publish status';
                               alert(errorMsg);
                             } finally {
+                              // Clear BOTH state and ref
                               setIsSavingPublishStatus(false);
+                              isSavingPublishStatusRef.current = false;
+                              console.log('🏁 Save complete, flags cleared');
                             }
                           }
                         }}

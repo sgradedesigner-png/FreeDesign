@@ -12,8 +12,8 @@ import path from 'path';
  * IMPORTANT: Uses .env.test to prevent deleting production data!
  */
 
-// Load .env.test file
-dotenv.config({ path: path.resolve(__dirname, '../../.env.test') });
+// Load .env.test file - MUST override any previously loaded .env
+dotenv.config({ path: path.resolve(__dirname, '../../.env.test'), override: true });
 
 // Store original environment
 const originalEnv = process.env.NODE_ENV;

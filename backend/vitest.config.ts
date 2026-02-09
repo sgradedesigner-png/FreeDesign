@@ -1,11 +1,19 @@
 import { defineConfig } from 'vitest/config';
 import path from 'path';
+import dotenv from 'dotenv';
+
+// CRITICAL: Load .env.test BEFORE anything else
+dotenv.config({ path: path.resolve(__dirname, '.env.test'), override: true });
 
 export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
     setupFiles: ['./src/tests/setup.ts'],
+    env: {
+      // Force test environment variables
+      NODE_ENV: 'test'
+    },
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html', 'lcov'],

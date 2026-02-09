@@ -2,7 +2,11 @@
   "permissions": {
     "allow": [
       "Bash(npm install:*)",
-      "Bash(npx prisma migrate dev:*)"
+      "Bash(npx prisma migrate dev:*)",
+      "Bash(echo:*)",
+      "Bash(ls:*)",
+      "Bash(npm info:*)",
+      "Bash(timeout 5 npx:*)"
     ]
   }
 }
