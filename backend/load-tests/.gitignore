@@ -1,0 +1,13 @@
+# Load testing results
+results/*.json
+results/*.html
+results/*.txt
+
+# Keep directory but ignore contents
+!results/.gitkeep
+
+# k6 output
+*.log
+
+# Temporary files
+*.tmp

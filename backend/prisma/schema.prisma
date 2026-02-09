@@ -75,10 +75,18 @@ model Product {
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
 
+  // Single column indexes
   @@index([slug])
   @@index([createdAt(sort: Desc)])
   @@index([categoryId])
   @@index([title])
+  @@index([is_published])  // NEW: Filter published products
+
+  // Composite indexes for common query patterns (Phase 3.3 - Performance Optimization)
+  @@index([is_published, createdAt(sort: Desc)])  // NEW: Published products sorted by date (most common query)
+  @@index([categoryId, is_published])              // NEW: Products by category (filtered by published)
+  @@index([is_published, categoryId, createdAt(sort: Desc)])  // NEW: Covering index for filtered category queries
+
   @@map("products")
 }
 
@@ -99,9 +107,14 @@ model ProductVariant {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
+  // Single column indexes
   @@index([productId])
   @@index([sku])
   @@index([stock])
+
+  // Composite index for variant loading (Phase 3.3 - Performance Optimization)
+  @@index([productId, sortOrder])  // NEW: Fast variant loading in correct order
+
   @@map("product_variants")
 }
 
