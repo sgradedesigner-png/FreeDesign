@@ -107,6 +107,10 @@ export async function publicProductRoutes(app: FastifyInstance) {
   // Query params: ?page=1&limit=20&category_id=xxx&is_published=true&include_total=true
   app.get('/', async (request, reply) => {
     try {
+      // VERIFICATION: Performance diagnostic mode (DEV/TEST only)
+      const perfDiag = process.env.PERF_DIAG === 'true' || process.env.NODE_ENV !== 'production';
+      const requestStart = perfDiag ? Date.now() : 0;
+
       const query = request.query as {
         page?: string;
         limit?: string;
@@ -130,6 +134,15 @@ export async function publicProductRoutes(app: FastifyInstance) {
       if (cacheEnabled && !includeTotal) {
         const cached = productsCache.get(cacheKey);
         if (cached) {
+          // VERIFICATION: Measure actual cache HIT time (DEV/TEST only)
+          if (perfDiag) {
+            const totalTime = Date.now() - requestStart;
+            reply.header('X-PERF-TOTAL-MS', totalTime.toString());
+            reply.header('X-PERF-DB-MS', '0'); // Cache hit, no DB
+            reply.header('X-PERF-QUERY-COUNT', '0');
+            reply.header('X-PERF-CACHE', 'HIT');
+          }
+          // Production headers (backward compatible)
           reply.header('X-Cache', 'HIT');
           reply.header('X-DB-Time', '0ms'); // No DB query
           reply.header('X-Total-Time', '0ms');
@@ -147,9 +160,8 @@ export async function publicProductRoutes(app: FastifyInstance) {
         where.is_published = query.is_published === 'true';
       }
 
-      // Phase 1 & 2: Add diagnostic timing
-      const requestStart = Date.now();
-      const dbStart = Date.now();
+      // Phase 1 & 2: Add diagnostic timing (cache MISS path)
+      const dbStart = perfDiag ? Date.now() : 0;
 
       // Phase 2 & 3: Lazy COUNT + Optimized variant loading
       const [products, totalCount] = await Promise.all([
@@ -192,8 +204,8 @@ export async function publicProductRoutes(app: FastifyInstance) {
         includeTotal ? prisma.product.count({ where }) : Promise.resolve(null),
       ]);
 
-      const dbTime = Date.now() - dbStart;
-      const totalTime = Date.now() - requestStart;
+      const dbTime = perfDiag ? Date.now() - dbStart : 0;
+      const totalTime = perfDiag ? Date.now() - requestStart : 0;
 
       // Phase 2: Calculate pagination with heuristics when COUNT not available
       const hasNextPage = products.length === limit; // If we got full page, likely more exist
@@ -218,7 +230,15 @@ export async function publicProductRoutes(app: FastifyInstance) {
         productsCache.set(cacheKey, responseData);
       }
 
-      // Phase 1 & 2 & 4: Add diagnostic headers
+      // VERIFICATION: Add performance diagnostic headers (DEV/TEST only)
+      if (perfDiag) {
+        reply.header('X-PERF-TOTAL-MS', totalTime.toString());
+        reply.header('X-PERF-DB-MS', dbTime.toString());
+        reply.header('X-PERF-QUERY-COUNT', includeTotal ? '2' : '1');
+        reply.header('X-PERF-CACHE', 'MISS');
+      }
+
+      // Phase 1 & 2 & 4: Add diagnostic headers (backward compatible)
       reply.header('X-DB-Time', `${dbTime}ms`);
       reply.header('X-Total-Time', `${totalTime}ms`);
       reply.header('X-Query-Count', includeTotal ? '2' : '1'); // Phase 2: Track query count

@@ -9,6 +9,7 @@ import { logQuery } from '../lib/logger';
  * - All queries in development mode (debug level)
  * - Query duration and parameters
  * - Separate tracking for COUNT queries (Phase 1: Diagnostic)
+ * - VERIFICATION: Enhanced logging when PERF_DIAG=true (DEV/TEST only)
  */
 export const prismaQueryLogger: Prisma.Middleware = async (params, next) => {
   const startTime = Date.now();
@@ -22,6 +23,12 @@ export const prismaQueryLogger: Prisma.Middleware = async (params, next) => {
   // Phase 1: Flag COUNT queries for performance analysis
   const isCountQuery = params.action === 'count';
   const queryType = isCountQuery ? 'COUNT' : params.action;
+
+  // VERIFICATION: Enhanced diagnostic logging (DEV/TEST only)
+  const perfDiag = process.env.PERF_DIAG === 'true' || process.env.NODE_ENV !== 'production';
+  if (perfDiag && params.model === 'Product') {
+    console.log(`[PERF_DIAG] Product.${params.action} took ${duration}ms`);
+  }
 
   // Log query with duration and params
   logQuery(query, duration, {
