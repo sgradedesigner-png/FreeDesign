@@ -9,6 +9,54 @@ import { orderIdParamSchema } from '../schemas/payment.schema';
 import { validateData } from '../utils/validation';
 import { NotFoundError, ServiceUnavailableError, BadRequestError, PaymentServiceError } from '../utils/errors';
 
+/**
+ * Helper function to check and update expired orders
+ * Checks if order's QPay invoice has expired and updates status to EXPIRED
+ */
+async function checkAndUpdateExpiredOrders(orders: any[]) {
+  const now = new Date();
+  const expiredOrderIds: string[] = [];
+
+  // Find orders that are expired
+  for (const order of orders) {
+    if (
+      order.qpayInvoiceExpiresAt &&
+      order.status === 'PENDING' &&
+      order.paymentStatus === 'UNPAID' &&
+      new Date(order.qpayInvoiceExpiresAt) < now
+    ) {
+      expiredOrderIds.push(order.id);
+    }
+  }
+
+  // Update expired orders in bulk
+  if (expiredOrderIds.length > 0) {
+    await prisma.order.updateMany({
+      where: {
+        id: { in: expiredOrderIds }
+      },
+      data: {
+        status: 'EXPIRED',
+        expiredAt: now,
+        updatedAt: now
+      }
+    });
+
+    console.log(`[Order Expiration] Updated ${expiredOrderIds.length} expired orders: ${expiredOrderIds.join(', ')}`);
+
+    // Update the orders in the array to reflect new status
+    for (const order of orders) {
+      if (expiredOrderIds.includes(order.id)) {
+        order.status = 'EXPIRED';
+        order.expiredAt = now;
+        order.updatedAt = now;
+      }
+    }
+  }
+
+  return orders;
+}
+
 export default async function orderRoutes(fastify: FastifyInstance) {
 
   // Create new order with QPay invoice (authenticated customers only)
@@ -267,10 +315,13 @@ export default async function orderRoutes(fastify: FastifyInstance) {
     const userId = (request as any).user.id;
 
     // No N+1 problem: items are stored as JSON in the Order model
-    const orders = await prisma.order.findMany({
+    let orders = await prisma.order.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' }
     });
+
+    // Check and update expired orders automatically
+    orders = await checkAndUpdateExpiredOrders(orders);
 
     return reply.send({ orders });
   });
@@ -290,7 +341,7 @@ export default async function orderRoutes(fastify: FastifyInstance) {
     const { id } = paramValidation.data;
 
     // No N+1 problem: items are stored as JSON in the Order model
-    const order = await prisma.order.findFirst({
+    let order = await prisma.order.findFirst({
       where: {
         id,
         userId // Ensure user can only see their own orders
@@ -300,6 +351,10 @@ export default async function orderRoutes(fastify: FastifyInstance) {
     if (!order) {
       throw new NotFoundError('Захиалга олдсонгүй');
     }
+
+    // Check and update if expired
+    const updatedOrders = await checkAndUpdateExpiredOrders([order]);
+    order = updatedOrders[0];
 
     return reply.send({ order });
   });

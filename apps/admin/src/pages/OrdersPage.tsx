@@ -33,7 +33,7 @@ type Order = {
   id: string;
   userId: string;
   total: string;
-  status: 'PENDING' | 'PAID' | 'SHIPPED' | 'COMPLETED' | 'CANCELLED';
+  status: 'PENDING' | 'PAID' | 'EXPIRED' | 'SHIPPED' | 'COMPLETED' | 'CANCELLED';
   items: any;
   shippingAddress: any;
   createdAt: string;
@@ -114,16 +114,41 @@ export default function OrdersPage() {
   };
 
   const getStatusBadge = (status: string) => {
-    const statusConfig: Record<string, { variant: any; label: string }> = {
-      PENDING: { variant: 'secondary', label: 'Хүлээгдэж буй' },
-      PAID: { variant: 'default', label: 'Төлсөн' },
-      SHIPPED: { variant: 'default', label: 'Илгээсэн' },
-      COMPLETED: { variant: 'default', label: 'Дууссан' },
-      CANCELLED: { variant: 'destructive', label: 'Цуцалсан' },
+    const statusConfig: Record<string, { variant: any; label: string; className?: string }> = {
+      PENDING: {
+        variant: 'secondary',
+        label: 'Хүлээгдэж буй',
+        className: 'bg-yellow-100 text-yellow-800 hover:bg-yellow-100 dark:bg-yellow-900/30 dark:text-yellow-400'
+      },
+      PAID: {
+        variant: 'default',
+        label: 'Төлсөн',
+        className: 'bg-emerald-100 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400'
+      },
+      EXPIRED: {
+        variant: 'destructive',
+        label: 'Хугацаа дууссан',
+        className: 'bg-orange-100 text-orange-800 hover:bg-orange-100 dark:bg-orange-900/30 dark:text-orange-400'
+      },
+      SHIPPED: {
+        variant: 'default',
+        label: 'Илгээсэн',
+        className: 'bg-blue-100 text-blue-800 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400'
+      },
+      COMPLETED: {
+        variant: 'default',
+        label: 'Дууссан',
+        className: 'bg-green-100 text-green-800 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400'
+      },
+      CANCELLED: {
+        variant: 'destructive',
+        label: 'Цуцалсан',
+        className: 'bg-red-100 text-red-800 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400'
+      },
     };
 
     const config = statusConfig[status] || statusConfig.PENDING;
-    return <Badge variant={config.variant}>{config.label}</Badge>;
+    return <Badge variant={config.variant} className={config.className}>{config.label}</Badge>;
   };
 
   if (isLoading) {
@@ -174,6 +199,7 @@ export default function OrdersPage() {
               <SelectItem value="all">Бүгд</SelectItem>
               <SelectItem value="PENDING">Хүлээгдэж буй</SelectItem>
               <SelectItem value="PAID">Төлсөн</SelectItem>
+              <SelectItem value="EXPIRED">Хугацаа дууссан</SelectItem>
               <SelectItem value="SHIPPED">Илгээсэн</SelectItem>
               <SelectItem value="COMPLETED">Дууссан</SelectItem>
               <SelectItem value="CANCELLED">Цуцалсан</SelectItem>
@@ -442,6 +468,7 @@ export default function OrdersPage() {
                 <SelectContent>
                   <SelectItem value="PENDING">Хүлээгдэж буй</SelectItem>
                   <SelectItem value="PAID">Төлсөн</SelectItem>
+                  <SelectItem value="EXPIRED">Хугацаа дууссан</SelectItem>
                   <SelectItem value="SHIPPED">Илгээсэн</SelectItem>
                   <SelectItem value="COMPLETED">Дууссан</SelectItem>
                   <SelectItem value="CANCELLED">Цуцалсан</SelectItem>
