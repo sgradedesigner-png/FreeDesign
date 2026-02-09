@@ -1,6 +1,7 @@
 // Public product routes (no auth required)
 import type { FastifyInstance } from 'fastify';
 import { prisma } from '../lib/prisma'; // Use shared singleton instance
+import { productsCache, getProductsCacheKey } from '../lib/cache'; // Phase 4: Response cache
 
 export async function publicProductRoutes(app: FastifyInstance) {
   // GET /api/categories - List categories with product count
@@ -103,7 +104,7 @@ export async function publicProductRoutes(app: FastifyInstance) {
   });
 
   // GET /api/products - List all products with variants (Phase 3.4 - Pagination)
-  // Query params: ?page=1&limit=20&category_id=xxx&is_published=true
+  // Query params: ?page=1&limit=20&category_id=xxx&is_published=true&include_total=true
   app.get('/', async (request, reply) => {
     try {
       const query = request.query as {
@@ -111,12 +112,31 @@ export async function publicProductRoutes(app: FastifyInstance) {
         limit?: string;
         category_id?: string;
         is_published?: string;
+        include_total?: string; // Phase 2: Optional total count
       };
 
       // Parse pagination parameters
       const page = Math.max(1, parseInt(query.page || '1', 10));
       const limit = Math.min(100, Math.max(1, parseInt(query.limit || '20', 10))); // Max 100, min 1, default 20
       const skip = (page - 1) * limit;
+
+      // Phase 2: Only run COUNT if explicitly requested
+      const includeTotal = query.include_total === 'true';
+
+      // Phase 4: Check cache first (only for requests without include_total)
+      const cacheEnabled = process.env.ENABLE_RESPONSE_CACHE !== 'false';
+      const cacheKey = getProductsCacheKey({ page, limit, category_id: query.category_id, is_published: query.is_published });
+
+      if (cacheEnabled && !includeTotal) {
+        const cached = productsCache.get(cacheKey);
+        if (cached) {
+          reply.header('X-Cache', 'HIT');
+          reply.header('X-DB-Time', '0ms'); // No DB query
+          reply.header('X-Total-Time', '0ms');
+          reply.header('X-Query-Count', '0');
+          return reply.send(cached);
+        }
+      }
 
       // Build where clause for filtering
       const where: any = {};
@@ -127,7 +147,11 @@ export async function publicProductRoutes(app: FastifyInstance) {
         where.is_published = query.is_published === 'true';
       }
 
-      // Fetch products and total count in parallel (optimized)
+      // Phase 1 & 2: Add diagnostic timing
+      const requestStart = Date.now();
+      const dbStart = Date.now();
+
+      // Phase 2 & 3: Lazy COUNT + Optimized variant loading
       const [products, totalCount] = await Promise.all([
         prisma.product.findMany({
           where,
@@ -141,36 +165,67 @@ export async function publicProductRoutes(app: FastifyInstance) {
                 slug: true,
               },
             },
+            // Phase 3: Only load essential variant fields for list view
             variants: {
+              select: {
+                id: true,
+                name: true,
+                price: true,
+                originalPrice: true,
+                imagePath: true, // Only main image, not galleryPaths
+                stock: true,
+                isAvailable: true,
+                sortOrder: true,
+                sizes: true, // Keep sizes for product cards
+                sku: true, // Keep SKU for reference
+              },
               orderBy: {
                 sortOrder: 'asc',
               },
+              take: 3, // Phase 3: Limit to first 3 variants for list view
             },
           },
           orderBy: {
             createdAt: 'desc',
           },
         }),
-        prisma.product.count({ where }),
+        includeTotal ? prisma.product.count({ where }) : Promise.resolve(null),
       ]);
 
-      // Calculate pagination metadata
-      const totalPages = Math.ceil(totalCount / limit);
-      const hasNextPage = page < totalPages;
-      const hasPrevPage = page > 1;
+      const dbTime = Date.now() - dbStart;
+      const totalTime = Date.now() - requestStart;
 
-      // Return paginated response
-      return reply.send({
+      // Phase 2: Calculate pagination with heuristics when COUNT not available
+      const hasNextPage = products.length === limit; // If we got full page, likely more exist
+      const hasPrevPage = page > 1;
+      const totalPages = totalCount !== null ? Math.ceil(totalCount / limit) : undefined;
+
+      // Phase 4: Build response object
+      const responseData = {
         products,
         pagination: {
           page,
           limit,
-          totalCount,
-          totalPages,
+          totalCount: totalCount ?? undefined, // undefined if not requested
+          totalPages, // undefined if totalCount not available
           hasNextPage,
           hasPrevPage,
         },
-      });
+      };
+
+      // Phase 4: Store in cache (only for requests without include_total)
+      if (cacheEnabled && !includeTotal) {
+        productsCache.set(cacheKey, responseData);
+      }
+
+      // Phase 1 & 2 & 4: Add diagnostic headers
+      reply.header('X-DB-Time', `${dbTime}ms`);
+      reply.header('X-Total-Time', `${totalTime}ms`);
+      reply.header('X-Query-Count', includeTotal ? '2' : '1'); // Phase 2: Track query count
+      reply.header('X-Cache', 'MISS'); // Phase 4: Cache miss
+
+      // Phase 2: Return paginated response with optional totalCount
+      return reply.send(responseData);
     } catch (error) {
       app.log.error(error);
       return reply.status(500).send({ error: 'Failed to fetch products' });

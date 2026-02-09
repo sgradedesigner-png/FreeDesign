@@ -8,6 +8,7 @@ import { logQuery } from '../lib/logger';
  * - Slow queries (> 1000ms)
  * - All queries in development mode (debug level)
  * - Query duration and parameters
+ * - Separate tracking for COUNT queries (Phase 1: Diagnostic)
  */
 export const prismaQueryLogger: Prisma.Middleware = async (params, next) => {
   const startTime = Date.now();
@@ -18,10 +19,16 @@ export const prismaQueryLogger: Prisma.Middleware = async (params, next) => {
   const duration = Date.now() - startTime;
   const query = `${params.model}.${params.action}`;
 
+  // Phase 1: Flag COUNT queries for performance analysis
+  const isCountQuery = params.action === 'count';
+  const queryType = isCountQuery ? 'COUNT' : params.action;
+
   // Log query with duration and params
   logQuery(query, duration, {
     model: params.model,
     action: params.action,
+    queryType, // Phase 1: Add query type for diagnostics
+    isCountQuery, // Phase 1: Flag COUNT queries
     args: process.env.NODE_ENV === 'development' ? params.args : undefined
   });
 

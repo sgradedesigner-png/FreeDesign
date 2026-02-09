@@ -78,15 +78,18 @@ export function checkResponse(response, expectedStatus = 200) {
 }
 
 // Sleep durations (in seconds)
+// Phase 1: Reduced delays for realistic performance testing
 export const SLEEP = {
-  SHORT: 1,
-  MEDIUM: 3,
-  LONG: 5,
+  SHORT: 0.1,   // 100ms (was 1s)
+  MEDIUM: 0.5,  // 500ms (was 3s)
+  LONG: 1.0,    // 1 second (was 5s)
 };
 
 // Common headers
+// Phase 1: Enable compression in load tests
 export const headers = {
   'Content-Type': 'application/json',
+  'Accept-Encoding': 'gzip, deflate, br', // Enable compression
 };
 
 // Helper to add auth token to headers
