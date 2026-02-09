@@ -1,6 +1,51 @@
 // backend/src/services/email.service.ts
 import { Resend } from 'resend';
 
+/**
+ * Escape HTML to prevent XSS attacks in email templates
+ */
+function escapeHtml(text: string | number): string {
+  const str = String(text);
+  const map: Record<string, string> = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#x27;',
+    '/': '&#x2F;',
+  };
+  return str.replace(/[&<>"'/]/g, (char) => map[char]);
+}
+
+/**
+ * Validate email address format
+ */
+function isValidEmail(email: string): boolean {
+  // RFC 5322 compliant email regex (simplified)
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email) && email.length <= 254;
+}
+
+/**
+ * Mask email address for privacy in logs (GDPR compliance)
+ * Example: test@example.com → t***@e***.com
+ */
+function maskEmail(email: string): string {
+  const [localPart, domain] = email.split('@');
+  if (!domain) return '***';
+
+  const maskedLocal = localPart.length > 1
+    ? `${localPart[0]}***`
+    : '***';
+
+  const domainParts = domain.split('.');
+  const maskedDomain = domainParts.map(part =>
+    part.length > 1 ? `${part[0]}***` : part
+  ).join('.');
+
+  return `${maskedLocal}@${maskedDomain}`;
+}
+
 interface EmailConfig {
   apiKey: string;
   from: string;
@@ -42,9 +87,23 @@ class EmailService {
       return { success: false, error: 'Email service not configured' };
     }
 
+    // Validate email addresses
+    const emails = Array.isArray(params.to) ? params.to : [params.to];
+    const invalidEmails = emails.filter(email => !isValidEmail(email));
+    if (invalidEmails.length > 0) {
+      console.error('[Email Service] Invalid email addresses:', invalidEmails);
+      return { success: false, error: `Invalid email addresses: ${invalidEmails.join(', ')}` };
+    }
+
     try {
+      // Mask email in production logs for privacy (GDPR)
+      const isProduction = process.env.NODE_ENV === 'production';
+      const logTo = isProduction
+        ? (Array.isArray(params.to) ? params.to.map(maskEmail) : maskEmail(params.to))
+        : params.to;
+
       console.log('[Email Service] Sending email:', {
-        to: params.to,
+        to: logTo,
         subject: params.subject,
         from: `${this.config.fromName} <${this.config.from}>`
       });
@@ -83,7 +142,7 @@ class EmailService {
     const { orderId, total, items, qrCodeUrl, qpayInvoiceExpiresAt } = orderData;
 
     const itemsList = items.map(item =>
-      `<li>${item.productName} - ${item.variantName} x ${item.quantity} = ₮${(item.price * item.quantity).toLocaleString()}</li>`
+      `<li>${escapeHtml(item.productName)} - ${escapeHtml(item.variantName)} x ${escapeHtml(item.quantity)} = ₮${(item.price * item.quantity).toLocaleString()}</li>`
     ).join('');
 
     const expiresText = qpayInvoiceExpiresAt
@@ -103,7 +162,7 @@ class EmailService {
     <h1 style="color: #059669; margin-bottom: 20px;">✅ Захиалга баталгаажлаа!</h1>
 
     <p>Сайн байна уу,</p>
-    <p>Таны <strong>#${orderId.substring(0, 8).toUpperCase()}</strong> дугаартай захиалга амжилттай үүслээ.</p>
+    <p>Таны <strong>#${escapeHtml(orderId.substring(0, 8).toUpperCase())}</strong> дугаартай захиалга амжилттай үүслээ.</p>
 
     ${expiresText}
 
@@ -170,7 +229,7 @@ class EmailService {
     <h1 style="color: #d97706; margin-bottom: 20px;">⏰ Анхааруулга: Төлбөрийн хугацаа дуусах гэж байна</h1>
 
     <p>Сайн байна уу,</p>
-    <p>Таны <strong>#${orderId.substring(0, 8).toUpperCase()}</strong> дугаартай захиалгын төлбөрийн хугацаа <strong style="color: #dc2626;">${hoursRemaining} цаг</strong>-ын дараа дуусна.</p>
+    <p>Таны <strong>#${escapeHtml(orderId.substring(0, 8).toUpperCase())}</strong> дугаартай захиалгын төлбөрийн хугацаа <strong style="color: #dc2626;">${escapeHtml(hoursRemaining)} цаг</strong>-ын дараа дуусна.</p>
 
     <div style="background-color: white; padding: 15px; border-radius: 5px; margin: 20px 0;">
       <p style="font-size: 18px; font-weight: bold; margin: 0;">
@@ -231,7 +290,7 @@ class EmailService {
     <h1 style="color: #dc2626; margin-bottom: 20px;">❌ Захиалгын хугацаа дууссан</h1>
 
     <p>Сайн байна уу,</p>
-    <p>Уучлаарай, таны <strong>#${orderId.substring(0, 8).toUpperCase()}</strong> дугаартай захиалгын төлбөрийн хугацаа дууссан тул автоматаар цуцлагдлаа.</p>
+    <p>Уучлаарай, таны <strong>#${escapeHtml(orderId.substring(0, 8).toUpperCase())}</strong> дугаартай захиалгын төлбөрийн хугацаа дууссан тул автоматаар цуцлагдлаа.</p>
 
     <div style="background-color: white; padding: 15px; border-radius: 5px; margin: 20px 0;">
       <p style="font-size: 18px; font-weight: bold; margin: 0;">

@@ -17,10 +17,12 @@ import profileRoutes from './routes/profile';
 import paymentRoutes from './routes/payment';
 import adminOrderRoutes from './routes/admin/orders';
 import testEmailRoutes from './routes/test-email';
+import adminCronRoutes from './routes/admin/cron';
 import { prisma } from './lib/prisma'; // Use shared singleton instance
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { logRateLimit } from './lib/logger';
 import pino from 'pino';
+import { cronService } from './services/cron.service';
 
 dotenv.config();
 
@@ -227,6 +229,7 @@ app.register(adminStatsRoutes, { prefix: '/admin/stats' });
 app.register(adminUploadRoutes, { prefix: '/admin/upload' });
 app.register(adminUploadPresignedRoutes, { prefix: '/admin/upload' });
 app.register(adminOrderRoutes);
+app.register(adminCronRoutes);
 app.register(testEmailRoutes);
 
 // 7) Error Handlers
@@ -242,10 +245,28 @@ const start = async () => {
     const port = Number(process.env.PORT) || 3000;
     await app.listen({ port, host: '0.0.0.0' });
     app.log.info(`Server is running at http://localhost:${port}`);
+
+    // Start cron jobs for email notifications (Phase 2)
+    await cronService.start();
   } catch (err) {
     app.log.error(err);
     process.exit(1);
   }
 };
+
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+  app.log.info('SIGTERM signal received: closing HTTP server and stopping cron jobs');
+  cronService.stop();
+  await app.close();
+  process.exit(0);
+});
+
+process.on('SIGINT', async () => {
+  app.log.info('SIGINT signal received: closing HTTP server and stopping cron jobs');
+  cronService.stop();
+  await app.close();
+  process.exit(0);
+});
 
 start();

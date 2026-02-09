@@ -8,6 +8,26 @@ import { createOrderSchema } from '../schemas/order.schema';
 import { orderIdParamSchema } from '../schemas/payment.schema';
 import { validateData } from '../utils/validation';
 import { NotFoundError, ServiceUnavailableError, BadRequestError, PaymentServiceError } from '../utils/errors';
+import { emailService } from '../services/email.service';
+
+/**
+ * Mask email address for privacy in logs (GDPR compliance)
+ */
+function maskEmail(email: string): string {
+  const [localPart, domain] = email.split('@');
+  if (!domain) return '***';
+
+  const maskedLocal = localPart.length > 1
+    ? `${localPart[0]}***`
+    : '***';
+
+  const domainParts = domain.split('.');
+  const maskedDomain = domainParts.map(part =>
+    part.length > 1 ? `${part[0]}***` : part
+  ).join('.');
+
+  return `${maskedLocal}@${maskedDomain}`;
+}
 
 /**
  * Helper function to check and update expired orders
@@ -270,6 +290,51 @@ export default async function orderRoutes(fastify: FastifyInstance) {
       });
 
       console.log(`✅ Order created with QPay invoice: ${order.id} for user ${userId}`);
+
+      // 7. Send order confirmation email in BACKGROUND (Phase 2)
+      // This prevents blocking the response while sending email
+      setImmediate(async () => {
+        try {
+          // Get user's email from profile (id = userId in Profile table)
+          const profile = await prisma.profile.findUnique({
+            where: { id: userId },
+            select: { email: true }
+          });
+
+          if (!profile?.email) {
+            console.warn(`[Email] No email found for user ${userId}, skipping confirmation email`);
+            return;
+          }
+
+          const isProduction = process.env.NODE_ENV === 'production';
+          const logEmail = isProduction ? maskEmail(profile.email) : profile.email;
+          console.log(`[Email] Sending order confirmation to ${logEmail} for order ${updatedOrder.id}`);
+
+          const emailResult = await emailService.sendOrderConfirmation(profile.email, {
+            orderId: updatedOrder.id,
+            total: Number(updatedOrder.total), // Convert Decimal to number
+            items: updatedOrder.items as any[],
+            qrCodeUrl: updatedOrder.qrCodeUrl || undefined,
+            qpayInvoiceExpiresAt: updatedOrder.qpayInvoiceExpiresAt || undefined
+          });
+
+          if (emailResult.success) {
+            // Update order to mark confirmation email as sent
+            await prisma.order.update({
+              where: { id: updatedOrder.id },
+              data: {
+                confirmationEmailSent: true,
+                confirmationEmailSentAt: new Date()
+              }
+            });
+            console.log(`[Email] ✅ Confirmation email sent successfully to ${logEmail}`);
+          } else {
+            console.error(`[Email] Failed to send confirmation email: ${emailResult.error}`);
+          }
+        } catch (emailError: any) {
+          console.error('[Email] Error sending confirmation email:', emailError.message);
+        }
+      });
 
       // 4. Return order with payment info
       return reply.code(201).send({

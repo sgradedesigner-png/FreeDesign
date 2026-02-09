@@ -37,6 +37,9 @@ model Profile {
   phone     String?  // User phone number
   address   String?  // JSON string for multiple addresses
 
+  // Relations
+  orders    Order[]  // User's orders
+
   @@index([email])
   @@map("profiles")
 }
@@ -124,8 +127,19 @@ model Order {
   qpayInvoiceExpiresAt DateTime?  // QPay invoice expiration time (48 hours from creation)
   expiredAt            DateTime?  // When order was marked as expired
 
+  // Email Notifications (Phase 2)
+  confirmationEmailSent       Boolean   @default(false)  // Order confirmation email sent
+  confirmationEmailSentAt     DateTime?                  // When confirmation email was sent
+  expirationWarningEmailSent  Boolean   @default(false)  // 24h warning email sent
+  expirationWarningEmailSentAt DateTime?                 // When warning email was sent
+  expiredEmailSent            Boolean   @default(false)  // Order expired email sent
+  expiredEmailSentAt          DateTime?                  // When expired email was sent
+
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
+
+  // Relations
+  user            Profile     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([status])
