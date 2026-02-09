@@ -7,6 +7,7 @@ import {
   FolderTree,
   ShoppingCart,
   Settings,
+  Mail,
   X,
 } from 'lucide-react';
 
@@ -15,6 +16,7 @@ const menuItems = [
   { path: '/products', icon: Package, labelKey: 'nav.products' },
   { path: '/categories', icon: FolderTree, labelKey: 'nav.categories' },
   { path: '/orders', icon: ShoppingCart, labelKey: 'nav.orders' },
+  { path: '/email-test', icon: Mail, labelKey: 'nav.emailTest' },
   { path: '/settings', icon: Settings, labelKey: 'nav.settings' },
 ];
 

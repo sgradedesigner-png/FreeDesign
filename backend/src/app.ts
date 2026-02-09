@@ -16,6 +16,7 @@ import orderRoutes from './routes/orders';
 import profileRoutes from './routes/profile';
 import paymentRoutes from './routes/payment';
 import adminOrderRoutes from './routes/admin/orders';
+import testEmailRoutes from './routes/test-email';
 import { prisma } from './lib/prisma'; // Use shared singleton instance
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { logRateLimit } from './lib/logger';
@@ -226,6 +227,7 @@ app.register(adminStatsRoutes, { prefix: '/admin/stats' });
 app.register(adminUploadRoutes, { prefix: '/admin/upload' });
 app.register(adminUploadPresignedRoutes, { prefix: '/admin/upload' });
 app.register(adminOrderRoutes);
+app.register(testEmailRoutes);
 
 // 7) Error Handlers
 // Set custom error handler (handles all errors thrown in routes)

@@ -26,6 +26,9 @@ backup-nicroni-products.json
 migration-script.ts
 test-migration.ts
 
+# Test SQL files
+TEST_*.sql
+
 # Temporary folders
 New folder/
 

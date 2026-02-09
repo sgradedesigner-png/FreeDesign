@@ -12,6 +12,12 @@ dist
 dist-ssr
 *.local
 
+# TypeScript build artifacts
+*.tsbuildinfo
+src/**/*.js
+src/**/*.jsx
+vite.config.txt
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

@@ -18,6 +18,7 @@ const translations: Record<Language, Record<string, string>> = {
     'nav.products': 'Products',
     'nav.categories': 'Categories',
     'nav.orders': 'Orders',
+    'nav.emailTest': 'Email Test',
     'nav.settings': 'Settings',
     'nav.logout': 'Logout',
 
@@ -78,6 +79,7 @@ const translations: Record<Language, Record<string, string>> = {
     'nav.products': 'Бүтээгдэхүүн',
     'nav.categories': 'Ангилал',
     'nav.orders': 'Захиалга',
+    'nav.emailTest': 'Email тест',
     'nav.settings': 'Тохиргоо',
     'nav.logout': 'Гарах',
 
