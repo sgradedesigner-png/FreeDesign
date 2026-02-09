@@ -17,6 +17,7 @@ import { r2Url } from '@/lib/r2'
 interface PaymentInfo {
   qrCode: string
   qrCodeUrl: string
+  qrText?: string // QR text URL for sandbox testing
   bankUrls: Array<{
     name: string
     description: string
@@ -55,6 +56,8 @@ function CheckoutPage() {
   const [paymentInfo, setPaymentInfo] = useState<PaymentInfo | null>(null)
   const [paymentStatus, setPaymentStatus] = useState<'pending' | 'checking' | 'paid' | 'failed' | 'timeout'>('pending')
   const [brokenBankLogos, setBrokenBankLogos] = useState<Record<string, boolean>>({})
+  const [checkoutError, setCheckoutError] = useState<string | null>(null)
+  const [paymentError, setPaymentError] = useState<string | null>(null)
 
   // Try to restore shipping info from sessionStorage
   const getInitialShippingInfo = () => {
@@ -141,7 +144,9 @@ function CheckoutPage() {
     } catch (error) {
       console.error('Payment check error:', error)
       setPaymentStatus('failed')
-      toast.error(language === 'en' ? 'Failed to check payment status' : 'Төлбөрийн төлөв шалгахад алдаа гарлаа')
+      const errorMsg = language === 'en' ? 'Failed to check payment status' : 'Төлбөрийн төлөв шалгахад алдаа гарлаа'
+      setPaymentError(errorMsg)
+      toast.error(errorMsg)
     }
   }, [orderId, language, clearCart, navigate])
 
@@ -333,7 +338,9 @@ function CheckoutPage() {
 
     } catch (error: any) {
       console.error('Order creation error:', error)
-      toast.error(error.message || (language === 'en' ? 'Failed to create order' : 'Захиалга үүсгэхэд алдаа гарлаа'))
+      const errorMsg = error.message || (language === 'en' ? 'Failed to create order' : 'Захиалга үүсгэхэд алдаа гарлаа')
+      setCheckoutError(errorMsg)
+      toast.error(errorMsg)
     } finally {
       setLoading(false)
     }
@@ -437,6 +444,7 @@ function CheckoutPage() {
                     paymentStatus === 'paid' ? 'border-green-500' : 'border-primary'
                   } transition-all duration-500`}>
                     <img
+                      data-testid="qpay-qr-code"
                       src={normalizeQrCodeSrc(paymentInfo.qrCode)}
                       alt="Payment QR Code"
                       className="w-64 h-64 md:w-80 md:h-80 rounded-lg"
@@ -468,6 +476,35 @@ function CheckoutPage() {
                     ₮{Number(cartTotal || 0).toLocaleString()}
                   </div>
                 </div>
+
+                {/* QR Text URL for Sandbox Testing (if available) */}
+                {paymentInfo.qrText && (
+                  <div className="mb-4 md:mb-6 p-3 md:p-4 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Icon name="Link" className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                      <p className="text-xs md:text-sm font-semibold text-blue-900 dark:text-blue-100">
+                        {language === 'en' ? 'QR Text URL (For Testing)' : 'QR Текст URL (Тестлэхэд)'}
+                      </p>
+                    </div>
+                    <div className="bg-white dark:bg-gray-900 rounded border border-blue-200 dark:border-blue-700 p-2 md:p-3 break-all">
+                      <p className="text-xs md:text-sm font-mono text-blue-800 dark:text-blue-200">
+                        {paymentInfo.qrText}
+                      </p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mt-2 w-full text-xs"
+                      onClick={() => {
+                        navigator.clipboard.writeText(paymentInfo.qrText!)
+                        toast.success(language === 'en' ? 'QR Text URL copied!' : 'QR текст хуулагдлаа!')
+                      }}
+                    >
+                      <Icon name="Copy" className="mr-2 h-3 w-3" />
+                      {language === 'en' ? 'Copy QR Text' : 'QR текст хуулах'}
+                    </Button>
+                  </div>
+                )}
 
                 {/* Banking App Quick Links */}
                 {paymentInfo.bankUrls && paymentInfo.bankUrls.length > 0 && (
@@ -519,7 +556,7 @@ function CheckoutPage() {
                 <div className="space-y-2 md:space-y-3">
                   {/* Timeout Message */}
                   {paymentStatus === 'timeout' && (
-                    <Alert className="bg-orange-50 dark:bg-orange-950 border-orange-200 dark:border-orange-800">
+                    <Alert data-testid="payment-timeout-message" className="bg-orange-50 dark:bg-orange-950 border-orange-200 dark:border-orange-800">
                       <AlertDescription className="text-sm text-orange-800 dark:text-orange-200">
                         <div className="flex items-start gap-2">
                           <Icon name="AlertCircle" className="h-5 w-5 flex-shrink-0 mt-0.5" />
@@ -538,7 +575,15 @@ function CheckoutPage() {
                     </Alert>
                   )}
 
+                  {/* Payment Error Display */}
+                  {paymentError && (
+                    <div data-testid="payment-error" className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                      <p className="text-red-600 text-sm">{paymentError}</p>
+                    </div>
+                  )}
+
                   <Button
+                    data-testid="payment-polling"
                     onClick={() => {
                       setPaymentStatus('pending')
                       checkPaymentStatus()
@@ -769,6 +814,13 @@ function CheckoutPage() {
               </div>
             )}
 
+            {/* Checkout Error Display */}
+            {checkoutError && (
+              <div data-testid="checkout-error" className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                <p className="text-red-600 text-sm">{checkoutError}</p>
+              </div>
+            )}
+
             <form onSubmit={handlePlaceOrder} className="space-y-5">
             {/* Full Name */}
             <div>
@@ -778,6 +830,7 @@ function CheckoutPage() {
               </Label>
               <Input
                 id="fullName"
+                data-testid="shipping-name"
                 value={shippingInfo.fullName}
                 onChange={(e) => setShippingInfo({ ...shippingInfo, fullName: e.target.value })}
                 placeholder={language === 'en' ? 'Enter your full name' : 'Овог нэрээ оруулна уу'}
@@ -794,6 +847,7 @@ function CheckoutPage() {
               </Label>
               <Input
                 id="phone"
+                data-testid="shipping-phone"
                 type="tel"
                 value={shippingInfo.phone}
                 onChange={(e) => setShippingInfo({ ...shippingInfo, phone: e.target.value })}
@@ -811,6 +865,7 @@ function CheckoutPage() {
               </Label>
               <Input
                 id="address"
+                data-testid="shipping-address"
                 value={shippingInfo.address}
                 onChange={(e) => setShippingInfo({ ...shippingInfo, address: e.target.value })}
                 placeholder={
@@ -864,6 +919,7 @@ function CheckoutPage() {
             <div className="pt-4">
               <Button
                 type="submit"
+                data-testid="submit-order-btn"
                 size="lg"
                 className="w-full h-12 text-base font-semibold"
                 disabled={loading}

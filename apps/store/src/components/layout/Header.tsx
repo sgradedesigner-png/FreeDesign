@@ -211,13 +211,14 @@ export default function Header() {
 
           {/* Cart */}
           <button
+            data-testid="cart-icon"
             onClick={() => setIsCartOpen(true)}
             className="flex items-center gap-2 px-2.5 sm:px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/90 rounded-full transition-colors font-medium text-sm shadow-lg shadow-primary/20"
           >
             <Icon name="ShoppingBagIcon" size={18} />
             <span className="hidden sm:inline">{language === 'mn' ? 'Сагс' : 'Cart'}</span>
             {cartCount > 0 && (
-               <span className="min-w-[20px] rounded-full px-1.5 py-0.5 text-center text-xs font-bold bg-primary-foreground/20 text-primary-foreground">
+               <span data-testid="cart-badge" className="min-w-[20px] rounded-full px-1.5 py-0.5 text-center text-xs font-bold bg-primary-foreground/20 text-primary-foreground">
 
              {cartCount}
               </span>

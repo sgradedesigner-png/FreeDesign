@@ -340,10 +340,11 @@ export default function ProductInfo({ product, onVariantChange }: ProductInfoPro
             <label id="variant-label" className="text-sm font-bold text-foreground mb-3 block">
               Color / Style: <span className="text-muted-foreground font-medium">{selectedVariant.name}</span>
             </label>
-            <div className="flex gap-3 flex-wrap">
+            <div className="flex gap-3 flex-wrap" data-testid="variant-select">
               {product.variants.map((variant) => (
                 <button
                   key={variant.id}
+                  data-testid="variant-option"
                   onClick={() => setSelectedVariant(variant)}
                   aria-label={`Select variant ${variant.name}`}
                   aria-pressed={selectedVariant.id === variant.id}
@@ -471,6 +472,7 @@ export default function ProductInfo({ product, onVariantChange }: ProductInfoPro
           {/* Add to Cart Button */}
           <button
             id="add-to-cart-button"
+            data-testid="add-to-cart-btn"
             onClick={handleAddToCart}
             className="group flex items-center justify-center gap-2 h-14 px-8 rounded-xl font-bold text-white
                        bg-primary hover:bg-primary/90
@@ -505,6 +507,7 @@ export default function ProductInfo({ product, onVariantChange }: ProductInfoPro
       <div className="sm:hidden sticky bottom-[max(0.5rem,env(safe-area-inset-bottom))] z-30 border border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 p-2 rounded-2xl shadow-lg">
         <div className="grid grid-cols-[1fr,56px] gap-2">
           <button
+            data-testid="add-to-cart-btn"
             onClick={handleAddToCart}
             className="group flex items-center justify-center gap-2 h-12 rounded-xl font-bold text-white bg-primary hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 active:scale-[0.98]"
           >

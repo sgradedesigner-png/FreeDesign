@@ -1,5 +1,126 @@
-node_modules
-# Keep environment variables out of version control
-.env
+# ===================================
+# Backend .gitignore
+# ===================================
 
+# Dependencies
+node_modules/
+package-lock.json
+
+# Environment Variables (CRITICAL - Never commit!)
+.env
+.env.*
+!.env.example         # Allow .env.example for documentation
+*.env
+
+# Build Outputs
+dist/
+build/
+*.tsbuildinfo
+
+# Prisma Generated Files
 /generated/prisma
+prisma/generated/
+node_modules/.prisma/
+
+# Test Coverage
+coverage/
+.nyc_output/
+*.lcov
+
+# Logs (QPay, application logs)
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+logs/
+qpay_test.log           # QPay specific log
+
+# Database Files (if using SQLite for testing)
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# OS Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+NUL
+_NUL
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+*.sublime-project
+*.sublime-workspace
+
+# Temporary Files
+*.tmp
+*.temp
+.cache/
+.temp/
+
+# Claude Code Settings (Local only)
+.claude/
+*.claude-settings.json
+
+# Backup Files
+*.bak
+*.backup
+*.old
+
+# Documentation (Optional - Remove if you want to commit docs)
+# Uncomment these if docs should NOT be committed:
+# INCIDENT_REPORT.md
+# PHASE2_PROGRESS.md
+# QPAY_CONNECTION_FIX.md
+# TASK_*.md
+# *RESULTS*.md
+# *SUMMARY*.md
+
+# Test Results (Usually don't commit)
+test-results/
+*.test-results.txt
+*TestResult*.txt
+*test-results*.md
+
+# Migration Scripts (Temporary - Remove after migration)
+migration-script.ts
+test-migration.ts
+list-tables.ts
+
+# SQL Files (May contain sensitive data)
+# Uncomment if you don't want to commit SQL files:
+# *.sql
+# !schema.sql          # Allow schema files
+
+# ===================================
+# Production Safety
+# ===================================
+# Never commit these production files:
+.env.production
+.env.production.local
+credentials.json
+service-account.json
+*.pem
+*.key
+*.cert
+*.crt
+
+# ===================================
+# Supabase Specific
+# ===================================
+.supabase/
+supabase/.env

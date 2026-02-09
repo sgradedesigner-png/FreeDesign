@@ -78,7 +78,7 @@ export default function CartSidebar() {
         {/* Cart Items List */}
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
           {cart.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center text-center space-y-6">
+            <div data-testid="cart-empty" className="h-full flex flex-col items-center justify-center text-center space-y-6">
               <div className="relative">
                 <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full"></div>
                 <div className="relative w-20 h-20 bg-gradient-to-tr from-white to-slate-100 dark:from-slate-800 dark:to-slate-900 rounded-3xl flex items-center justify-center text-muted-foreground shadow-lg ring-1 ring-white/20">
@@ -103,6 +103,7 @@ export default function CartSidebar() {
                 return (
                   <div
                     key={productId}
+                    data-testid="cart-item"
                     className="group relative p-4 bg-white/50 dark:bg-white/5 rounded-2xl border border-white/20 dark:border-white/5 shadow-sm hover:shadow-md transition-all"
                   >
                     <div className="flex flex-col gap-3">
@@ -141,7 +142,7 @@ export default function CartSidebar() {
                                   <span className="text-sm font-semibold text-foreground">
                                     {firstItem.variantName}
                                   </span>
-                                  <span className="font-bold text-sm text-primary">
+                                  <span data-testid="item-price" className="font-bold text-sm text-primary">
                                     ${variantTotal.toFixed(2)}
                                   </span>
                                 </div>
@@ -153,16 +154,16 @@ export default function CartSidebar() {
                                       key={item.cartKey}
                                       className="flex items-center gap-1 bg-black/5 dark:bg-white/10 px-2 py-1 rounded-lg"
                                     >
-                                      <span className="text-[11px] font-bold text-foreground">
+                                      <span data-testid="item-quantity" className="text-[11px] font-bold text-foreground">
                                         {sizeKey === 'none' ? 'No size' : sizeKey} ({item.quantity})
                                       </span>
-                                      <button onClick={() => decreaseQty(item.cartKey)} className="ml-1 hover:text-primary">
+                                      <button data-testid="decrease-quantity" onClick={() => decreaseQty(item.cartKey)} className="ml-1 hover:text-primary">
                                         <Minus size={12} />
                                       </button>
-                                      <button onClick={() => increaseQty(item.cartKey)} className="hover:text-primary">
+                                      <button data-testid="increase-quantity" onClick={() => increaseQty(item.cartKey)} className="hover:text-primary">
                                         <Plus size={12} />
                                       </button>
-                                      <button onClick={() => removeItem(item.cartKey)} className="ml-1 text-muted-foreground hover:text-destructive">
+                                      <button data-testid="remove-item" onClick={() => removeItem(item.cartKey)} className="ml-1 text-muted-foreground hover:text-destructive">
                                         <Trash2 size={12} />
                                       </button>
                                     </div>
@@ -186,7 +187,7 @@ export default function CartSidebar() {
           <div className="border-t border-black/5 dark:border-white/5 p-6 space-y-3">
             <div className="flex justify-between text-lg font-bold text-foreground">
               <p>{language === 'mn' ? 'Нийт дүн' : 'Total'}</p>
-              <p>${cartTotal.toFixed(2)}</p>
+              <p data-testid="cart-total">${cartTotal.toFixed(2)}</p>
             </div>
             <Link
               to="/cart"
@@ -198,6 +199,7 @@ export default function CartSidebar() {
             </Link>
             <Link
               to="/checkout"
+              data-testid="checkout-btn"
               onClick={() => setIsCartOpen(false)}
               className="w-full rounded-xl bg-primary px-6 py-3 text-white font-bold flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors"
             >

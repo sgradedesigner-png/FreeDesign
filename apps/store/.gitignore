@@ -3,7 +3,7 @@
 ############################
 .env
 .env.*
-!/env/.env.example
+!.env.example
 
 ############################
 # LOGS
@@ -25,6 +25,7 @@ dist-ssr/
 build/
 .out/
 .vite/
+*.tsbuildinfo
 
 ############################
 # CACHE / TEMP
@@ -32,6 +33,8 @@ build/
 .cache/
 .tmp/
 temp/
+*.tmp
+*.temp
 
 ############################
 # LOCAL / DEV
@@ -62,10 +65,31 @@ processed/
 .netlify/
 
 ############################
+# TESTING (Playwright/Vitest)
+############################
+# Playwright
+test-results/
+playwright-report/
+playwright/.cache/
+playwright/.auth/
+
+# Test outputs
+test-output*.txt
+test-output*.log
+*test-results*.txt
+*.test-output.*
+
+# Coverage (if added later)
+coverage/
+.nyc_output/
+*.lcov
+
+############################
 # EDITOR / OS
 ############################
 .vscode/*
 !.vscode/extensions.json
+!.vscode/settings.json
 .idea/
 .DS_Store
 Thumbs.db
@@ -74,3 +98,46 @@ Thumbs.db
 *.njsproj
 *.sln
 *.sw?
+desktop.ini
+NUL
+_NUL
+
+############################
+# MEDIA FILES (OPTIONAL)
+############################
+# Large binary files should use Git LFS or external hosting
+# Uncomment if you want to ignore these:
+# *.gif
+# *.mp4
+# *.webm
+# *.mov
+# Size Guide.gif
+# sizeguide.gif
+
+############################
+# DOCUMENTATION (OPTIONAL)
+############################
+# Uncomment these if temp docs should NOT be committed:
+# findsize.md
+# repair.md
+# ScaleFindSize.md
+# ThingsToMade.md
+
+############################
+# SECURITY
+############################
+# Never commit these:
+*.pem
+*.key
+*.cert
+*.crt
+credentials.json
+service-account.json
+
+############################
+# MISC
+############################
+*.bak
+*.backup
+*.old
+.firebase/

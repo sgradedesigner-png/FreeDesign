@@ -47,6 +47,7 @@ export default function ProductCard({ product }: ProductCardProps) {
 
   return (
     <div
+      data-testid="product-card"
       className="group relative rounded-3xl overflow-hidden flex flex-col transition-all duration-500
                  bg-card text-card-foreground border border-border/40
                  hover:shadow-2xl hover:shadow-primary/10"
@@ -88,6 +89,7 @@ export default function ProductCard({ product }: ProductCardProps) {
 
           {/* Add to Cart Button */}
           <button
+            data-testid="add-to-cart-btn"
             onClick={handleAddToCart}
             className="w-12 h-12 bg-white text-slate-900 rounded-xl flex items-center justify-center shadow-lg hover:bg-primary hover:text-white transition-all duration-300"
             title={language === 'mn' ? 'Сагсанд нэмэх' : 'Add to cart'}

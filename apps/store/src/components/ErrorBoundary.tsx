@@ -76,7 +76,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
       // Default error UI
       return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
+        <div data-testid="error-boundary" className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
           <div className="max-w-md w-full bg-white dark:bg-gray-800 shadow-lg rounded-lg p-6">
             <div className="text-center">
               {/* Error Icon */}
@@ -125,6 +125,7 @@ export class ErrorBoundary extends Component<Props, State> {
               {/* Action Buttons */}
               <div className="mt-6 space-y-3">
                 <button
+                  data-testid="error-retry-btn"
                   onClick={this.handleReload}
                   className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
                 >

@@ -116,10 +116,21 @@ export default function Catalog() {
           </div>
 
           {isLoading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 animate-pulse">
+            <div data-testid="products-loading" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 animate-pulse">
               {[...Array(8)].map((_, i) => (
                 <div key={i} className="aspect-[4/5] bg-white/5 rounded-2xl" />
               ))}
+            </div>
+          ) : loadError ? (
+            <div data-testid="products-error" className="text-center py-12">
+              <p className="text-red-500 mb-4">{loadError}</p>
+              <button
+                data-testid="retry-products-btn"
+                onClick={() => window.location.reload()}
+                className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90"
+              >
+                {language === 'mn' ? 'Дахин оролдох' : 'Retry'}
+              </button>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">

@@ -224,6 +224,7 @@ export default async function orderRoutes(fastify: FastifyInstance) {
         payment: {
           qrCode: qpayInvoice.qr_image,
           qrCodeUrl: qpayInvoice.qPay_shortUrl,
+          qrText: qpayInvoice.qr_text, // QR text URL for sandbox testing
           bankUrls: qpayInvoice.urls, // Deep links to banking apps
           invoiceId: qpayInvoice.invoice_id
         }
