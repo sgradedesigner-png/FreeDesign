@@ -41,9 +41,20 @@ export default function OrderDetailPage() {
     fetchOrder()
   }, [id])
 
-  // Auto-refresh every 10 seconds if order is unpaid
+  // Auto-refresh every 10 seconds if order is unpaid and not expired
   useEffect(() => {
-    if (!order || order.paymentStatus === 'PAID') return
+    // Don't auto-refresh if:
+    // 1. Order not loaded
+    // 2. Payment already completed
+    // 3. Order status is EXPIRED
+    // 4. Invoice expiration time has passed
+    if (!order ||
+        order.paymentStatus === 'PAID' ||
+        order.status === 'EXPIRED' ||
+        (order.qpayInvoiceExpiresAt && new Date(order.qpayInvoiceExpiresAt) < new Date())
+    ) {
+      return
+    }
 
     const interval = setInterval(() => {
       setAutoCheckCount(prev => prev + 1)
@@ -52,7 +63,7 @@ export default function OrderDetailPage() {
     }, 10000) // 10 seconds
 
     return () => clearInterval(interval)
-  }, [order?.id, order?.paymentStatus])
+  }, [order?.id, order?.paymentStatus, order?.status, order?.qpayInvoiceExpiresAt])
 
   const fetchOrder = async (showRefreshToast = false) => {
     try {
@@ -364,8 +375,12 @@ export default function OrderDetailPage() {
           </CardContent>
         </Card>
 
-        {/* ⭐ NEW: Payment Section - Show QR for Unpaid Orders */}
-        {order.paymentStatus === 'UNPAID' && order.qrCode && order.qpayInvoiceId && (
+        {/* ⭐ NEW: Payment Section - Show QR for Unpaid Orders (NOT expired) */}
+        {order.paymentStatus === 'UNPAID' &&
+         order.qrCode &&
+         order.qpayInvoiceId &&
+         order.status !== 'EXPIRED' &&
+         !(order.qpayInvoiceExpiresAt && new Date(order.qpayInvoiceExpiresAt) < new Date()) && (
           <Card className="mt-6 border-2 border-primary shadow-lg">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-primary">
