@@ -116,6 +116,7 @@ model Order {
   paymentMethod   String?     // "QPAY", "CASH", etc.
   qrCode          String?     @db.Text // QR code text (base64 image)
   qrCodeUrl       String?     // QPay short URL
+  qrText          String?     @db.Text // QR text URL (for sandbox testing)
   paymentDate     DateTime?
 
   createdAt       DateTime    @default(now())

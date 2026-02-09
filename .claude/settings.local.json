@@ -6,7 +6,8 @@
       "Bash(echo:*)",
       "Bash(ls:*)",
       "Bash(npm info:*)",
-      "Bash(timeout 5 npx:*)"
+      "Bash(timeout 5 npx:*)",
+      "Bash(npm run build:*)"
     ]
   }
 }

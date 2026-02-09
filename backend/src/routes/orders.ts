@@ -212,7 +212,8 @@ export default async function orderRoutes(fastify: FastifyInstance) {
         data: {
           qpayInvoiceId: qpayInvoice.invoice_id,
           qrCode: qpayInvoice.qr_image, // Base64 QR image
-          qrCodeUrl: qpayInvoice.qPay_shortUrl
+          qrCodeUrl: qpayInvoice.qPay_shortUrl,
+          qrText: qpayInvoice.qr_text // QR text URL for sandbox testing
         }
       });
 
