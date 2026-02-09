@@ -19,6 +19,7 @@ enum Role {
 enum OrderStatus {
   PENDING
   PAID
+  EXPIRED              // QPay invoice expired (unpaid after 48 hours)
   SHIPPED
   COMPLETED
   CANCELLED
@@ -119,6 +120,10 @@ model Order {
   qrText          String?     @db.Text // QR text URL (for sandbox testing)
   paymentDate     DateTime?
 
+  // Expiration Management (Phase 1)
+  qpayInvoiceExpiresAt DateTime?  // QPay invoice expiration time (48 hours from creation)
+  expiredAt            DateTime?  // When order was marked as expired
+
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
@@ -128,6 +133,8 @@ model Order {
   @@index([qpayInvoiceId])
   @@index([qpayPaymentId])
   @@index([paymentStatus])
+  @@index([qpayInvoiceExpiresAt])
+  @@index([expiredAt])
   @@map("orders")
 }
 

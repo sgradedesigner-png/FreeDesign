@@ -207,13 +207,17 @@ export default async function orderRoutes(fastify: FastifyInstance) {
       }
 
       // 6. Update order with QPay invoice details
+      // Phase 1: Set invoice expiration to 48 hours from now
+      const qpayInvoiceExpiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000);
+
       const updatedOrder = await prisma.order.update({
         where: { id: order.id },
         data: {
           qpayInvoiceId: qpayInvoice.invoice_id,
           qrCode: qpayInvoice.qr_image, // Base64 QR image
           qrCodeUrl: qpayInvoice.qPay_shortUrl,
-          qrText: qpayInvoice.qr_text // QR text URL for sandbox testing
+          qrText: qpayInvoice.qr_text, // QR text URL for sandbox testing
+          qpayInvoiceExpiresAt: qpayInvoiceExpiresAt // 48-hour expiration
         }
       });
 

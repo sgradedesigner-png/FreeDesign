@@ -498,7 +498,8 @@ export class QPayService {
         invoice_description: params.description,
         amount: params.amount,
         callback_url: params.callbackUrl || process.env.QPAY_CALLBACK_URL || '',
-        enable_expiry: 'false',
+        enable_expiry: 'true',  // Phase 1: Enable 48-hour expiration
+        expiry_date: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(), // 48 hours from now
         allow_partial: false,
         allow_exceed: false,
         invoice_receiver_data: params.customerInfo || {},

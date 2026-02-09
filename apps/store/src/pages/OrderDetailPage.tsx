@@ -22,6 +22,9 @@ interface Order {
   qrCode?: string             // QR code image (base64)
   qrCodeUrl?: string          // QPay short URL
   qrText?: string             // QR text URL (for sandbox testing)
+  // Phase 1: Expiration management
+  qpayInvoiceExpiresAt?: string  // ISO date string - when invoice expires
+  expiredAt?: string             // ISO date string - when order was marked expired
 }
 
 export default function OrderDetailPage() {
@@ -377,6 +380,70 @@ export default function OrderDetailPage() {
             </CardHeader>
             <CardContent>
               <div className="flex flex-col items-center gap-4">
+                {/* Phase 1: Expiration Warning */}
+                {order.qpayInvoiceExpiresAt && (() => {
+                  const now = new Date();
+                  const expiresAt = new Date(order.qpayInvoiceExpiresAt);
+                  const hoursRemaining = Math.floor((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60));
+                  const isExpiringSoon = hoursRemaining <= 24 && hoursRemaining > 0;
+                  const isExpired = hoursRemaining <= 0;
+
+                  if (isExpired) {
+                    return (
+                      <div className="w-full p-4 bg-red-50 dark:bg-red-950/30 border-2 border-red-500 rounded-lg">
+                        <p className="text-red-700 dark:text-red-300 font-semibold flex items-center gap-2">
+                          <Icon name="AlertTriangleIcon" size={20} />
+                          {language === 'mn'
+                            ? '⚠️ Энэ захиалгын төлбөрийн хугацаа дууссан байна'
+                            : '⚠️ This order\'s payment deadline has expired'}
+                        </p>
+                        <p className="text-sm text-red-600 dark:text-red-400 mt-2">
+                          {language === 'mn'
+                            ? 'QR код идэвхгүй болсон. Шинэ захиалга үүсгэх шаардлагатай.'
+                            : 'QR code is inactive. Please create a new order.'}
+                        </p>
+                        <p className="text-xs text-red-500 dark:text-red-500 mt-1">
+                          {language === 'mn'
+                            ? `Хугацаа дууссан: ${expiresAt.toLocaleString('mn-MN')}`
+                            : `Expired at: ${expiresAt.toLocaleString()}`}
+                        </p>
+                      </div>
+                    );
+                  }
+
+                  if (isExpiringSoon) {
+                    return (
+                      <div className="w-full p-4 bg-yellow-50 dark:bg-yellow-950/30 border-2 border-yellow-500 rounded-lg">
+                        <p className="text-yellow-700 dark:text-yellow-300 font-semibold flex items-center gap-2">
+                          <Icon name="ClockIcon" size={20} />
+                          {language === 'mn'
+                            ? `⏰ Төлбөрийн хугацаа дуусахад ${hoursRemaining} цаг үлдлээ`
+                            : `⏰ ${hoursRemaining} hours remaining to pay`}
+                        </p>
+                        <p className="text-sm text-yellow-600 dark:text-yellow-400 mt-2">
+                          {language === 'mn'
+                            ? 'Та яаралтай төлбөрөө төлнө үү. Хугацаа дууссаны дараа QR код идэвхгүй болно.'
+                            : 'Please pay urgently. QR code will become inactive after expiration.'}
+                        </p>
+                        <p className="text-xs text-yellow-600 dark:text-yellow-500 mt-1">
+                          {language === 'mn'
+                            ? `Хугацаа дуусах: ${expiresAt.toLocaleString('mn-MN')}`
+                            : `Expires at: ${expiresAt.toLocaleString()}`}
+                        </p>
+                      </div>
+                    );
+                  }
+
+                  // More than 24 hours remaining - show subtle info
+                  return (
+                    <p className="text-xs text-muted-foreground w-full text-center">
+                      {language === 'mn'
+                        ? `Төлбөрийн хугацаа: ${expiresAt.toLocaleString('mn-MN')}`
+                        : `Payment deadline: ${expiresAt.toLocaleString()}`}
+                    </p>
+                  );
+                })()}
+
                 {/* QR Code Display */}
                 <div className="p-4 md:p-6 bg-white dark:bg-gray-900 rounded-2xl shadow-xl border-4 border-primary">
                   <img
@@ -485,6 +552,34 @@ export default function OrderDetailPage() {
                         second: '2-digit'
                       })}
                       {autoCheckCount > 0 && ` (${autoCheckCount}x)`}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Expired Order Message */}
+        {(order.status === 'EXPIRED' || (order.paymentStatus === 'UNPAID' && order.qpayInvoiceExpiresAt && new Date(order.qpayInvoiceExpiresAt) < new Date())) && (
+          <Card className="mt-6 border-2 border-red-500 bg-red-50 dark:bg-red-950/30">
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-3 text-red-700 dark:text-red-400">
+                <Icon name="XCircleIcon" size={24} />
+                <div>
+                  <p className="font-semibold text-lg">
+                    {language === 'mn' ? 'Захиалгын хугацаа дууссан' : 'Order Expired'}
+                  </p>
+                  <p className="text-sm text-red-600 dark:text-red-500">
+                    {language === 'mn'
+                      ? 'Төлбөрийн хугацаа дууссан тул энэ захиалга цуцлагдсан байна. Та дахин захиалга өгнө үү.'
+                      : 'This order has been cancelled due to payment timeout. Please create a new order.'}
+                  </p>
+                  {order.qpayInvoiceExpiresAt && (
+                    <p className="text-xs text-red-500 dark:text-red-600 mt-1">
+                      {language === 'mn'
+                        ? `Хугацаа дууссан: ${new Date(order.qpayInvoiceExpiresAt).toLocaleString('mn-MN')}`
+                        : `Expired at: ${new Date(order.qpayInvoiceExpiresAt).toLocaleString()}`}
                     </p>
                   )}
                 </div>
