@@ -36,14 +36,14 @@ import testEmailRoutes from './routes/test-email';
 import adminCronRoutes from './routes/admin/cron';
 import { prisma } from './lib/prisma'; // Use shared singleton instance
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
-import { logRateLimit, logger } from './lib/logger'; // Use shared logger instance
+import { logRateLimit, logger, loggerConfig } from './lib/logger'; // Use shared logger instance
 import { cronService } from './services/cron.service';
 
 const isDevelopment = process.env.NODE_ENV === 'development';
 
-// Use shared logger instance (already configured for dev/prod)
+// Use shared logger configuration (Fastify will create its own Pino instance)
 const app = fastify({
-  logger: logger, // Single source of truth for logging
+  logger: loggerConfig, // Pass Pino configuration object, not instance
   disableRequestLogging: false,
   requestIdLogLabel: 'requestId',
   genReqId: () => {

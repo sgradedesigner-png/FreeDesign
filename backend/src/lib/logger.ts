@@ -71,6 +71,11 @@ const devTransport: pino.TransportSingleOptions = {
   }
 };
 
+// Export logger configuration for Fastify
+export const loggerConfig = isDevelopment
+  ? { ...baseOptions, transport: devTransport }
+  : baseOptions;
+
 // Create logger instance
 export const logger = isDevelopment
   ? pino({
