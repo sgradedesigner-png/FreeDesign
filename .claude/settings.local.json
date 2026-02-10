@@ -11,7 +11,10 @@
       "WebSearch",
       "Bash(npx prisma:*)",
       "Bash(npm audit:*)",
-      "Bash(git check-ignore:*)"
+      "Bash(git check-ignore:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
     ]
   }
 }

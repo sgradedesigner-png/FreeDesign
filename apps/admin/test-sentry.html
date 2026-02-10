@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sentry Integration Test</title>
+  <script src="https://browser.sentry-cdn.com/7.99.0/bundle.min.js" crossorigin="anonymous"></script>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    .container {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border-radius: 12px;
+      padding: 30px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    }
+    h1 {
+      margin-top: 0;
+      font-size: 2rem;
+    }
+    .status {
+      background: rgba(0, 255, 0, 0.2);
+      padding: 15px;
+      border-radius: 8px;
+      margin: 20px 0;
+      border: 2px solid rgba(0, 255, 0, 0.5);
+    }
+    button {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      margin: 10px 10px 10px 0;
+      transition: transform 0.2s;
+    }
+    button:hover {
+      transform: scale(1.05);
+    }
+    button:active {
+      transform: scale(0.95);
+    }
+    .info {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 15px;
+      border-radius: 8px;
+      margin: 20px 0;
+      font-family: monospace;
+      font-size: 14px;
+    }
+    .success {
+      color: #4ade80;
+      font-weight: bold;
+    }
+    a {
+      color: #60a5fa;
+      text-decoration: none;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔍 Sentry Integration Test</h1>
+
+    <div class="status">
+      <p><strong class="success">✅ Sentry Initialized Successfully!</strong></p>
+      <p>Your DSN: <code>...@o4510859559305216.ingest.de.sentry.io/...</code></p>
+      <p>Region: 🇩🇪 Germany (de.sentry.io)</p>
+    </div>
+
+    <h2>Test Error Capture</h2>
+    <p>Click the buttons below to send test errors to your Sentry dashboard:</p>
+
+    <button onclick="testSimpleError()">1. Simple Error</button>
+    <button onclick="testUserContext()">2. Error with User Context</button>
+    <button onclick="testBreadcrumbs()">3. Error with Breadcrumbs</button>
+    <button onclick="testMessage()">4. Log Message</button>
+
+    <div class="info">
+      <p><strong>What to expect:</strong></p>
+      <ul>
+        <li>Errors appear in Sentry within 2-5 seconds</li>
+        <li>Check your Sentry dashboard: <a href="https://sentry.io/issues/" target="_blank">https://sentry.io/issues/</a></li>
+        <li>Look for errors with environment: "test"</li>
+      </ul>
+    </div>
+
+    <h2>Next Steps</h2>
+    <ol>
+      <li>Click any test button above</li>
+      <li>Open Sentry dashboard: <a href="https://sentry.io/issues/" target="_blank">sentry.io/issues/</a></li>
+      <li>Verify error appears with details</li>
+      <li>Start your admin app dev server with Sentry enabled</li>
+    </ol>
+  </div>
+
+  <script>
+    // Initialize Sentry
+    Sentry.init({
+      dsn: 'https://698e3734afe9640749a140348d1e45a2@o4510859559305216.ingest.de.sentry.io/4510859561730128',
+      environment: 'test',
+      release: 'admin@test',
+      tracesSampleRate: 1.0,
+    });
+
+    console.log('✅ Sentry initialized successfully!');
+
+    // Test 1: Simple Error
+    function testSimpleError() {
+      console.log('🧪 Sending simple error to Sentry...');
+      try {
+        throw new Error('Test error from Sentry integration test');
+      } catch (error) {
+        Sentry.captureException(error);
+        alert('✅ Simple error sent! Check your Sentry dashboard.');
+      }
+    }
+
+    // Test 2: Error with User Context
+    function testUserContext() {
+      console.log('🧪 Sending error with user context...');
+
+      // Set user context
+      Sentry.setUser({
+        id: 'test-user-123',
+        email: 'test@example.com',
+        username: 'Test User'
+      });
+
+      try {
+        throw new Error('Test error with user context');
+      } catch (error) {
+        Sentry.captureException(error);
+        alert('✅ Error with user context sent! Check Sentry for user info.');
+      }
+    }
+
+    // Test 3: Error with Breadcrumbs
+    function testBreadcrumbs() {
+      console.log('🧪 Sending error with breadcrumbs...');
+
+      // Add breadcrumbs
+      Sentry.addBreadcrumb({
+        message: 'User clicked test button',
+        category: 'user-action',
+        level: 'info'
+      });
+
+      Sentry.addBreadcrumb({
+        message: 'Preparing to throw error',
+        category: 'test',
+        level: 'debug'
+      });
+
+      try {
+        throw new Error('Test error with breadcrumb trail');
+      } catch (error) {
+        Sentry.captureException(error);
+        alert('✅ Error with breadcrumbs sent! Check Sentry for event trail.');
+      }
+    }
+
+    // Test 4: Log Message
+    function testMessage() {
+      console.log('🧪 Sending message to Sentry...');
+      Sentry.captureMessage('Test message from integration test', 'info');
+      alert('✅ Message sent! Check Sentry for the log entry.');
+    }
+
+    // Add a breadcrumb on page load
+    Sentry.addBreadcrumb({
+      message: 'Test page loaded',
+      category: 'navigation',
+      level: 'info'
+    });
+  </script>
+</body>
+</html>
