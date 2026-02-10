@@ -8,10 +8,14 @@ import { AuthProvider } from './auth/AuthContext';
 import { LanguageProvider } from './context/LanguageContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { validateEnv } from './lib/env';
+import { initSentry } from './lib/sentry';
 import './index.css';
 
 // Validate environment variables before app starts
 validateEnv();
+
+// Initialize Sentry error tracking (production only, unless explicitly enabled)
+initSentry();
 
 const queryClient = new QueryClient({
   defaultOptions: {

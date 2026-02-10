@@ -3,6 +3,8 @@ import cors from '@fastify/cors';
 import multipart from '@fastify/multipart';
 import rateLimit from '@fastify/rate-limit';
 import compress from '@fastify/compress';
+import cookie from '@fastify/cookie';
+import csrf from '@fastify/csrf-protection';
 import dotenv from 'dotenv';
 
 import { adminCategoryRoutes } from './routes/admin/categories';
@@ -72,7 +74,7 @@ app.register(cors, {
   origin: allowedOrigins,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Explicitly allow all methods
-  allowedHeaders: ['Content-Type', 'Authorization'], // Allow required headers
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token'], // Allow CSRF token header
 });
 
 // Register multipart for file uploads
@@ -127,6 +129,26 @@ app.register(rateLimit, {
   }
 });
 
+// Register cookie plugin (required for CSRF protection)
+app.register(cookie, {
+  secret: process.env.COOKIE_SECRET || 'change-this-to-a-random-string-in-production',
+  parseOptions: {}
+});
+
+// Register CSRF protection
+app.register(csrf, {
+  // Use cookie-based tokens (more secure for SPA)
+  cookieOpts: {
+    signed: true,
+    sameSite: 'strict', // Prevent CSRF from external sites
+    httpOnly: true,     // Prevent XSS attacks
+    secure: process.env.NODE_ENV === 'production', // HTTPS only in production
+    path: '/'
+  },
+  // Session key for CSRF token
+  sessionPlugin: '@fastify/cookie'
+});
+
 // Security Headers - Protect against common web vulnerabilities
 // Applied to all responses via onSend hook
 app.addHook('onSend', async (request, reply) => {
@@ -178,6 +200,12 @@ app.addHook('onSend', async (request, reply) => {
 
 // 2) Public routes
 app.get('/', async () => ({ message: 'eCommerce API is running correctly! 🚀' }));
+
+// CSRF token endpoint - Frontend can fetch this token before making state-changing requests
+app.get('/csrf-token', async (request, reply) => {
+  const token = await reply.generateCsrf();
+  return { csrfToken: token };
+});
 
 // Health check endpoint - detailed health status
 app.get('/health', async (_request, reply) => {

@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { setSentryUser } from '../lib/sentry';
 
 // ✅ Type safety: Proper user type instead of 'any'
 type SupabaseUser = {
@@ -36,6 +37,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(null);
       setAccessToken(null);
       localStorage.removeItem('sb-access-token');
+      setSentryUser(null); // Clear Sentry user context
       setLoading(false);
       return;
     }
@@ -43,6 +45,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(session.user as SupabaseUser);
     setAccessToken(session.access_token);
     localStorage.setItem('sb-access-token', session.access_token);
+
+    // Set Sentry user context for error tracking
+    setSentryUser({
+      id: session.user.id,
+      email: session.user.email,
+    });
+
     setLoading(false);
   }, []);
 
@@ -67,6 +76,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (data.session?.access_token) {
       localStorage.setItem('sb-access-token', data.session.access_token);
     }
+
+    // Set Sentry user context for error tracking
+    setSentryUser({
+      id: data.user.id,
+      email: data.user.email,
+    });
+
     setLoading(false);
   }, []);
 
@@ -75,6 +91,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
     setAccessToken(null);
     localStorage.removeItem('sb-access-token');
+
+    // Clear Sentry user context
+    setSentryUser(null);
   }, []);
 
   useEffect(() => {

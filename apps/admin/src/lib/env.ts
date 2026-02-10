@@ -27,7 +27,12 @@ const optionalEnvVars: Record<string, string> = {
   VITE_ENABLE_ERROR_TRACKING: 'false',
   VITE_ENABLE_DEBUG_MODE: 'true',
   VITE_API_TIMEOUT: '30000',
-  VITE_MAX_FILE_SIZE: '5242880'
+  VITE_MAX_FILE_SIZE: '5242880',
+  // Sentry error tracking (optional)
+  VITE_SENTRY_DSN: '',
+  VITE_SENTRY_ENABLED: 'false',
+  VITE_SENTRY_ENVIRONMENT: 'development',
+  VITE_SENTRY_RELEASE: 'admin@0.0.1'
 };
 
 /**
