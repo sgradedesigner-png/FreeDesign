@@ -8,7 +8,10 @@
       "Bash(npm info:*)",
       "Bash(timeout 5 npx:*)",
       "Bash(npm run build:*)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(npx prisma:*)",
+      "Bash(npm audit:*)",
+      "Bash(git check-ignore:*)"
     ]
   }
 }
