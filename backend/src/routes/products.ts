@@ -141,12 +141,11 @@ export async function publicProductRoutes(app: FastifyInstance) {
             reply.header('X-PERF-DB-MS', '0'); // Cache hit, no DB
             reply.header('X-PERF-QUERY-COUNT', '0');
             reply.header('X-PERF-CACHE', 'HIT');
+            reply.header('X-Cache', 'HIT');
+            reply.header('X-DB-Time', '0ms'); // No DB query
+            reply.header('X-Total-Time', '0ms');
+            reply.header('X-Query-Count', '0');
           }
-          // Production headers (backward compatible)
-          reply.header('X-Cache', 'HIT');
-          reply.header('X-DB-Time', '0ms'); // No DB query
-          reply.header('X-Total-Time', '0ms');
-          reply.header('X-Query-Count', '0');
           return reply.send(cached);
         }
       }
@@ -236,13 +235,11 @@ export async function publicProductRoutes(app: FastifyInstance) {
         reply.header('X-PERF-DB-MS', dbTime.toString());
         reply.header('X-PERF-QUERY-COUNT', includeTotal ? '2' : '1');
         reply.header('X-PERF-CACHE', 'MISS');
+        reply.header('X-DB-Time', `${dbTime}ms`);
+        reply.header('X-Total-Time', `${totalTime}ms`);
+        reply.header('X-Query-Count', includeTotal ? '2' : '1');
+        reply.header('X-Cache', 'MISS');
       }
-
-      // Phase 1 & 2 & 4: Add diagnostic headers (backward compatible)
-      reply.header('X-DB-Time', `${dbTime}ms`);
-      reply.header('X-Total-Time', `${totalTime}ms`);
-      reply.header('X-Query-Count', includeTotal ? '2' : '1'); // Phase 2: Track query count
-      reply.header('X-Cache', 'MISS'); // Phase 4: Cache miss
 
       // Phase 2: Return paginated response with optional totalCount
       return reply.send(responseData);
