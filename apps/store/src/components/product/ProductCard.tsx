@@ -4,8 +4,9 @@ import { useTheme } from '../../context/ThemeContext';
 import { r2Url } from '@/lib/r2';
 import { ShoppingBag } from 'lucide-react';
 import type { Product } from '../../data/products';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tantml/react-query';
 import { prefetchProduct, seedProductCache } from '../../data/products.queries';
+import { logger } from '@/lib/logger';
 
 const PLACEHOLDER_IMG = 'https://placehold.co/800x1000/png?text=No+Image';
 
@@ -37,7 +38,7 @@ export default function ProductCard({ product }: ProductCardProps) {
 
     // Check if product has variants
     if (!defaultVariant) {
-      console.error('Product has no variants:', product);
+      logger.error('Product has no variants:', product);
       return;
     }
 

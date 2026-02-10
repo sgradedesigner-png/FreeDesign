@@ -13,6 +13,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import Icon from '@/components/ui/AppIcon'
 import { toast } from 'sonner'
 import { r2Url } from '@/lib/r2'
+import { logger } from '@/lib/logger'
 
 interface PaymentInfo {
   qrCode: string
@@ -99,7 +100,7 @@ function CheckoutPage() {
     try {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session?.access_token) {
-        console.warn('No session token available')
+        logger.warn('No session token available')
         return
       }
 
@@ -126,7 +127,7 @@ function CheckoutPage() {
         try {
           clearCart()
         } catch (error) {
-          console.error('Failed to clear cart:', error)
+          logger.error('Failed to clear cart:', error)
         }
 
         sessionStorage.removeItem('checkout-shipping-info')
@@ -142,7 +143,7 @@ function CheckoutPage() {
       }
 
     } catch (error) {
-      console.error('Payment check error:', error)
+      logger.error('Payment check error:', error)
       setPaymentStatus('failed')
       const errorMsg = language === 'en' ? 'Failed to check payment status' : 'Төлбөрийн төлөв шалгахад алдаа гарлаа'
       setPaymentError(errorMsg)
@@ -172,14 +173,14 @@ function CheckoutPage() {
             ? 'Payment verification timed out. Please check your order status manually.'
             : 'Төлбөрийн баталгаажуулалт хугацаа хэтэрсэн. Захиалгын төлвийг гараар шалгана уу.'
         )
-        console.warn(`Payment polling timed out after ${pollCount} attempts (${Math.round(elapsed / 1000)}s)`)
+        logger.warn(`Payment polling timed out after ${pollCount} attempts (${Math.round(elapsed / 1000)}s)`)
         return
       }
 
       try {
         await checkPaymentStatus()
       } catch (error) {
-        console.error('Payment polling error:', error)
+        logger.error('Payment polling error:', error)
         // Continue polling even if one check fails
       }
     }, 5000)
@@ -225,7 +226,7 @@ function CheckoutPage() {
         }
       }
     } catch (error) {
-      console.error('Failed to fetch profile:', error)
+      logger.error('Failed to fetch profile:', error)
     } finally {
       setLoadingProfile(false)
     }
@@ -337,7 +338,7 @@ function CheckoutPage() {
       setPaymentStatus('pending')
 
     } catch (error: any) {
-      console.error('Order creation error:', error)
+      logger.error('Order creation error:', error)
       const errorMsg = error.message || (language === 'en' ? 'Failed to create order' : 'Захиалга үүсгэхэд алдаа гарлаа')
       setCheckoutError(errorMsg)
       toast.error(errorMsg)

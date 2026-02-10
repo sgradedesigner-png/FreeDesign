@@ -11,6 +11,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import TurnstileCaptcha from '@/components/auth/TurnstileCaptcha';
 import Icon from '@/components/ui/AppIcon';
 import { toast } from 'sonner';
+import { logger } from '@/lib/logger';
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -54,7 +55,7 @@ export default function LoginPage() {
     const { error: loginError } = await login(email, password, captchaToken);
 
     if (loginError) {
-      console.error('Login error:', loginError);
+      logger.error('Login error:', loginError);
       setError(loginError.message || (language === 'mn' ? 'Нэвтрэх үед алдаа гарлаа' : 'Login failed'));
       setCaptchaRefreshKey((prev) => prev + 1);
       setLoading(false);

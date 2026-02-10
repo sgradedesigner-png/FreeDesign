@@ -10,6 +10,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import TurnstileCaptcha from '@/components/auth/TurnstileCaptcha';
 import Icon from '@/components/ui/AppIcon';
 import { toast } from 'sonner';
+import { logger } from '@/lib/logger';
 
 export default function SignupPage() {
   const { signup } = useAuth();
@@ -54,7 +55,7 @@ export default function SignupPage() {
     const { error: signupError } = await signup(email, password, captchaToken);
 
     if (signupError) {
-      console.error('Signup error:', signupError);
+      logger.error('Signup error:', signupError);
       setError(signupError.message || (language === 'mn' ? 'Бүртгэл үүсгэхэд алдаа гарлаа' : 'Signup failed'));
       setCaptchaRefreshKey((prev) => prev + 1);
       setLoading(false);

@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { User, Session, AuthError } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
+import { setSentryUser } from '@/lib/sentry'
 
 interface AuthContextType {
   user: User | null
@@ -34,6 +35,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(session)
       setUser(session?.user ?? null)
       setLoading(false)
+
+      // Set Sentry user context
+      if (session?.user) {
+        setSentryUser({
+          id: session.user.id,
+          email: session.user.email,
+        })
+      }
     })
 
     // Listen for auth state changes (login, logout, token refresh)
@@ -42,6 +51,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSession(session)
         setUser(session?.user ?? null)
         setLoading(false)
+
+        // Update Sentry user context on auth state change
+        if (session?.user) {
+          setSentryUser({
+            id: session.user.id,
+            email: session.user.email,
+          })
+        } else {
+          setSentryUser(null)
+        }
       }
     )
 

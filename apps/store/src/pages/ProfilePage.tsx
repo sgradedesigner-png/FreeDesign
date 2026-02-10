@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
 import Icon from '@/components/ui/AppIcon'
+import { logger } from '@/lib/logger'
 
 export default function ProfilePage() {
   const { user } = useAuth()
@@ -64,7 +65,7 @@ export default function ProfilePage() {
         address: addressValue
       })
     } catch (error) {
-      console.error('Failed to fetch profile:', error)
+      logger.error('Failed to fetch profile:', error)
     } finally {
       setFetching(false)
     }
@@ -105,7 +106,7 @@ export default function ProfilePage() {
         language === 'mn' ? 'Профайл амжилттай шинэчлэгдлээ' : 'Profile updated successfully'
       )
     } catch (error: any) {
-      console.error('Profile update error:', error)
+      logger.error('Profile update error:', error)
       toast.error(
         language === 'mn'
           ? `Алдаа гарлаа: ${error.message}`

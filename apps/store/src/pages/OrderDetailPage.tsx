@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import Icon from '@/components/ui/AppIcon'
 import { toast } from 'sonner'
+import { logger } from '@/lib/logger'
 
 interface Order {
   id: string
@@ -138,7 +139,7 @@ export default function OrderDetailPage() {
       setOrder(fetchedOrder)
 
     } catch (error) {
-      console.error('Failed to fetch order:', error)
+      logger.error('Failed to fetch order:', error)
       if (showRefreshToast) {
         toast.error(
           language === 'mn'

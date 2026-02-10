@@ -4,7 +4,39 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>shirt-store</title>
+
+    <!-- Content Security Policy -->
+    <meta http-equiv="Content-Security-Policy" content="
+      default-src 'self';
+      script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com;
+      style-src 'self' 'unsafe-inline';
+      img-src 'self' data: https: blob:;
+      font-src 'self' data:;
+      connect-src 'self' https://*.supabase.co wss://*.supabase.co https://challenges.cloudflare.com https://*.sentry.io https://*.qpay.mn;
+      frame-src https://challenges.cloudflare.com;
+      object-src 'none';
+      base-uri 'self';
+      form-action 'self';
+      frame-ancestors 'none';
+      upgrade-insecure-requests;
+    " />
+
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="Korean Goods - Premium Korean fashion and lifestyle products" />
+    <meta name="keywords" content="korean fashion, k-fashion, korean goods, online shopping" />
+    <meta name="author" content="Korean Goods" />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Korean Goods - Premium Korean Fashion" />
+    <meta property="og:description" content="Discover premium Korean fashion and lifestyle products" />
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:title" content="Korean Goods - Premium Korean Fashion" />
+    <meta property="twitter:description" content="Discover premium Korean fashion and lifestyle products" />
+
+    <title>Korean Goods - Premium Korean Fashion</title>
   </head>
   <body>
     <div id="root"></div>

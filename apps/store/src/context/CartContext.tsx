@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { toast } from 'sonner';
 import type { Product, ProductVariant } from '../data/types';
+import { logger } from '@/lib/logger';
 
 type CartItem = {
   cartKey: string;
@@ -67,7 +68,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         const parsed = JSON.parse(savedCart) as CartItem[];
         setCart(parsed);
       } catch (error) {
-        console.error('Failed to load cart from localStorage:', error);
+        logger.error('Failed to load cart from localStorage:', error);
         localStorage.removeItem('shopping-cart');
       }
     }

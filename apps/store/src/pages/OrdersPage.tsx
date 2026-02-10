@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import Icon from '@/components/ui/AppIcon'
+import { logger } from '@/lib/logger'
 
 interface Order {
   id: string
@@ -46,7 +47,7 @@ export default function OrdersPage() {
       const { orders } = await response.json()
       setOrders(orders)
     } catch (error) {
-      console.error('Failed to fetch orders:', error)
+      logger.error('Failed to fetch orders:', error)
     } finally {
       setLoading(false)
     }
