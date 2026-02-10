@@ -8,7 +8,7 @@ export async function adminStatsRoutes(app: FastifyInstance) {
 
   // 📊 GET dashboard stats (optimized with aggregations)
   app.get('/', async () => {
-    console.log('\n[Stats] Fetching dashboard statistics...');
+    logger.info('\n[Stats] Fetching dashboard statistics...');
 
     const [
       productsCount,
@@ -82,8 +82,8 @@ export async function adminStatsRoutes(app: FastifyInstance) {
       }),
     ]);
 
-    console.log('[Stats] ✅ Statistics fetched successfully');
-    console.log(`[Stats] Products: ${productsCount}, Categories: ${categoriesCount}, Inventory: $${inventoryValue}`);
+    logger.info('[Stats] ✅ Statistics fetched successfully');
+    logger.info(`[Stats] Products: ${productsCount}, Categories: ${categoriesCount}, Inventory: $${inventoryValue}`);
 
     return {
       productsCount,

@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger';
 import type { FastifyInstance } from 'fastify';
 import { randomUUID } from 'crypto';
 import { z } from 'zod';
@@ -408,8 +409,8 @@ export async function adminProductRoutes(app: FastifyInstance) {
     const schema = z.object({ id: z.string().uuid() });
     const { id } = schema.parse(request.params);
 
-    console.log('\n[Delete Product] ========== DELETE PRODUCT REQUEST ==========');
-    console.log('[Delete Product] Product ID:', id);
+    logger.info('\n[Delete Product] ========== DELETE PRODUCT REQUEST ==========');
+    logger.info('[Delete Product] Product ID:', id);
 
     try {
       // Step 1: Check if product exists and get variants
@@ -419,37 +420,37 @@ export async function adminProductRoutes(app: FastifyInstance) {
       });
 
       if (!product) {
-        console.log('[Delete Product] ❌ Product not found');
+        logger.info('[Delete Product] ❌ Product not found');
         return reply.status(404).send({ message: 'Product not found' });
       }
 
-      console.log('[Delete Product] ✅ Product found:', product.title);
-      console.log('[Delete Product] Variants:', product.variants.length);
+      logger.info('[Delete Product] ✅ Product found:', product.title);
+      logger.info('[Delete Product] Variants:', product.variants.length);
 
       // Step 2: Delete all variant images from R2 storage
-      console.log('[Delete Product] Step 1: Deleting variant images from R2...');
+      logger.info('[Delete Product] Step 1: Deleting variant images from R2...');
       try {
         const deletedCount = await deleteProductImages(id);
-        console.log('[Delete Product] ✅ Deleted', deletedCount, 'files from R2');
+        logger.info('[Delete Product] ✅ Deleted', deletedCount, 'files from R2');
       } catch (r2Error) {
-        console.error('[Delete Product] ⚠️ R2 deletion failed, but continuing...', r2Error);
+        logger.error('[Delete Product] ⚠️ R2 deletion failed, but continuing...', r2Error);
         // Continue even if R2 deletion fails - don't block product deletion
       }
 
       // Step 3: Delete product from database (variants auto-deleted via CASCADE)
-      console.log('[Delete Product] Step 2: Deleting product from database...');
+      logger.info('[Delete Product] Step 2: Deleting product from database...');
       await prisma.product.delete({ where: { id } });
-      console.log('[Delete Product] ✅ Product and all variants deleted from database');
+      logger.info('[Delete Product] ✅ Product and all variants deleted from database');
 
       productsCache.clear();
-      console.log('[Delete Product] ========== DELETE COMPLETE ==========\n');
+      logger.info('[Delete Product] ========== DELETE COMPLETE ==========\n');
       return {
         ok: true,
         message: 'Product, variants, and all associated images deleted successfully'
       };
     } catch (error) {
-      console.error('[Delete Product] ❌ Delete failed');
-      console.error('[Delete Product] Error:', error);
+      logger.error('[Delete Product] ❌ Delete failed');
+      logger.error('[Delete Product] Error:', error);
       return reply.status(500).send({
         message: 'Failed to delete product',
         error: error instanceof Error ? error.message : 'Unknown error'

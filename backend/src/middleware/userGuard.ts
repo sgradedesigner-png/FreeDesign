@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger';
 // backend/src/middleware/userGuard.ts
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import { createClient } from '@supabase/supabase-js';
@@ -29,23 +30,23 @@ export async function userGuard(req: FastifyRequest, reply: FastifyReply) {
     const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
 
     if (!token) {
-      console.error('[userGuard] Missing Bearer token');
+      logger.error('[userGuard] Missing Bearer token');
       return reply.status(401).send({ error: 'Unauthorized - No token provided' });
     }
 
-    console.log('[userGuard] Verifying JWT token with Supabase...');
+    logger.info('[userGuard] Verifying JWT token with Supabase...');
 
     // ✅ Supabase ашиглаад token verify хийнэ
     const { data, error } = await supabase.auth.getUser(token);
 
     if (error || !data.user) {
-      console.error('[userGuard] Token verification failed:', error?.message);
+      logger.error('[userGuard] Token verification failed:', error?.message);
       return reply.status(401).send({ error: 'Invalid or expired token' });
     }
 
-    console.log('[userGuard] ✅ JWT verified successfully');
-    console.log('[userGuard] User ID:', data.user.id);
-    console.log('[userGuard] User email:', data.user.email);
+    logger.info('[userGuard] ✅ JWT verified successfully');
+    logger.info('[userGuard] User ID:', data.user.id);
+    logger.info('[userGuard] User email:', data.user.email);
 
     // ✅ Attach user info to request object
     (req as any).user = {
@@ -54,12 +55,12 @@ export async function userGuard(req: FastifyRequest, reply: FastifyReply) {
       email_confirmed_at: data.user.email_confirmed_at,
     };
 
-    console.log('[userGuard] ✅ User access granted to', data.user.email);
+    logger.info('[userGuard] ✅ User access granted to', data.user.email);
 
     return; // ok
   } catch (err: any) {
-    console.error('[userGuard] ❌ Error:', err.message);
-    console.error('[userGuard] Error details:', err);
+    logger.error('[userGuard] ❌ Error:', err.message);
+    logger.error('[userGuard] Error details:', err);
     return reply.status(500).send({ error: 'Authentication failed', details: err.message });
   }
 }

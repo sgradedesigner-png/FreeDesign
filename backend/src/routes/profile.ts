@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger';
 // backend/src/routes/profile.ts
 import { FastifyInstance } from 'fastify';
 import { userGuard } from '../middleware/userGuard';
@@ -26,12 +27,12 @@ export default async function profileRoutes(fastify: FastifyInstance) {
           }
         });
 
-        console.log(`✅ Profile created for user: ${userId}`);
+        logger.info(`✅ Profile created for user: ${userId}`);
       }
 
       return reply.send({ profile });
     } catch (error: any) {
-      console.error('Fetch profile error:', error);
+      logger.error('Fetch profile error:', error);
       return reply.code(500).send({ error: 'Failed to fetch profile' });
     }
   });
@@ -67,11 +68,11 @@ export default async function profileRoutes(fastify: FastifyInstance) {
         }
       });
 
-      console.log(`✅ Profile updated for user: ${userId}`);
+      logger.info(`✅ Profile updated for user: ${userId}`);
 
       return reply.send({ profile });
     } catch (error: any) {
-      console.error('Update profile error:', error);
+      logger.error('Update profile error:', error);
       return reply.code(500).send({ error: 'Failed to update profile' });
     }
   });

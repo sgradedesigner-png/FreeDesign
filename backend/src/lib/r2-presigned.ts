@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger';
 import { S3Client } from '@aws-sdk/client-s3';
 import { createPresignedPost } from '@aws-sdk/s3-presigned-post';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
@@ -9,7 +10,7 @@ const R2_SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY!;
 const R2_BUCKET_NAME = process.env.R2_BUCKET_NAME!;
 const R2_PUBLIC_DOMAIN = process.env.R2_PUBLIC_DOMAIN!;
 
-console.log('[R2 Presigned] Creating minimal S3 client for presigned URLs...');
+logger.info('[R2 Presigned] Creating minimal S3 client for presigned URLs...');
 
 // Minimal S3 client - no custom HTTPS agent needed for signing
 export const r2SigningClient = new S3Client({
@@ -22,7 +23,7 @@ export const r2SigningClient = new S3Client({
   forcePathStyle: true, // Use path-style URLs instead of virtual-hosted-style
 });
 
-console.log('[R2 Presigned] ✅ Signing client ready');
+logger.info('[R2 Presigned] ✅ Signing client ready');
 
 /**
  * Generate presigned URL for uploading
@@ -33,10 +34,10 @@ export async function generatePresignedUploadUrl(
   contentType: string,
   expiresIn: number = 3600 // 1 hour
 ): Promise<string> {
-  console.log('[R2 Presigned] Generating presigned URL...');
-  console.log('[R2 Presigned] Key:', key);
-  console.log('[R2 Presigned] Content-Type:', contentType);
-  console.log('[R2 Presigned] Expires in:', expiresIn, 'seconds');
+  logger.info('[R2 Presigned] Generating presigned URL...');
+  logger.info('[R2 Presigned] Key:', key);
+  logger.info('[R2 Presigned] Content-Type:', contentType);
+  logger.info('[R2 Presigned] Expires in:', expiresIn, 'seconds');
 
   try {
     // CRITICAL FIX: Don't include ContentType in PutObjectCommand
@@ -53,12 +54,12 @@ export async function generatePresignedUploadUrl(
       unhoistableHeaders: new Set(['content-type']), // Don't sign Content-Type
     });
 
-    console.log('[R2 Presigned] ✅ Presigned URL generated (ContentType NOT signed)');
-    console.log('[R2 Presigned] URL length:', signedUrl.length);
+    logger.info('[R2 Presigned] ✅ Presigned URL generated (ContentType NOT signed)');
+    logger.info('[R2 Presigned] URL length:', signedUrl.length);
 
     return signedUrl;
   } catch (error) {
-    console.error('[R2 Presigned] ❌ Failed to generate presigned URL:', error);
+    logger.error('[R2 Presigned] ❌ Failed to generate presigned URL:', error);
     throw error;
   }
 }
@@ -73,7 +74,7 @@ export async function generatePresignedPost(
   maxFileSize: number = 5 * 1024 * 1024, // 5MB
   expiresIn: number = 3600
 ) {
-  console.log('[R2 Presigned POST] Generating presigned POST...');
+  logger.info('[R2 Presigned POST] Generating presigned POST...');
 
   try {
     const presignedPost = await createPresignedPost(r2SigningClient, {
@@ -89,11 +90,11 @@ export async function generatePresignedPost(
       Expires: expiresIn,
     });
 
-    console.log('[R2 Presigned POST] ✅ Presigned POST generated');
+    logger.info('[R2 Presigned POST] ✅ Presigned POST generated');
 
     return presignedPost;
   } catch (error) {
-    console.error('[R2 Presigned POST] ❌ Failed:', error);
+    logger.error('[R2 Presigned POST] ❌ Failed:', error);
     throw error;
   }
 }
@@ -113,9 +114,9 @@ export async function generateProductImageUploadUrl(
   filename: string,
   contentType: string
 ): Promise<{ uploadUrl: string; publicUrl: string; key: string }> {
-  console.log('[R2 Product Presigned] Generating upload URL for product image...');
-  console.log('[R2 Product Presigned] Product ID:', productId);
-  console.log('[R2 Product Presigned] Filename:', filename);
+  logger.info('[R2 Product Presigned] Generating upload URL for product image...');
+  logger.info('[R2 Product Presigned] Product ID:', productId);
+  logger.info('[R2 Product Presigned] Filename:', filename);
 
   const timestamp = Date.now();
   // ✅ Bucket нэр нь "products" тул "products/" prefix нэмэх шаардлагагүй
@@ -124,8 +125,8 @@ export async function generateProductImageUploadUrl(
   const uploadUrl = await generatePresignedUploadUrl(key, contentType);
   const publicUrl = getPublicUrl(key);
 
-  console.log('[R2 Product Presigned] ✅ URLs generated');
-  console.log('[R2 Product Presigned] Public URL:', publicUrl);
+  logger.info('[R2 Product Presigned] ✅ URLs generated');
+  logger.info('[R2 Product Presigned] Public URL:', publicUrl);
 
   return {
     uploadUrl,

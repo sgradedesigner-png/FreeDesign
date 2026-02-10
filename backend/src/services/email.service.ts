@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger';
 // backend/src/services/email.service.ts
 import { Resend } from 'resend';
 
@@ -71,11 +72,11 @@ class EmailService {
     };
 
     if (!this.config.apiKey) {
-      console.warn('[Email Service] RESEND_API_KEY not configured. Email sending will be disabled.');
+      logger.warn('[Email Service] RESEND_API_KEY not configured. Email sending will be disabled.');
     }
 
     this.resend = new Resend(this.config.apiKey);
-    console.log('[Email Service] Initialized with from:', `${this.config.fromName} <${this.config.from}>`);
+    logger.info('[Email Service] Initialized with from:', `${this.config.fromName} <${this.config.from}>`);
   }
 
   /**
@@ -83,7 +84,7 @@ class EmailService {
    */
   async sendEmail(params: SendEmailParams): Promise<{ success: boolean; messageId?: string; error?: string }> {
     if (!this.config.apiKey) {
-      console.error('[Email Service] Cannot send email: RESEND_API_KEY not configured');
+      logger.error('[Email Service] Cannot send email: RESEND_API_KEY not configured');
       return { success: false, error: 'Email service not configured' };
     }
 
@@ -91,7 +92,7 @@ class EmailService {
     const emails = Array.isArray(params.to) ? params.to : [params.to];
     const invalidEmails = emails.filter(email => !isValidEmail(email));
     if (invalidEmails.length > 0) {
-      console.error('[Email Service] Invalid email addresses:', invalidEmails);
+      logger.error('[Email Service] Invalid email addresses:', invalidEmails);
       return { success: false, error: `Invalid email addresses: ${invalidEmails.join(', ')}` };
     }
 
@@ -102,7 +103,7 @@ class EmailService {
         ? (Array.isArray(params.to) ? params.to.map(maskEmail) : maskEmail(params.to))
         : params.to;
 
-      console.log('[Email Service] Sending email:', {
+      logger.info('[Email Service] Sending email:', {
         to: logTo,
         subject: params.subject,
         from: `${this.config.fromName} <${this.config.from}>`
@@ -117,14 +118,14 @@ class EmailService {
       });
 
       if (error) {
-        console.error('[Email Service] Failed to send email:', error);
+        logger.error('[Email Service] Failed to send email:', error);
         return { success: false, error: error.message };
       }
 
-      console.log('[Email Service] ✅ Email sent successfully:', data?.id);
+      logger.info('[Email Service] ✅ Email sent successfully:', data?.id);
       return { success: true, messageId: data?.id };
     } catch (error: any) {
-      console.error('[Email Service] Error sending email:', error);
+      logger.error('[Email Service] Error sending email:', error);
       return { success: false, error: error.message };
     }
   }

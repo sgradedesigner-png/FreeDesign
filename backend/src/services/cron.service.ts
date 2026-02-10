@@ -2,6 +2,7 @@
 import * as cron from 'node-cron';
 import { prisma } from '../lib/prisma';
 import { emailService } from './email.service';
+import { logger } from '../lib/logger';
 
 /**
  * Mask email address for privacy in logs (GDPR compliance)
@@ -31,7 +32,7 @@ class CronService {
    * Initialize all cron jobs
    */
   async start() {
-    console.log('[Cron Service] Starting cron jobs...');
+    logger.info('[Cron Service] Starting cron jobs...');
 
     // Run every hour: Check for orders expiring in 24 hours and send warning emails
     const warningJob = cron.schedule('0 * * * *', async () => {
@@ -45,13 +46,13 @@ class CronService {
     });
     this.jobs.set('expired-orders', expiredJob);
 
-    console.log('[Cron Service] ✅ All cron jobs started successfully');
-    console.log('[Cron Service] - Expiration warnings: Every hour (0 * * * *)');
-    console.log('[Cron Service] - Expired orders: Every hour (0 * * * *)');
+    logger.info('[Cron Service] ✅ All cron jobs started successfully');
+    logger.info('[Cron Service] - Expiration warnings: Every hour (0 * * * *)');
+    logger.info('[Cron Service] - Expired orders: Every hour (0 * * * *)');
 
     // Run immediately on startup for testing
     if (process.env.CRON_RUN_ON_STARTUP === 'true') {
-      console.log('[Cron Service] Running initial checks...');
+      logger.info('[Cron Service] Running initial checks...');
       await this.checkExpirationWarnings();
       await this.checkExpiredOrders();
     }
@@ -61,10 +62,10 @@ class CronService {
    * Stop all cron jobs
    */
   stop() {
-    console.log('[Cron Service] Stopping all cron jobs...');
+    logger.info('[Cron Service] Stopping all cron jobs...');
     this.jobs.forEach((job, name) => {
       job.stop();
-      console.log(`[Cron Service] Stopped: ${name}`);
+      logger.info(`[Cron Service] Stopped: ${name}`);
     });
     this.jobs.clear();
   }
@@ -75,7 +76,7 @@ class CronService {
    */
   private async checkExpirationWarnings() {
     try {
-      console.log('[Cron: Expiration Warnings] Starting check...');
+      logger.info('[Cron: Expiration Warnings] Starting check...');
 
       const now = new Date();
       const twentyFourHoursFromNow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
@@ -102,31 +103,31 @@ class CronService {
       });
 
       if (ordersToWarn.length === 0) {
-        console.log('[Cron: Expiration Warnings] No orders found requiring warnings');
+        logger.info('[Cron: Expiration Warnings] No orders found requiring warnings');
         return;
       }
 
       // Apply batch limit to prevent email bombing
       const limitedOrders = ordersToWarn.slice(0, this.MAX_EMAILS_PER_RUN);
       if (ordersToWarn.length > this.MAX_EMAILS_PER_RUN) {
-        console.warn(`[Cron: Expiration Warnings] Limiting to ${this.MAX_EMAILS_PER_RUN} emails (found ${ordersToWarn.length} total)`);
+        logger.warn(`[Cron: Expiration Warnings] Limiting to ${this.MAX_EMAILS_PER_RUN} emails (found ${ordersToWarn.length} total)`);
       }
 
-      console.log(`[Cron: Expiration Warnings] Processing ${limitedOrders.length} orders`);
+      logger.info(`[Cron: Expiration Warnings] Processing ${limitedOrders.length} orders`);
 
       // Send warning emails
       let emailsSent = 0;
       for (const order of limitedOrders) {
         const email = order.user?.email;
         if (!email) {
-          console.warn(`[Cron: Expiration Warnings] No email found for order ${order.id}, skipping`);
+          logger.warn(`[Cron: Expiration Warnings] No email found for order ${order.id}, skipping`);
           continue;
         }
 
         try {
           const isProduction = process.env.NODE_ENV === 'production';
           const logEmail = isProduction ? maskEmail(email) : email;
-          console.log(`[Cron: Expiration Warnings] Sending warning to ${logEmail} for order ${order.id}`);
+          logger.info(`[Cron: Expiration Warnings] Sending warning to ${logEmail} for order ${order.id}`);
 
           const emailResult = await emailService.sendExpirationWarning(email, {
             orderId: order.id,
@@ -145,18 +146,18 @@ class CronService {
               }
             });
             emailsSent++;
-            console.log(`[Cron: Expiration Warnings] ✅ Warning email sent to ${logEmail} for order ${order.id}`);
+            logger.info(`[Cron: Expiration Warnings] ✅ Warning email sent to ${logEmail} for order ${order.id}`);
           } else {
-            console.error(`[Cron: Expiration Warnings] Failed to send warning email: ${emailResult.error}`);
+            logger.error(`[Cron: Expiration Warnings] Failed to send warning email: ${emailResult.error}`);
           }
         } catch (error: any) {
-          console.error(`[Cron: Expiration Warnings] Error sending warning for order ${order.id}:`, error.message);
+          logger.error(`[Cron: Expiration Warnings] Error sending warning for order ${order.id}:`, error.message);
         }
       }
 
-      console.log(`[Cron: Expiration Warnings] ✅ Completed - sent ${emailsSent}/${ordersToWarn.length} warning emails`);
+      logger.info(`[Cron: Expiration Warnings] ✅ Completed - sent ${emailsSent}/${ordersToWarn.length} warning emails`);
     } catch (error: any) {
-      console.error('[Cron: Expiration Warnings] Error:', error.message);
+      logger.error('[Cron: Expiration Warnings] Error:', error.message);
     }
   }
 
@@ -166,7 +167,7 @@ class CronService {
    */
   private async checkExpiredOrders() {
     try {
-      console.log('[Cron: Expired Orders] Starting check...');
+      logger.info('[Cron: Expired Orders] Starting check...');
 
       const now = new Date();
 
@@ -189,17 +190,17 @@ class CronService {
       });
 
       if (expiredOrders.length === 0) {
-        console.log('[Cron: Expired Orders] No expired orders found');
+        logger.info('[Cron: Expired Orders] No expired orders found');
         return;
       }
 
       // Apply batch limit to prevent email bombing
       const limitedOrders = expiredOrders.slice(0, this.MAX_EMAILS_PER_RUN);
       if (expiredOrders.length > this.MAX_EMAILS_PER_RUN) {
-        console.warn(`[Cron: Expired Orders] Limiting to ${this.MAX_EMAILS_PER_RUN} emails (found ${expiredOrders.length} total)`);
+        logger.warn(`[Cron: Expired Orders] Limiting to ${this.MAX_EMAILS_PER_RUN} emails (found ${expiredOrders.length} total)`);
       }
 
-      console.log(`[Cron: Expired Orders] Processing ${limitedOrders.length} orders`);
+      logger.info(`[Cron: Expired Orders] Processing ${limitedOrders.length} orders`);
 
       // Process expired orders
       let emailsSent = 0;
@@ -214,19 +215,19 @@ class CronService {
             }
           });
 
-          console.log(`[Cron: Expired Orders] Marked order ${order.id} as EXPIRED`);
+          logger.info(`[Cron: Expired Orders] Marked order ${order.id} as EXPIRED`);
 
           // Send expired email if not already sent
           if (!order.expiredEmailSent) {
             const email = order.user?.email;
             if (!email) {
-              console.warn(`[Cron: Expired Orders] No email found for order ${order.id}, skipping email`);
+              logger.warn(`[Cron: Expired Orders] No email found for order ${order.id}, skipping email`);
               continue;
             }
 
             const isProduction = process.env.NODE_ENV === 'production';
             const logEmail = isProduction ? maskEmail(email) : email;
-            console.log(`[Cron: Expired Orders] Sending expired notification to ${logEmail} for order ${order.id}`);
+            logger.info(`[Cron: Expired Orders] Sending expired notification to ${logEmail} for order ${order.id}`);
 
             const emailResult = await emailService.sendOrderExpired(email, {
               orderId: order.id,
@@ -243,19 +244,19 @@ class CronService {
                 }
               });
               emailsSent++;
-              console.log(`[Cron: Expired Orders] ✅ Expired email sent to ${logEmail} for order ${order.id}`);
+              logger.info(`[Cron: Expired Orders] ✅ Expired email sent to ${logEmail} for order ${order.id}`);
             } else {
-              console.error(`[Cron: Expired Orders] Failed to send expired email: ${emailResult.error}`);
+              logger.error(`[Cron: Expired Orders] Failed to send expired email: ${emailResult.error}`);
             }
           }
         } catch (error: any) {
-          console.error(`[Cron: Expired Orders] Error processing order ${order.id}:`, error.message);
+          logger.error(`[Cron: Expired Orders] Error processing order ${order.id}:`, error.message);
         }
       }
 
-      console.log(`[Cron: Expired Orders] ✅ Completed - processed ${limitedOrders.length} orders, sent ${emailsSent} emails (total found: ${expiredOrders.length})`);
+      logger.info(`[Cron: Expired Orders] ✅ Completed - processed ${limitedOrders.length} orders, sent ${emailsSent} emails (total found: ${expiredOrders.length})`);
     } catch (error: any) {
-      console.error('[Cron: Expired Orders] Error:', error.message);
+      logger.error('[Cron: Expired Orders] Error:', error.message);
     }
   }
 
@@ -263,7 +264,7 @@ class CronService {
    * Manually trigger expiration warnings check (for testing)
    */
   async triggerExpirationWarnings() {
-    console.log('[Cron Service] Manually triggering expiration warnings check...');
+    logger.info('[Cron Service] Manually triggering expiration warnings check...');
     await this.checkExpirationWarnings();
   }
 
@@ -271,7 +272,7 @@ class CronService {
    * Manually trigger expired orders check (for testing)
    */
   async triggerExpiredOrders() {
-    console.log('[Cron Service] Manually triggering expired orders check...');
+    logger.info('[Cron Service] Manually triggering expired orders check...');
     await this.checkExpiredOrders();
   }
 }

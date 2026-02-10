@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger';
 import { PrismaClient } from '@prisma/client';
 import { prismaQueryLogger } from '../middleware/prismaQueryLogger';
 
@@ -48,13 +49,13 @@ if (process.env.NODE_ENV !== 'production') {
  * Ensures database connections are properly closed when the server shuts down
  */
 const shutdown = async (signal: string) => {
-  console.log(`\n${signal} received. Closing database connections...`);
+  logger.info(`\n${signal} received. Closing database connections...`);
   try {
     await prisma.$disconnect();
-    console.log('✅ Database connections closed successfully');
+    logger.info('✅ Database connections closed successfully');
     process.exit(0);
   } catch (error) {
-    console.error('❌ Error closing database connections:', error);
+    logger.error('❌ Error closing database connections:', error);
     process.exit(1);
   }
 };
@@ -75,7 +76,7 @@ export async function checkDatabaseHealth(): Promise<boolean> {
     await prisma.$queryRaw`SELECT 1`;
     return true;
   } catch (error) {
-    console.error('Database health check failed:', error);
+    logger.error('Database health check failed:', error);
     return false;
   }
 }

@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger';
 // backend/src/routes/admin/orders.ts
 import { FastifyInstance } from 'fastify';
 import { adminGuard } from '../../supabaseauth';
@@ -36,7 +37,7 @@ async function checkAndUpdateExpiredOrders(orders: any[]) {
       }
     });
 
-    console.log(`[Admin Order Expiration] Updated ${expiredOrderIds.length} expired orders: ${expiredOrderIds.join(', ')}`);
+    logger.info(`[Admin Order Expiration] Updated ${expiredOrderIds.length} expired orders: ${expiredOrderIds.join(', ')}`);
 
     // Update the orders in the array to reflect new status
     for (const order of orders) {
@@ -90,7 +91,7 @@ export default async function adminOrderRoutes(fastify: FastifyInstance) {
         }
       });
     } catch (error: any) {
-      console.error('Admin fetch orders error:', error);
+      logger.error('Admin fetch orders error:', error);
       return reply.code(500).send({ error: 'Failed to fetch orders' });
     }
   });
@@ -117,7 +118,7 @@ export default async function adminOrderRoutes(fastify: FastifyInstance) {
 
       return reply.send({ order });
     } catch (error: any) {
-      console.error('Admin fetch order error:', error);
+      logger.error('Admin fetch order error:', error);
       return reply.code(500).send({ error: 'Failed to fetch order' });
     }
   });
@@ -141,11 +142,11 @@ export default async function adminOrderRoutes(fastify: FastifyInstance) {
         data: { status }
       });
 
-      console.log(`✅ Order ${id} status updated to ${status}`);
+      logger.info(`✅ Order ${id} status updated to ${status}`);
 
       return reply.send({ order });
     } catch (error: any) {
-      console.error('Update order error:', error);
+      logger.error('Update order error:', error);
       return reply.code(500).send({ error: 'Failed to update order' });
     }
   });

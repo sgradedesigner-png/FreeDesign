@@ -4,6 +4,7 @@ import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { NodeHttpHandler } from '@smithy/node-http-handler';
 import https from 'https';
 import crypto from 'crypto';
+import { logger } from './logger';
 
 // CRITICAL: Disable SSL verification for development (Windows SSL compatibility)
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
@@ -15,16 +16,18 @@ const R2_BUCKET_NAME = process.env.R2_BUCKET_NAME!;
 const R2_PUBLIC_DOMAIN = process.env.R2_PUBLIC_DOMAIN!;
 
 // Log R2 configuration at startup
-console.log('[R2 Config] Initializing Cloudflare R2 client...');
-console.log('[R2 Config] Account ID:', R2_ACCOUNT_ID ? '✓ Set' : '✗ Missing');
-console.log('[R2 Config] Access Key:', R2_ACCESS_KEY_ID ? '✓ Set' : '✗ Missing');
-console.log('[R2 Config] Secret Key:', R2_SECRET_ACCESS_KEY ? '✓ Set' : '✗ Missing');
-console.log('[R2 Config] Bucket:', R2_BUCKET_NAME);
-console.log('[R2 Config] Public Domain:', R2_PUBLIC_DOMAIN);
-console.log('[R2 Config] Endpoint:', `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`);
+logger.info('Initializing Cloudflare R2 client...');
+logger.info({
+  accountId: R2_ACCOUNT_ID ? '✓ Set' : '✗ Missing',
+  accessKey: R2_ACCESS_KEY_ID ? '✓ Set' : '✗ Missing',
+  secretKey: R2_SECRET_ACCESS_KEY ? '✓ Set' : '✗ Missing',
+  bucket: R2_BUCKET_NAME,
+  publicDomain: R2_PUBLIC_DOMAIN,
+  endpoint: `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`
+}, 'R2 configuration');
 
 // Create HTTPS agent with custom SSL options for Windows compatibility
-console.log('[R2 HTTPS Agent] Creating HTTPS agent with SSL workarounds...');
+logger.debug('Creating HTTPS agent with SSL workarounds...');
 
 const httpsAgent = new https.Agent({
   rejectUnauthorized: false, // For development only - bypass SSL verification
@@ -44,18 +47,17 @@ const httpsAgent = new https.Agent({
   checkServerIdentity: () => undefined,
 });
 
-console.log('[R2 HTTPS Agent] Configuration:', {
+logger.debug({
   rejectUnauthorized: false,
   keepAlive: true,
   maxSockets: 50,
   timeout: 60000,
   minVersion: 'TLSv1.2',
   maxVersion: 'TLSv1.3',
-  secureOptions: 'SSL_OP_NO_SSLv2|SSL_OP_NO_SSLv3|SSL_OP_NO_TLSv1|SSL_OP_NO_TLSv1_1',
-});
+}, 'HTTPS agent configuration');
 
 // Create S3 client configured for Cloudflare R2
-console.log('[R2 Client] Creating S3Client for Cloudflare R2...');
+logger.info('Creating S3Client for Cloudflare R2...');
 export const r2Client = new S3Client({
   region: 'auto',
   endpoint: `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
@@ -70,7 +72,7 @@ export const r2Client = new S3Client({
   }),
 });
 
-console.log('[R2 Client] ✅ S3Client created successfully');
+logger.info('✅ S3Client created successfully');
 
 /**
  * Upload a file to R2 storage
@@ -84,14 +86,14 @@ export async function uploadToR2(
   key: string,
   contentType: string
 ): Promise<string> {
-  console.log('[R2 Upload] Starting upload to R2...');
-  console.log('[R2 Upload] Key:', key);
-  console.log('[R2 Upload] Content-Type:', contentType);
-  console.log('[R2 Upload] File size:', file.length, 'bytes');
-  console.log('[R2 Upload] Bucket:', R2_BUCKET_NAME);
+  logger.debug({
+    key,
+    contentType,
+    fileSize: file.length,
+    bucket: R2_BUCKET_NAME
+  }, 'Starting R2 upload');
 
   try {
-    console.log('[R2 Upload] Creating PutObjectCommand...');
     const command = new PutObjectCommand({
       Bucket: R2_BUCKET_NAME,
       Key: key,
@@ -99,40 +101,34 @@ export async function uploadToR2(
       ContentType: contentType,
     });
 
-    console.log('[R2 Upload] Sending command to R2...');
-    console.log('[R2 Upload] Endpoint:', `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`);
+    logger.debug({
+      endpoint: `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`
+    }, 'Sending upload command to R2');
 
     const startTime = Date.now();
     const response = await r2Client.send(command);
     const duration = Date.now() - startTime;
 
-    console.log('[R2 Upload] ✅ Upload successful!');
-    console.log('[R2 Upload] Response:', JSON.stringify(response, null, 2));
-    console.log('[R2 Upload] Duration:', duration, 'ms');
-
-    // Return the public URL
     const publicUrl = `https://${R2_PUBLIC_DOMAIN}/${key}`;
-    console.log('[R2 Upload] Public URL:', publicUrl);
+
+    logger.info({
+      key,
+      publicUrl,
+      duration: `${duration}ms`,
+      response
+    }, '✅ R2 upload successful');
 
     return publicUrl;
   } catch (error) {
-    console.error('[R2 Upload] ❌ Upload failed');
-    console.error('[R2 Upload] Error type:', error instanceof Error ? error.constructor.name : typeof error);
-    console.error('[R2 Upload] Error message:', error instanceof Error ? error.message : String(error));
-
-    if (error instanceof Error) {
-      console.error('[R2 Upload] Error stack:', error.stack);
-
-      // Log specific error properties
-      const errorObj = error as any;
-      console.error('[R2 Upload] Error code:', errorObj.code);
-      console.error('[R2 Upload] Error errno:', errorObj.errno);
-      console.error('[R2 Upload] Error syscall:', errorObj.syscall);
-      console.error('[R2 Upload] Error metadata:', JSON.stringify(errorObj.$metadata, null, 2));
-
-      // Log all error properties
-      console.error('[R2 Upload] Full error object:', JSON.stringify(errorObj, Object.getOwnPropertyNames(errorObj), 2));
-    }
+    logger.error({
+      key,
+      error: error instanceof Error ? {
+        name: error.constructor.name,
+        message: error.message,
+        stack: error.stack,
+        ...(error as any)
+      } : String(error)
+    }, '❌ R2 upload failed');
 
     throw error;
   }
@@ -152,15 +148,15 @@ export async function uploadProductImage(
   filename: string,
   contentType: string
 ): Promise<string> {
-  console.log('[R2 Product Image] Preparing product image upload...');
-  console.log('[R2 Product Image] Product ID:', productId);
-  console.log('[R2 Product Image] Filename:', filename);
-  console.log('[R2 Product Image] Content-Type:', contentType);
-  console.log('[R2 Product Image] Buffer size:', file.length, 'bytes');
-
-  // ✅ Bucket нэр нь "products" тул "products/" prefix нэмэх шаардлагагүй
   const key = `${productId}/web/${filename}`;
-  console.log('[R2 Product Image] Generated key:', key);
+
+  logger.debug({
+    productId,
+    filename,
+    contentType,
+    fileSize: file.length,
+    key
+  }, 'Preparing product image upload');
 
   return uploadToR2(file, key, contentType);
 }
@@ -170,9 +166,7 @@ export async function uploadProductImage(
  * @param key - Object key (path) in R2
  */
 export async function deleteFromR2(key: string): Promise<void> {
-  console.log('[R2 Delete] Deleting object from R2...');
-  console.log('[R2 Delete] Key:', key);
-  console.log('[R2 Delete] Bucket:', R2_BUCKET_NAME);
+  logger.debug({ key, bucket: R2_BUCKET_NAME }, 'Deleting object from R2');
 
   try {
     const command = new DeleteObjectCommand({
@@ -181,10 +175,9 @@ export async function deleteFromR2(key: string): Promise<void> {
     });
 
     await r2Client.send(command);
-    console.log('[R2 Delete] ✅ Object deleted successfully');
+    logger.info({ key }, '✅ R2 object deleted successfully');
   } catch (error) {
-    console.error('[R2 Delete] ❌ Delete failed');
-    console.error('[R2 Delete] Error:', error);
+    logger.error({ key, error }, '❌ R2 delete failed');
     throw error;
   }
 }
@@ -195,9 +188,7 @@ export async function deleteFromR2(key: string): Promise<void> {
  * @returns Number of objects deleted
  */
 export async function deleteR2Folder(prefix: string): Promise<number> {
-  console.log('[R2 Delete Folder] Deleting folder from R2...');
-  console.log('[R2 Delete Folder] Prefix:', prefix);
-  console.log('[R2 Delete Folder] Bucket:', R2_BUCKET_NAME);
+  logger.debug({ prefix, bucket: R2_BUCKET_NAME }, 'Deleting folder from R2');
 
   try {
     // List all objects with the prefix
@@ -209,10 +200,10 @@ export async function deleteR2Folder(prefix: string): Promise<number> {
     const listResponse = await r2Client.send(listCommand);
     const objects = listResponse.Contents || [];
 
-    console.log('[R2 Delete Folder] Found', objects.length, 'objects to delete');
+    logger.debug({ prefix, objectCount: objects.length }, 'Found objects to delete');
 
     if (objects.length === 0) {
-      console.log('[R2 Delete Folder] No objects to delete');
+      logger.debug({ prefix }, 'No objects to delete');
       return 0;
     }
 
@@ -228,16 +219,15 @@ export async function deleteR2Folder(prefix: string): Promise<number> {
     const deleteResponse = await r2Client.send(deleteCommand);
     const deletedCount = deleteResponse.Deleted?.length || 0;
 
-    console.log('[R2 Delete Folder] ✅ Deleted', deletedCount, 'objects');
+    logger.info({ prefix, deletedCount }, '✅ R2 folder deleted');
 
     if (deleteResponse.Errors && deleteResponse.Errors.length > 0) {
-      console.error('[R2 Delete Folder] ⚠️ Some deletions failed:', deleteResponse.Errors);
+      logger.warn({ prefix, errors: deleteResponse.Errors }, '⚠️ Some deletions failed');
     }
 
     return deletedCount;
   } catch (error) {
-    console.error('[R2 Delete Folder] ❌ Delete folder failed');
-    console.error('[R2 Delete Folder] Error:', error);
+    logger.error({ prefix, error }, '❌ R2 folder delete failed');
     throw error;
   }
 }
@@ -248,13 +238,13 @@ export async function deleteR2Folder(prefix: string): Promise<number> {
  * @returns Number of images deleted
  */
 export async function deleteProductImages(productId: string): Promise<number> {
-  console.log('[R2 Delete Product] Deleting all images for product:', productId);
+  logger.debug({ productId }, 'Deleting all images for product');
 
   // ✅ Bucket нэр нь "products" тул "products/" prefix нэмэх шаардлагагүй
   // Delete entire product folder: {productId}/
   const prefix = `${productId}/`;
   const deletedCount = await deleteR2Folder(prefix);
 
-  console.log('[R2 Delete Product] ✅ Deleted', deletedCount, 'images for product', productId);
+  logger.info({ productId, deletedCount }, '✅ Deleted product images');
   return deletedCount;
 }

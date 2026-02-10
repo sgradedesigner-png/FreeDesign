@@ -4,6 +4,7 @@
  * Simple LRU cache with TTL for expensive API responses.
  * Designed for product listings that change infrequently.
  */
+import { logger } from './logger';
 
 interface CacheEntry<T> {
   value: T;
@@ -132,7 +133,7 @@ if (CACHE_ENABLED) {
   setInterval(() => {
     const removed = productsCache.cleanup();
     if (removed > 0) {
-      console.log(`[Cache] Cleaned up ${removed} expired entries`);
+      logger.debug({ removed }, 'Cache cleanup: removed expired entries');
     }
   }, 5 * 60 * 1000);
 }

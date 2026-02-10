@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger';
 // backend/src/routes/test-email.ts
 import { FastifyInstance } from 'fastify';
 import { emailService } from '../services/email.service';
@@ -16,7 +17,7 @@ export default async function testEmailRoutes(fastify: FastifyInstance) {
     }
 
     try {
-      console.log('[Test Email] Sending test email to:', to);
+      logger.info('[Test Email] Sending test email to:', to);
       const result = await emailService.sendTestEmail(to);
 
       if (result.success) {
@@ -32,7 +33,7 @@ export default async function testEmailRoutes(fastify: FastifyInstance) {
         });
       }
     } catch (error: any) {
-      console.error('[Test Email] Error:', error);
+      logger.error('[Test Email] Error:', error);
       return reply.code(500).send({
         error: 'Failed to send test email',
         details: error.message
@@ -51,7 +52,7 @@ export default async function testEmailRoutes(fastify: FastifyInstance) {
     }
 
     try {
-      console.log('[Test Email] Sending order confirmation test to:', to);
+      logger.info('[Test Email] Sending order confirmation test to:', to);
 
       const result = await emailService.sendOrderConfirmation(to, {
         orderId: 'test-order-123456',
@@ -77,7 +78,7 @@ export default async function testEmailRoutes(fastify: FastifyInstance) {
         });
       }
     } catch (error: any) {
-      console.error('[Test Email] Error:', error);
+      logger.error('[Test Email] Error:', error);
       return reply.code(500).send({
         error: 'Failed to send test email',
         details: error.message
@@ -96,7 +97,7 @@ export default async function testEmailRoutes(fastify: FastifyInstance) {
     }
 
     try {
-      console.log('[Test Email] Sending expiration warning test to:', to);
+      logger.info('[Test Email] Sending expiration warning test to:', to);
 
       const result = await emailService.sendExpirationWarning(to, {
         orderId: 'test-order-123456',
@@ -118,7 +119,7 @@ export default async function testEmailRoutes(fastify: FastifyInstance) {
         });
       }
     } catch (error: any) {
-      console.error('[Test Email] Error:', error);
+      logger.error('[Test Email] Error:', error);
       return reply.code(500).send({
         error: 'Failed to send test email',
         details: error.message

@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger';
 // backend/src/routes/orders.ts
 import { FastifyInstance } from 'fastify';
 import { userGuard } from '../middleware/userGuard';
@@ -62,7 +63,7 @@ async function checkAndUpdateExpiredOrders(orders: any[]) {
       }
     });
 
-    console.log(`[Order Expiration] Updated ${expiredOrderIds.length} expired orders: ${expiredOrderIds.join(', ')}`);
+    logger.info(`[Order Expiration] Updated ${expiredOrderIds.length} expired orders: ${expiredOrderIds.join(', ')}`);
 
     // Update the orders in the array to reflect new status
     for (const order of orders) {
@@ -95,16 +96,16 @@ export default async function orderRoutes(fastify: FastifyInstance) {
 
     try {
       // Log request body for debugging
-      console.log('[Order Creation] Request body:', JSON.stringify(request.body, null, 2));
+      logger.info('[Order Creation] Request body:', JSON.stringify(request.body, null, 2));
 
       // Validate request body with Zod
       const validation = validateData(createOrderSchema, request.body, reply);
       if (!validation.success) {
-        console.log('[Order Creation] Validation failed:', JSON.stringify(validation.error, null, 2));
+        logger.info('[Order Creation] Validation failed:', JSON.stringify(validation.error, null, 2));
         return; // Error response already sent by validateData
       }
 
-      console.log('[Order Creation] Validation passed');
+      logger.info('[Order Creation] Validation passed');
 
       const { items: rawItems, shippingAddress, total } = validation.data;
 
@@ -145,7 +146,7 @@ export default async function orderRoutes(fastify: FastifyInstance) {
           }
         });
 
-        console.log(`[QPay Cleanup] userId=${userId} foundPending=${existingPending.length}`);
+        logger.info(`[QPay Cleanup] userId=${userId} foundPending=${existingPending.length}`);
 
         // 2. Mark old orders as CANCELLING to prevent race condition
         // This blocks other concurrent requests from seeing these orders as PENDING
@@ -162,7 +163,7 @@ export default async function orderRoutes(fastify: FastifyInstance) {
             }
           });
 
-          console.log(`[QPay Cleanup] userId=${userId} marked ${existingPending.length} as CANCELLING`);
+          logger.info(`[QPay Cleanup] userId=${userId} marked ${existingPending.length} as CANCELLING`);
         }
 
         // 3. Create new order INSIDE transaction (prevents duplicate creation)
@@ -178,7 +179,7 @@ export default async function orderRoutes(fastify: FastifyInstance) {
           }
         });
 
-        console.log(`[Order Create] newOrderId=${newOrder.id} userId=${userId}`);
+        logger.info(`[Order Create] newOrderId=${newOrder.id} userId=${userId}`);
 
         return {
           order: newOrder,
@@ -197,7 +198,7 @@ export default async function orderRoutes(fastify: FastifyInstance) {
             if (oldOrder.qpayInvoiceId && !isMockMode) {
               qpayService.cancelInvoiceWithTimeout(oldOrder.qpayInvoiceId, 5000)
                 .then(() => {
-                  console.log(`[QPay Cleanup] Cancelled invoice ${oldOrder.qpayInvoiceId}`);
+                  logger.info(`[QPay Cleanup] Cancelled invoice ${oldOrder.qpayInvoiceId}`);
                   // Mark as CANCELLED after successful cancellation
                   prisma.order.update({
                     where: { id: oldOrder.id },
@@ -207,15 +208,15 @@ export default async function orderRoutes(fastify: FastifyInstance) {
                       qrCode: null,
                       qrCodeUrl: null
                     }
-                  }).catch(err => console.error('Failed to update cancelled order:', err));
+                  }).catch(err => logger.error('Failed to update cancelled order:', err));
                 })
                 .catch(err => {
-                  console.warn(`[QPay Cleanup] Failed to cancel invoice ${oldOrder.qpayInvoiceId}:`, err.message);
+                  logger.warn(`[QPay Cleanup] Failed to cancel invoice ${oldOrder.qpayInvoiceId}:`, err.message);
                   // Mark as CANCELLATION_FAILED if QPay cancellation failed
                   prisma.order.update({
                     where: { id: oldOrder.id },
                     data: { status: 'CANCELLATION_FAILED' }
-                  }).catch(e => console.error('Failed to mark cancellation failed:', e));
+                  }).catch(e => logger.error('Failed to mark cancellation failed:', e));
                 });
             } else {
               // No invoice to cancel, just mark as CANCELLED
@@ -227,7 +228,7 @@ export default async function orderRoutes(fastify: FastifyInstance) {
                   qrCode: null,
                   qrCodeUrl: null
                 }
-              }).catch(err => console.error('Failed to update cancelled order:', err));
+              }).catch(err => logger.error('Failed to update cancelled order:', err));
             }
           });
         });
@@ -236,17 +237,17 @@ export default async function orderRoutes(fastify: FastifyInstance) {
       // 5. Create QPay invoice with Circuit Breaker (OUTSIDE transaction to avoid blocking)
       let qpayInvoice;
       try {
-        console.log(`[QPay Invoice] start orderId=${order.id}`);
+        logger.info(`[QPay Invoice] start orderId=${order.id}`);
         qpayInvoice = await qpayCircuitBreaker.createInvoice({
           orderNumber: order.id,
           amount: Number(total),
           description: `Order #${order.id.substring(0, 8)} - ${items.length} items`,
           callbackUrl
         });
-        console.log(`[QPay Invoice] success orderId=${order.id} invoiceId=${qpayInvoice.invoice_id}`);
+        logger.info(`[QPay Invoice] success orderId=${order.id} invoiceId=${qpayInvoice.invoice_id}`);
       } catch (invoiceError: any) {
         const errorMessage = invoiceError instanceof Error ? invoiceError.message : String(invoiceError);
-        console.error(`[QPay Invoice] failed orderId=${order.id} reason=${errorMessage}`);
+        logger.error(`[QPay Invoice] failed orderId=${order.id} reason=${errorMessage}`);
 
         // Mark order as PENDING for circuit open or service unavailable
         const isCircuitOpen = invoiceError.code === 'CIRCUIT_OPEN';
@@ -289,7 +290,7 @@ export default async function orderRoutes(fastify: FastifyInstance) {
         }
       });
 
-      console.log(`✅ Order created with QPay invoice: ${order.id} for user ${userId}`);
+      logger.info(`✅ Order created with QPay invoice: ${order.id} for user ${userId}`);
 
       // 7. Send order confirmation email in BACKGROUND (Phase 2)
       // This prevents blocking the response while sending email
@@ -302,13 +303,13 @@ export default async function orderRoutes(fastify: FastifyInstance) {
           });
 
           if (!profile?.email) {
-            console.warn(`[Email] No email found for user ${userId}, skipping confirmation email`);
+            logger.warn(`[Email] No email found for user ${userId}, skipping confirmation email`);
             return;
           }
 
           const isProduction = process.env.NODE_ENV === 'production';
           const logEmail = isProduction ? maskEmail(profile.email) : profile.email;
-          console.log(`[Email] Sending order confirmation to ${logEmail} for order ${updatedOrder.id}`);
+          logger.info(`[Email] Sending order confirmation to ${logEmail} for order ${updatedOrder.id}`);
 
           const emailResult = await emailService.sendOrderConfirmation(profile.email, {
             orderId: updatedOrder.id,
@@ -327,12 +328,12 @@ export default async function orderRoutes(fastify: FastifyInstance) {
                 confirmationEmailSentAt: new Date()
               }
             });
-            console.log(`[Email] ✅ Confirmation email sent successfully to ${logEmail}`);
+            logger.info(`[Email] ✅ Confirmation email sent successfully to ${logEmail}`);
           } else {
-            console.error(`[Email] Failed to send confirmation email: ${emailResult.error}`);
+            logger.error(`[Email] Failed to send confirmation email: ${emailResult.error}`);
           }
         } catch (emailError: any) {
-          console.error('[Email] Error sending confirmation email:', emailError.message);
+          logger.error('[Email] Error sending confirmation email:', emailError.message);
         }
       });
 
@@ -348,7 +349,7 @@ export default async function orderRoutes(fastify: FastifyInstance) {
         }
       });
     } catch (error: any) {
-      console.error('Order creation error:', error);
+      logger.error('Order creation error:', error);
 
       // Check if it's a transaction timeout
       if (error.message && error.message.includes('timeout')) {
@@ -485,7 +486,7 @@ export default async function orderRoutes(fastify: FastifyInstance) {
       return reply.send({ paid: false });
 
     } catch (error: any) {
-      console.error('Payment status check error:', error);
+      logger.error('Payment status check error:', error);
       return reply.code(500).send({ error: 'Failed to check payment status' });
     }
   });
