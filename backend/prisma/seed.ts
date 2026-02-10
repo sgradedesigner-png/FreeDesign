@@ -1,25 +1,27 @@
 import { PrismaClient } from '@prisma/client';
-import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
 async function main() {
-  // 1. Нууц үг шифрлэх (Hash)
-  // Та нэвтрэхдээ "admin123" гэж бичнэ
-  const hashedPassword = await bcrypt.hash('admin123', 10);
+  // Note: Supabase auth handles passwords, not Prisma
+  // This seed file creates a Profile entry for an admin user
+  // The user must be created in Supabase Auth first with email: admin@ecommerce.com
 
-  // 2. Хэрэглэгч үүсгэх
-  const user = await prisma.user.upsert({
-    where: { email: 'admin@ecommerce.com' },
-    update: {}, // Хэрэв аль хэдийн байвал юу ч хийхгүй
+  const adminId = 'admin-seed-id'; // Replace with actual Supabase user ID
+
+  // Create admin profile
+  const profile = await prisma.profile.upsert({
+    where: { id: adminId },
+    update: { role: 'ADMIN' }, // Update role if exists
     create: {
+      id: adminId,
       email: 'admin@ecommerce.com',
-      password: hashedPassword,
+      name: 'Admin User',
       role: 'ADMIN',
     },
   });
 
-  console.log('✅ Admin user created:', user.email);
+  console.log('✅ Admin profile created:', profile.email);
 }
 
 main()

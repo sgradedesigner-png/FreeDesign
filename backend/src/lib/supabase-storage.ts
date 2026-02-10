@@ -5,7 +5,7 @@ const SUPABASE_URL = process.env.SUPABASE_URL!;
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY!;
 
 logger.info('[Supabase Storage] Initializing Supabase client...');
-logger.info('[Supabase Storage] URL:', SUPABASE_URL);
+logger.info({ url: SUPABASE_URL }, '[Supabase Storage] URL');
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -26,10 +26,10 @@ export async function uploadToSupabase(
   contentType: string
 ): Promise<string> {
   logger.info('[Supabase Upload] Starting upload...');
-  logger.info('[Supabase Upload] Bucket:', bucket);
-  logger.info('[Supabase Upload] Path:', path);
-  logger.info('[Supabase Upload] Content-Type:', contentType);
-  logger.info('[Supabase Upload] File size:', file.length, 'bytes');
+  logger.info({ bucket }, '[Supabase Upload] Bucket');
+  logger.info({ path }, '[Supabase Upload] Path');
+  logger.info({ contentType }, '[Supabase Upload] Content-Type');
+  logger.info({ fileSize: `${file.length} bytes` }, '[Supabase Upload] File size');
 
   try {
     const { data, error } = await supabase.storage
@@ -40,12 +40,12 @@ export async function uploadToSupabase(
       });
 
     if (error) {
-      logger.error('[Supabase Upload] ❌ Upload failed:', error);
+      logger.error({ error }, '[Supabase Upload] ❌ Upload failed');
       throw error;
     }
 
     logger.info('[Supabase Upload] ✅ Upload successful');
-    logger.info('[Supabase Upload] Data:', data);
+    logger.info({ data }, '[Supabase Upload] Data');
 
     // Get public URL
     const { data: urlData } = supabase.storage
@@ -53,11 +53,11 @@ export async function uploadToSupabase(
       .getPublicUrl(path);
 
     const publicUrl = urlData.publicUrl;
-    logger.info('[Supabase Upload] Public URL:', publicUrl);
+    logger.info({ publicUrl }, '[Supabase Upload] Public URL');
 
     return publicUrl;
   } catch (error) {
-    logger.error('[Supabase Upload] ❌ Error:', error);
+    logger.error({ error }, '[Supabase Upload] ❌ Error');
     throw error;
   }
 }
@@ -77,13 +77,13 @@ export async function uploadProductImage(
   contentType: string
 ): Promise<string> {
   logger.info('[Supabase Product Image] Uploading product image...');
-  logger.info('[Supabase Product Image] Product ID:', productId);
-  logger.info('[Supabase Product Image] Filename:', filename);
+  logger.info({ productId }, '[Supabase Product Image] Product ID');
+  logger.info({ filename }, '[Supabase Product Image] Filename');
 
   const timestamp = Date.now();
   const path = `products/${productId}/${timestamp}-${filename}`;
 
-  logger.info('[Supabase Product Image] Path:', path);
+  logger.info({ path }, '[Supabase Product Image] Path');
 
   return uploadToSupabase('products', path, file, contentType);
 }
@@ -98,15 +98,15 @@ export async function deleteFromSupabase(
   path: string
 ): Promise<void> {
   logger.info('[Supabase Delete] Deleting file...');
-  logger.info('[Supabase Delete] Bucket:', bucket);
-  logger.info('[Supabase Delete] Path:', path);
+  logger.info({ bucket }, '[Supabase Delete] Bucket');
+  logger.info({ path }, '[Supabase Delete] Path');
 
   const { error } = await supabase.storage
     .from(bucket)
     .remove([path]);
 
   if (error) {
-    logger.error('[Supabase Delete] ❌ Failed:', error);
+    logger.error({ error }, '[Supabase Delete] ❌ Failed');
     throw error;
   }
 

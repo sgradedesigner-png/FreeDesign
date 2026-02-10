@@ -1,3 +1,4 @@
+import { logger } from '../../lib/logger';
 import type { FastifyInstance } from 'fastify';
 import { adminGuard } from '../../supabaseauth';
 import { prisma } from '../../lib/prisma';
@@ -8,7 +9,7 @@ export async function adminStatsRoutes(app: FastifyInstance) {
 
   // 📊 GET dashboard stats (optimized with aggregations)
   app.get('/', async () => {
-    logger.info('\n[Stats] Fetching dashboard statistics...');
+    logger.info('[Stats] Fetching dashboard statistics...');
 
     const [
       productsCount,
@@ -82,8 +83,7 @@ export async function adminStatsRoutes(app: FastifyInstance) {
       }),
     ]);
 
-    logger.info('[Stats] ✅ Statistics fetched successfully');
-    logger.info(`[Stats] Products: ${productsCount}, Categories: ${categoriesCount}, Inventory: $${inventoryValue}`);
+    logger.info({ productsCount, categoriesCount, inventoryValue }, '[Stats] Statistics fetched successfully');
 
     return {
       productsCount,

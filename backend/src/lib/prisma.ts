@@ -55,7 +55,7 @@ const shutdown = async (signal: string) => {
     logger.info('✅ Database connections closed successfully');
     process.exit(0);
   } catch (error) {
-    logger.error('❌ Error closing database connections:', error);
+    logger.error({ error }, '❌ Error closing database connections');
     process.exit(1);
   }
 };
@@ -76,7 +76,7 @@ export async function checkDatabaseHealth(): Promise<boolean> {
     await prisma.$queryRaw`SELECT 1`;
     return true;
   } catch (error) {
-    logger.error('Database health check failed:', error);
+    logger.error({ error }, 'Database health check failed');
     return false;
   }
 }

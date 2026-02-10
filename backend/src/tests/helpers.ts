@@ -49,20 +49,17 @@ export async function createTestCategory(overrides?: {
  */
 export async function createTestProduct(categoryId: string, overrides?: {
   id?: string;
-  name?: string;
-  price?: number;
-  stock?: number;
+  title?: string;
+  basePrice?: number;
 }) {
   return await prisma.product.create({
     data: {
       id: overrides?.id || 'test-product-id',
-      name: overrides?.name || 'Test Product',
+      title: overrides?.title || 'Test Product',
+      slug: 'test-product',
       description: 'Test product description',
-      price: overrides?.price || 10000,
-      categoryId: categoryId,
-      stock: overrides?.stock || 100,
-      images: ['https://example.com/image.jpg'],
-      slug: 'test-product'
+      basePrice: overrides?.basePrice || 10000,
+      categoryId: categoryId
     }
   });
 }
@@ -75,12 +72,14 @@ export async function createTestProductVariant(productId: string, overrides?: {
   name?: string;
   price?: number;
   stock?: number;
+  sku?: string;
 }) {
   return await prisma.productVariant.create({
     data: {
       id: overrides?.id || 'test-variant-id',
       productId: productId,
       name: overrides?.name || 'Test Variant',
+      sku: overrides?.sku || 'TEST-SKU-001',
       price: overrides?.price || 10000,
       stock: overrides?.stock || 50,
       imagePath: 'https://example.com/variant.jpg'

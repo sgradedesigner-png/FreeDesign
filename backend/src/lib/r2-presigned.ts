@@ -34,10 +34,7 @@ export async function generatePresignedUploadUrl(
   contentType: string,
   expiresIn: number = 3600 // 1 hour
 ): Promise<string> {
-  logger.info('[R2 Presigned] Generating presigned URL...');
-  logger.info('[R2 Presigned] Key:', key);
-  logger.info('[R2 Presigned] Content-Type:', contentType);
-  logger.info('[R2 Presigned] Expires in:', expiresIn, 'seconds');
+  logger.info({ key, contentType, expiresIn }, '[R2 Presigned] Generating presigned URL');
 
   try {
     // CRITICAL FIX: Don't include ContentType in PutObjectCommand
@@ -54,12 +51,11 @@ export async function generatePresignedUploadUrl(
       unhoistableHeaders: new Set(['content-type']), // Don't sign Content-Type
     });
 
-    logger.info('[R2 Presigned] ✅ Presigned URL generated (ContentType NOT signed)');
-    logger.info('[R2 Presigned] URL length:', signedUrl.length);
+    logger.info({ urlLength: signedUrl.length }, '[R2 Presigned] ✅ Presigned URL generated (ContentType NOT signed)');
 
     return signedUrl;
   } catch (error) {
-    logger.error('[R2 Presigned] ❌ Failed to generate presigned URL:', error);
+    logger.error({ error }, '[R2 Presigned] ❌ Failed to generate presigned URL');
     throw error;
   }
 }
@@ -94,7 +90,7 @@ export async function generatePresignedPost(
 
     return presignedPost;
   } catch (error) {
-    logger.error('[R2 Presigned POST] ❌ Failed:', error);
+    logger.error({ error }, '[R2 Presigned POST] ❌ Failed');
     throw error;
   }
 }
@@ -114,9 +110,7 @@ export async function generateProductImageUploadUrl(
   filename: string,
   contentType: string
 ): Promise<{ uploadUrl: string; publicUrl: string; key: string }> {
-  logger.info('[R2 Product Presigned] Generating upload URL for product image...');
-  logger.info('[R2 Product Presigned] Product ID:', productId);
-  logger.info('[R2 Product Presigned] Filename:', filename);
+  logger.info({ productId, filename }, '[R2 Product Presigned] Generating upload URL for product image');
 
   const timestamp = Date.now();
   // ✅ Bucket нэр нь "products" тул "products/" prefix нэмэх шаардлагагүй
@@ -125,8 +119,7 @@ export async function generateProductImageUploadUrl(
   const uploadUrl = await generatePresignedUploadUrl(key, contentType);
   const publicUrl = getPublicUrl(key);
 
-  logger.info('[R2 Product Presigned] ✅ URLs generated');
-  logger.info('[R2 Product Presigned] Public URL:', publicUrl);
+  logger.info({ publicUrl }, '[R2 Product Presigned] ✅ URLs generated');
 
   return {
     uploadUrl,

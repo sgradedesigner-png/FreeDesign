@@ -76,7 +76,7 @@ class EmailService {
     }
 
     this.resend = new Resend(this.config.apiKey);
-    logger.info('[Email Service] Initialized with from:', `${this.config.fromName} <${this.config.from}>`);
+    logger.info({ from: `${this.config.fromName} <${this.config.from}>` }, '[Email Service] Initialized');
   }
 
   /**
@@ -84,7 +84,7 @@ class EmailService {
    */
   async sendEmail(params: SendEmailParams): Promise<{ success: boolean; messageId?: string; error?: string }> {
     if (!this.config.apiKey) {
-      logger.error('[Email Service] Cannot send email: RESEND_API_KEY not configured');
+      logger.error({}, '[Email Service] Cannot send email: RESEND_API_KEY not configured');
       return { success: false, error: 'Email service not configured' };
     }
 
@@ -92,7 +92,7 @@ class EmailService {
     const emails = Array.isArray(params.to) ? params.to : [params.to];
     const invalidEmails = emails.filter(email => !isValidEmail(email));
     if (invalidEmails.length > 0) {
-      logger.error('[Email Service] Invalid email addresses:', invalidEmails);
+      logger.error({ invalidEmails }, '[Email Service] Invalid email addresses');
       return { success: false, error: `Invalid email addresses: ${invalidEmails.join(', ')}` };
     }
 
@@ -103,11 +103,11 @@ class EmailService {
         ? (Array.isArray(params.to) ? params.to.map(maskEmail) : maskEmail(params.to))
         : params.to;
 
-      logger.info('[Email Service] Sending email:', {
+      logger.info({
         to: logTo,
         subject: params.subject,
         from: `${this.config.fromName} <${this.config.from}>`
-      });
+      }, '[Email Service] Sending email');
 
       const { data, error } = await this.resend.emails.send({
         from: `${this.config.fromName} <${this.config.from}>`,
@@ -118,14 +118,14 @@ class EmailService {
       });
 
       if (error) {
-        logger.error('[Email Service] Failed to send email:', error);
+        logger.error({ error }, '[Email Service] Failed to send email');
         return { success: false, error: error.message };
       }
 
-      logger.info('[Email Service] ✅ Email sent successfully:', data?.id);
+      logger.info({ messageId: data?.id }, '[Email Service] Email sent successfully');
       return { success: true, messageId: data?.id };
     } catch (error: any) {
-      logger.error('[Email Service] Error sending email:', error);
+      logger.error({ error }, '[Email Service] Error sending email');
       return { success: false, error: error.message };
     }
   }

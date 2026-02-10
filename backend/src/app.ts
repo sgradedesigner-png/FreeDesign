@@ -516,16 +516,19 @@ app.register(testEmailRoutes);
 // 7) Error Handlers
 // Set custom error handler with Sentry integration
 app.setErrorHandler((error, request, reply) => {
+  // Type guard: ensure error is Error instance
+  const err = error instanceof Error ? error : new Error(String(error));
+
   // Log error locally
   request.log.error({
-    error: error.message,
-    stack: error.stack,
+    error: err.message,
+    stack: err.stack,
     url: request.url,
     method: request.method,
   }, 'Request error');
 
   // Send to Sentry (production monitoring)
-  captureException(error, {
+  captureException(err, {
     url: request.url,
     method: request.method,
     userId: (request as any).user?.id,
@@ -533,7 +536,7 @@ app.setErrorHandler((error, request, reply) => {
   });
 
   // Use existing error handler for response
-  return errorHandler(error, request, reply);
+  return errorHandler(err, request, reply);
 });
 
 // Set custom 404 handler (handles routes that don't exist)

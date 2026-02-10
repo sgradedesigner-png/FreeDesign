@@ -27,7 +27,7 @@ export const prismaQueryLogger: Prisma.Middleware = async (params, next) => {
   // VERIFICATION: Enhanced diagnostic logging (DEV/TEST only)
   const perfDiag = process.env.PERF_DIAG === 'true' || process.env.NODE_ENV !== 'production';
   if (perfDiag && params.model === 'Product') {
-    logger.debug(`[PERF_DIAG] Product.${params.action} took ${duration}ms`);
+    logQuery(`[PERF_DIAG] Product.${params.action}`, duration);
   }
 
   // Log query with duration and params

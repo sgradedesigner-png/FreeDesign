@@ -1,4 +1,4 @@
-import { logger } from '../lib/logger';
+import { logger } from '../../lib/logger';
 import type { FastifyInstance } from 'fastify';
 import { adminGuard } from '../../supabaseauth';
 import { uploadProductImage } from '../../lib/r2';
@@ -10,8 +10,7 @@ export async function adminUploadRoutes(app: FastifyInstance) {
 
   // 📤 Upload product image
   app.post('/product-image', async (request, reply) => {
-    logger.info('\n[Upload Route] ========== NEW UPLOAD REQUEST ==========');
-    logger.info('[Upload Route] Headers:', JSON.stringify(request.headers, null, 2));
+    logger.info({ headers: request.headers }, '[Upload Route] NEW UPLOAD REQUEST');
 
     try {
       // Get the uploaded file using multipart
@@ -23,15 +22,12 @@ export async function adminUploadRoutes(app: FastifyInstance) {
         return reply.status(400).send({ message: 'No file uploaded' });
       }
 
-      logger.info('[Upload Route] File received:');
-      logger.info('[Upload Route]   - Filename:', data.filename);
-      logger.info('[Upload Route]   - MIME type:', data.mimetype);
-      logger.info('[Upload Route]   - Encoding:', data.encoding);
+      logger.info({ filename: data.filename, mimetype: data.mimetype, encoding: data.encoding }, '[Upload Route] File received');
 
       // Validate file type (images only)
       const allowedMimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
       if (!allowedMimeTypes.includes(data.mimetype)) {
-        logger.info('[Upload Route] ❌ Invalid file type:', data.mimetype);
+        logger.info({ mimetype: data.mimetype }, '[Upload Route] Invalid file type');
         return reply.status(400).send({
           message: 'Invalid file type. Only JPEG, PNG, and WebP images are allowed.',
         });
@@ -41,10 +37,10 @@ export async function adminUploadRoutes(app: FastifyInstance) {
       const maxSize = 5 * 1024 * 1024; // 5MB
       logger.info('[Upload Route] Converting to buffer...');
       const buffer = await data.toBuffer();
-      logger.info('[Upload Route] Buffer size:', buffer.length, 'bytes');
+      logger.info({ bufferSize: buffer.length }, '[Upload Route] Buffer converted');
 
       if (buffer.length > maxSize) {
-        logger.info('[Upload Route] ❌ File too large:', buffer.length, '>', maxSize);
+        logger.info({ bufferSize: buffer.length, maxSize }, '[Upload Route] File too large');
         return reply.status(400).send({
           message: 'File too large. Maximum size is 5MB.',
         });
@@ -55,16 +51,13 @@ export async function adminUploadRoutes(app: FastifyInstance) {
         ? String(request.query.productId)
         : `temp-${Date.now()}`;
 
-      logger.info('[Upload Route] Product ID:', productId);
-
       // Get filename
       const originalFilename = data.filename;
       const ext = originalFilename.split('.').pop() || 'webp';
       const timestamp = Date.now();
       const filename = `${timestamp}-${originalFilename}`;
 
-      logger.info('[Upload Route] Generated filename:', filename);
-      logger.info('[Upload Route] Extension:', ext);
+      logger.info({ productId, filename, ext }, '[Upload Route] File metadata generated');
 
       // Upload to R2
       logger.info('[Upload Route] Calling uploadProductImage...');
@@ -75,9 +68,6 @@ export async function adminUploadRoutes(app: FastifyInstance) {
         data.mimetype
       );
 
-      logger.info('[Upload Route] ✅ Upload successful!');
-      logger.info('[Upload Route] URL:', url);
-
       const response = {
         url,
         filename,
@@ -85,23 +75,19 @@ export async function adminUploadRoutes(app: FastifyInstance) {
         mimeType: data.mimetype,
       };
 
-      logger.info('[Upload Route] Returning response:', JSON.stringify(response, null, 2));
+      logger.info({ response }, '[Upload Route] Upload successful');
       return response;
     } catch (error) {
-      logger.error('[Upload Route] ❌ Upload failed');
-      logger.error('[Upload Route] Error type:', error instanceof Error ? error.constructor.name : typeof error);
-      logger.error('[Upload Route] Error message:', error instanceof Error ? error.message : String(error));
+      const errorDetails = error instanceof Error ? {
+        type: error.constructor.name,
+        message: error.message,
+        stack: error.stack,
+        code: (error as any).code,
+        errno: (error as any).errno,
+        syscall: (error as any).syscall,
+      } : { message: String(error) };
 
-      if (error instanceof Error) {
-        logger.error('[Upload Route] Error stack:', error.stack);
-
-        const errorObj = error as any;
-        logger.error('[Upload Route] Error details:', {
-          code: errorObj.code,
-          errno: errorObj.errno,
-          syscall: errorObj.syscall,
-        });
-      }
+      logger.error(errorDetails, '[Upload Route] Upload failed');
 
       return reply.status(500).send({
         message: 'Failed to upload image',
@@ -165,7 +151,7 @@ export async function adminUploadRoutes(app: FastifyInstance) {
         count: uploadedUrls.length,
       };
     } catch (error) {
-      logger.error('Upload error:', error);
+      logger.error({ error }, 'Upload error');
       return reply.status(500).send({
         message: 'Failed to upload images',
         error: error instanceof Error ? error.message : 'Unknown error',

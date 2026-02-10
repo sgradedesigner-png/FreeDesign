@@ -77,7 +77,7 @@ export class QPayService {
     this.mockMode = process.env.QPAY_MOCK_MODE === 'true'
 
     if (this.mockMode) {
-      logger.info('[MOCK] QPay Mock Mode Enabled - Using fake payment responses')
+      logger.info({ mode: 'mock' }, 'QPay Mock Mode Enabled')
     }
 
     const rawBaseUrl = process.env.QPAY_BASE_URL || ''
@@ -95,7 +95,7 @@ export class QPayService {
       invoiceMaxRetries: Math.max(1, Number(process.env.QPAY_INVOICE_MAX_RETRIES || 3))
     }
 
-    logger.info('[QPay Config]', {
+    logger.info({
       baseURL: this.config.baseURL,
       username: this.config.username,
       invoiceCode: this.config.invoiceCode,
@@ -103,7 +103,7 @@ export class QPayService {
       requestTimeoutMs: this.config.requestTimeoutMs,
       invoiceMaxRetries: this.config.invoiceMaxRetries,
       callbackUrl: process.env.QPAY_CALLBACK_URL || ''
-    })
+    }, 'QPay Config')
 
     // Create HTTPS agent for better SSL/TLS handling
     const httpsAgent = new https.Agent({
@@ -142,7 +142,11 @@ export class QPayService {
     this.client.interceptors.request.use(async (config) => {
       // Skip auth for token endpoint
       if (config.url?.includes('/auth/token')) {
-        logger.debug(`${config.method?.toUpperCase()} ${config.url} (no auth)`, 'QPay Request')
+        logger.debug({
+        method: config.method?.toUpperCase(),
+        url: config.url,
+        auth: false
+      }, 'QPay Request')
         return config
       }
 
@@ -281,9 +285,9 @@ export class QPayService {
       const expiresIn = response.data.expires_in || 3600
       this.tokenExpiry = new Date(Date.now() + expiresIn * 1000)
 
-      logger.info('[OK] QPay token obtained successfully')
-    } catch (error) {
-      logger.error('[ERROR] Failed to get QPay token:', error)
+      logger.info({ expiresIn: response.data.expires_in }, 'QPay token obtained successfully')
+    } catch (error: any) {
+      logger.error({ error: error?.message || String(error) }, 'Failed to get QPay token')
       throw new Error('QPay authentication failed')
     }
   }
@@ -313,9 +317,9 @@ export class QPayService {
       const expiresIn = response.data.expires_in || 3600
       this.tokenExpiry = new Date(Date.now() + expiresIn * 1000)
 
-      logger.info('[OK] QPay token refreshed successfully')
-    } catch (error) {
-      logger.error('[ERROR] Failed to refresh token, getting new one:', error)
+      logger.info({ expiresIn: response.data.expires_in }, 'QPay token refreshed successfully')
+    } catch (error: any) {
+      logger.error({ error: error?.message || String(error) }, 'Failed to refresh token, getting new one')
       await this.getToken()
     }
   }
@@ -388,7 +392,7 @@ export class QPayService {
         ]
       }
 
-      logger.info(`[MOCK] Mock QPay invoice created: ${mockInvoiceId} for order ${params.orderNumber}`)
+      logger.info({ invoiceId: mockInvoiceId, orderNumber: params.orderNumber, mode: 'mock' }, 'Mock QPay invoice created')
       return mockResponse
     }
 
@@ -405,7 +409,8 @@ export class QPayService {
 
       if (/localhost|127\.0\.0\.1/i.test(invoiceRequest.callback_url)) {
         logger.warn(
-          '[WARN] QPAY_CALLBACK_URL points to localhost. QPay sandbox may reject invoice or fail callback. Use ngrok/public HTTPS callback URL.'
+          { callbackUrl: invoiceRequest.callback_url },
+          'QPAY_CALLBACK_URL points to localhost. QPay sandbox may reject invoice or fail callback. Use ngrok/public HTTPS callback URL.'
         )
       }
 
@@ -420,7 +425,7 @@ export class QPayService {
             invoiceRequest
           )
 
-          logger.info('[OK] QPay invoice created:', response.data.invoice_id)
+          logger.info({ invoiceId: response.data.invoice_id }, 'QPay invoice created')
           return response.data
         } catch (primaryError: any) {
           let candidateError: any = primaryError
@@ -430,7 +435,8 @@ export class QPayService {
 
           if (shouldTrySandboxFallback) {
             logger.warn(
-              `[WARN] Primary invoice endpoint returned 404. Retrying with fallback endpoint: ${fallbackEndpoint}`
+              { endpoint: fallbackEndpoint },
+              'Primary invoice endpoint returned 404. Retrying with fallback endpoint'
             )
 
             try {
@@ -439,7 +445,7 @@ export class QPayService {
                 invoiceRequest
               )
 
-              logger.info('[OK] QPay invoice created via fallback endpoint:', fallbackResponse.data.invoice_id)
+              logger.info({ invoiceId: fallbackResponse.data.invoice_id, endpoint: 'fallback' }, 'QPay invoice created via fallback endpoint')
               return fallbackResponse.data
             } catch (fallbackError: any) {
               candidateError = fallbackError
@@ -454,7 +460,8 @@ export class QPayService {
 
           const backoffMs = 1000 * attempt
           logger.warn(
-            `[WARN] QPay invoice create retry ${attempt}/${this.config.invoiceMaxRetries - 1} after ${backoffMs}ms: ${this.formatAxiosError(candidateError)}`
+            { attempt, maxRetries: this.config.invoiceMaxRetries, backoffMs, error: this.formatAxiosError(candidateError) },
+            'QPay invoice create retry'
           )
           await this.sleep(backoffMs)
         }
@@ -466,7 +473,7 @@ export class QPayService {
 
       throw new Error('Unknown invoice creation error')
     } catch (error: any) {
-      logger.error('[ERROR] Failed to create QPay invoice:', this.formatAxiosError(error))
+      logger.error({ error: this.formatAxiosError(error) }, 'Failed to create QPay invoice')
       throw new Error('Failed to create payment invoice')
     }
   }
@@ -521,7 +528,8 @@ export class QPayService {
 
       if (/localhost|127\.0\.0\.1/i.test(invoiceRequest.callback_url)) {
         logger.warn(
-          '[WARN] QPAY_CALLBACK_URL points to localhost. QPay sandbox may reject invoice or fail callback. Use ngrok/public HTTPS callback URL.'
+          { callbackUrl: invoiceRequest.callback_url },
+          'QPAY_CALLBACK_URL points to localhost. QPay sandbox may reject invoice or fail callback. Use ngrok/public HTTPS callback URL.'
         )
       }
 
@@ -533,7 +541,7 @@ export class QPayService {
           invoiceRequest
         )
 
-        logger.info('[OK] QPay detailed invoice created:', response.data.invoice_id)
+        logger.info({ invoiceId: response.data.invoice_id }, 'QPay detailed invoice created')
         return response.data
       } catch (primaryError: any) {
         const status = primaryError?.response?.status
@@ -546,7 +554,8 @@ export class QPayService {
 
         const fallbackEndpoint = '/v2/invoice/test'
         logger.warn(
-          `[WARN] Primary detailed invoice endpoint returned 404. Retrying with fallback endpoint: ${fallbackEndpoint}`
+          { endpoint: fallbackEndpoint },
+          'Primary detailed invoice endpoint returned 404. Retrying with fallback endpoint'
         )
 
         const fallbackResponse = await this.client.post<QPayInvoiceResponse>(
@@ -554,11 +563,11 @@ export class QPayService {
           invoiceRequest
         )
 
-        logger.info('[OK] QPay detailed invoice created via fallback endpoint:', fallbackResponse.data.invoice_id)
+        logger.info({ invoiceId: fallbackResponse.data.invoice_id, endpoint: 'fallback' }, 'QPay detailed invoice created via fallback endpoint')
         return fallbackResponse.data
       }
     } catch (error: any) {
-      logger.error('[ERROR] Failed to create detailed invoice:', this.formatAxiosError(error))
+      logger.error({ error: this.formatAxiosError(error) }, 'Failed to create detailed invoice')
       throw new Error('Failed to create payment invoice')
     }
   }
@@ -579,7 +588,7 @@ export class QPayService {
         // After 30 seconds, simulate successful payment
         if (elapsed > 30000) {
           const mockPaymentId = `MOCK_PAY_${Date.now()}`
-          logger.info(`[MOCK] Mock payment PAID for invoice ${invoiceId}`)
+          logger.info({ invoiceId, paymentId: mockPaymentId, mode: 'mock' }, 'Mock payment PAID for invoice')
 
           return {
             count: 1,
@@ -599,7 +608,7 @@ export class QPayService {
       }
 
       // Still waiting for payment
-      logger.info(`[MOCK] Mock payment UNPAID for invoice ${invoiceId}`)
+      logger.info({ invoiceId, mode: 'mock' }, 'Mock payment UNPAID for invoice')
       return {
         count: 0,
         paid_amount: 0,
@@ -625,7 +634,7 @@ export class QPayService {
 
       return response.data
     } catch (error: any) {
-      logger.error('[ERROR] Failed to check payment:', this.formatAxiosError(error))
+      logger.error({ error: this.formatAxiosError(error) }, 'Failed to check payment')
       throw new Error('Failed to check payment status')
     }
   }
@@ -638,7 +647,7 @@ export class QPayService {
       const response = await this.client.get(`/v2/payment/${paymentId}`)
       return response.data
     } catch (error: any) {
-      logger.error('[ERROR] Failed to get payment:', this.formatAxiosError(error))
+      logger.error({ error: this.formatAxiosError(error) }, 'Failed to get payment')
       throw new Error('Failed to get payment details')
     }
   }
@@ -649,9 +658,9 @@ export class QPayService {
   async cancelInvoice(invoiceId: string): Promise<void> {
     try {
       await this.client.delete(`/v2/invoice/${invoiceId}`)
-      logger.info('[OK] Invoice cancelled:', invoiceId)
+      logger.info({ invoiceId }, 'Invoice cancelled')
     } catch (error: any) {
-      logger.error('[ERROR] Failed to cancel invoice:', this.formatAxiosError(error))
+      logger.error({ error: this.formatAxiosError(error) }, 'Failed to cancel invoice')
       throw new Error('Failed to cancel invoice')
     }
   }
@@ -670,12 +679,13 @@ export class QPayService {
     })
 
     try {
-      logger.info(`[QPay Cancel] start invoiceId=${invoiceId} timeoutMs=${timeoutMs}`)
+      logger.info({ invoiceId, timeoutMs }, 'QPay Cancel start')
       await Promise.race([this.cancelInvoice(invoiceId), timeoutPromise])
-      logger.info(`[QPay Cancel] success invoiceId=${invoiceId} elapsedMs=${Date.now() - startedAt}`)
+      logger.info({ invoiceId, elapsedMs: Date.now() - startedAt }, 'QPay Cancel success')
     } catch (error: any) {
       logger.warn(
-        `[QPay Cancel] failed invoiceId=${invoiceId} elapsedMs=${Date.now() - startedAt} reason=${error?.message || 'unknown'}`
+        { invoiceId, elapsedMs: Date.now() - startedAt, reason: error?.message || 'unknown' },
+        'QPay Cancel failed'
       )
       throw error
     } finally {
@@ -693,9 +703,9 @@ export class QPayService {
     try {
       // QPay V2 docs show this endpoint as GET.
       await this.client.get(`/v2/payment/refund/${paymentId}`)
-      logger.info('[OK] Payment refunded:', paymentId)
+      logger.info({ paymentId }, 'Payment refunded')
     } catch (error: any) {
-      logger.error('[ERROR] Failed to refund payment:', this.formatAxiosError(error))
+      logger.error({ error: this.formatAxiosError(error) }, 'Failed to refund payment')
       throw new Error('Failed to refund payment')
     }
   }
@@ -710,10 +720,10 @@ export class QPayService {
         ebarimt_receiver_type: receiverType
       })
 
-      logger.info('[OK] Ebarimt created for payment:', paymentId)
+      logger.info({ paymentId, receiverType }, 'Ebarimt created for payment')
       return response.data
     } catch (error: any) {
-      logger.error('[ERROR] Failed to create ebarimt:', this.formatAxiosError(error))
+      logger.error({ error: this.formatAxiosError(error) }, 'Failed to create ebarimt')
       throw new Error('Failed to create electronic receipt')
     }
   }

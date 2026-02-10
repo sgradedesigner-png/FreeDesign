@@ -1,4 +1,4 @@
-import { logger } from '../lib/logger';
+import { logger } from '../../lib/logger';
 import type { FastifyInstance } from 'fastify';
 import { adminGuard } from '../../supabaseauth';
 import { generateProductImageUploadUrl } from '../../lib/r2-presigned';
@@ -22,16 +22,14 @@ export async function adminUploadPresignedRoutes(app: FastifyInstance) {
 
   // 📝 Generate presigned URL for product image upload
   app.post('/presigned-url', async (request, reply) => {
-    logger.info('\n[Presigned Upload] ========== GENERATE PRESIGNED URL ==========');
-
     try {
       const body = generatePresignedSchema.parse(request.body);
 
-      logger.info('[Presigned Upload] Request:', {
+      logger.info({
         filename: body.filename,
         contentType: body.contentType,
         productId: body.productId,
-      });
+      }, '[Presigned Upload] GENERATE PRESIGNED URL');
 
       const productId = body.productId || `temp-${Date.now()}`;
 
@@ -43,8 +41,7 @@ export async function adminUploadPresignedRoutes(app: FastifyInstance) {
         body.contentType
       );
 
-      logger.info('[Presigned Upload] ✅ Presigned URL generated successfully');
-      logger.info('[Presigned Upload] Public URL:', result.publicUrl);
+      logger.info({ publicUrl: result.publicUrl }, '[Presigned Upload] Presigned URL generated successfully');
 
       return {
         uploadUrl: result.uploadUrl,
@@ -52,8 +49,7 @@ export async function adminUploadPresignedRoutes(app: FastifyInstance) {
         key: result.key,
       };
     } catch (error) {
-      logger.error('[Presigned Upload] ❌ Failed to generate presigned URL');
-      logger.error('[Presigned Upload] Error:', error);
+      logger.error({ error }, '[Presigned Upload] Failed to generate presigned URL');
 
       if (error instanceof z.ZodError) {
         return reply.status(400).send({

@@ -4,7 +4,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { r2Url } from '@/lib/r2';
 import { ShoppingBag } from 'lucide-react';
 import type { Product } from '../../data/products';
-import { useQueryClient } from '@tantml/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { prefetchProduct, seedProductCache } from '../../data/products.queries';
 import { logger } from '@/lib/logger';
 

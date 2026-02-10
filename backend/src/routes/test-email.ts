@@ -17,7 +17,7 @@ export default async function testEmailRoutes(fastify: FastifyInstance) {
     }
 
     try {
-      logger.info('[Test Email] Sending test email to:', to);
+      logger.info({ to }, '[Test Email] Sending test email');
       const result = await emailService.sendTestEmail(to);
 
       if (result.success) {
@@ -33,7 +33,7 @@ export default async function testEmailRoutes(fastify: FastifyInstance) {
         });
       }
     } catch (error: any) {
-      logger.error('[Test Email] Error:', error);
+      logger.error({ error }, '[Test Email] Error');
       return reply.code(500).send({
         error: 'Failed to send test email',
         details: error.message
@@ -52,7 +52,7 @@ export default async function testEmailRoutes(fastify: FastifyInstance) {
     }
 
     try {
-      logger.info('[Test Email] Sending order confirmation test to:', to);
+      logger.info({ to }, '[Test Email] Sending order confirmation test');
 
       const result = await emailService.sendOrderConfirmation(to, {
         orderId: 'test-order-123456',
@@ -78,7 +78,7 @@ export default async function testEmailRoutes(fastify: FastifyInstance) {
         });
       }
     } catch (error: any) {
-      logger.error('[Test Email] Error:', error);
+      logger.error({ error }, '[Test Email] Error');
       return reply.code(500).send({
         error: 'Failed to send test email',
         details: error.message
@@ -97,7 +97,7 @@ export default async function testEmailRoutes(fastify: FastifyInstance) {
     }
 
     try {
-      logger.info('[Test Email] Sending expiration warning test to:', to);
+      logger.info({ to }, '[Test Email] Sending expiration warning test');
 
       const result = await emailService.sendExpirationWarning(to, {
         orderId: 'test-order-123456',
@@ -119,7 +119,7 @@ export default async function testEmailRoutes(fastify: FastifyInstance) {
         });
       }
     } catch (error: any) {
-      logger.error('[Test Email] Error:', error);
+      logger.error({ error }, '[Test Email] Error');
       return reply.code(500).send({
         error: 'Failed to send test email',
         details: error.message

@@ -1,4 +1,4 @@
-import { logger } from '../lib/logger';
+import { logger } from '../../lib/logger';
 import type { FastifyInstance } from 'fastify';
 import { randomUUID } from 'crypto';
 import { z } from 'zod';
@@ -409,8 +409,7 @@ export async function adminProductRoutes(app: FastifyInstance) {
     const schema = z.object({ id: z.string().uuid() });
     const { id } = schema.parse(request.params);
 
-    logger.info('\n[Delete Product] ========== DELETE PRODUCT REQUEST ==========');
-    logger.info('[Delete Product] Product ID:', id);
+    logger.info({ productId: id }, '[Delete Product] DELETE PRODUCT REQUEST');
 
     try {
       // Step 1: Check if product exists and get variants
@@ -424,33 +423,31 @@ export async function adminProductRoutes(app: FastifyInstance) {
         return reply.status(404).send({ message: 'Product not found' });
       }
 
-      logger.info('[Delete Product] ✅ Product found:', product.title);
-      logger.info('[Delete Product] Variants:', product.variants.length);
+      logger.info({ title: product.title, variantCount: product.variants.length }, '[Delete Product] Product found');
 
       // Step 2: Delete all variant images from R2 storage
       logger.info('[Delete Product] Step 1: Deleting variant images from R2...');
       try {
         const deletedCount = await deleteProductImages(id);
-        logger.info('[Delete Product] ✅ Deleted', deletedCount, 'files from R2');
+        logger.info({ deletedCount }, '[Delete Product] Deleted files from R2');
       } catch (r2Error) {
-        logger.error('[Delete Product] ⚠️ R2 deletion failed, but continuing...', r2Error);
+        logger.error({ error: r2Error }, '[Delete Product] R2 deletion failed, but continuing...');
         // Continue even if R2 deletion fails - don't block product deletion
       }
 
       // Step 3: Delete product from database (variants auto-deleted via CASCADE)
       logger.info('[Delete Product] Step 2: Deleting product from database...');
       await prisma.product.delete({ where: { id } });
-      logger.info('[Delete Product] ✅ Product and all variants deleted from database');
+      logger.info('[Delete Product] Product and all variants deleted from database');
 
       productsCache.clear();
-      logger.info('[Delete Product] ========== DELETE COMPLETE ==========\n');
+      logger.info('[Delete Product] DELETE COMPLETE');
       return {
         ok: true,
         message: 'Product, variants, and all associated images deleted successfully'
       };
     } catch (error) {
-      logger.error('[Delete Product] ❌ Delete failed');
-      logger.error('[Delete Product] Error:', error);
+      logger.error({ error }, '[Delete Product] Delete failed');
       return reply.status(500).send({
         message: 'Failed to delete product',
         error: error instanceof Error ? error.message : 'Unknown error'

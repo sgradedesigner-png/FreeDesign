@@ -80,8 +80,9 @@ export function validateEnv(): Env {
     return parsed;
   } catch (error) {
     if (error instanceof z.ZodError) {
+      const zodError = error as z.ZodError<Env>;
       console.error('\n❌ Environment validation failed:\n');
-      error.errors.forEach((err) => {
+      zodError.issues.forEach((err: z.ZodIssue) => {
         const field = err.path.join('.');
         console.error(`  • ${field}: ${err.message}`);
       });
