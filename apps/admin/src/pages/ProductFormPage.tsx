@@ -21,6 +21,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ArrowLeft, Loader2, Upload, X, Plus, Trash2, AlertCircle, CheckCircle2, Image as ImageIcon, Video } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { logger } from '@/lib/logger';
 
 type Category = {
   id: string;
@@ -203,7 +204,7 @@ export default function ProductFormPage() {
         }
       })
       .catch((error) => {
-        console.error('Failed to prefill Nike data:', error);
+        logger.error('Failed to prefill Nike data:', error);
         const backendMessage =
           error?.response?.data?.message ||
           error?.message ||
@@ -258,12 +259,12 @@ export default function ProductFormPage() {
       const { data } = await api.get<Category[]>('/admin/categories');
       setCategories(data);
     } catch (error) {
-      console.error('Failed to fetch categories:', error);
+      logger.error('Failed to fetch categories:', error);
     }
   };
 
   const fetchProduct = async (productId: string) => {
-    console.log('🔄 fetchProduct called for:', productId);
+    logger.debug('🔄 fetchProduct called for:', productId);
     try {
       setLoading(true);
       const { data } = await api.get(`/admin/products/${productId}`);
@@ -282,13 +283,13 @@ export default function ProductFormPage() {
       setSubtitle(data.subtitle || '');
 
       const publishedValue = Boolean(data.is_published ?? data.isPublished ?? false);
-      console.log('📥 fetchProduct setting isPublished to:', publishedValue, { is_published: data.is_published, isPublished: data.isPublished, isSavingPublishStatus: isSavingPublishStatusRef.current });
+      logger.debug('📥 fetchProduct setting isPublished to:', publishedValue, { is_published: data.is_published, isPublished: data.isPublished, isSavingPublishStatus: isSavingPublishStatusRef.current });
 
       // Only update isPublished if we're not currently saving it
       if (!isSavingPublishStatusRef.current) {
         setIsPublished(publishedValue);
       } else {
-        console.log('⏭️ Skipping isPublished update (save in progress)');
+        logger.debug('⏭️ Skipping isPublished update (save in progress)');
       }
 
       if (data.variants && data.variants.length > 0) {
@@ -309,7 +310,7 @@ export default function ProductFormPage() {
         );
       }
     } catch (error) {
-      console.error('Failed to fetch product:', error);
+      logger.error('Failed to fetch product:', error);
       alert('Failed to load product');
     } finally {
       setLoading(false);
@@ -345,7 +346,7 @@ export default function ProductFormPage() {
 
       return publicUrl;
     } catch (error) {
-      console.error('Failed to upload file:', error);
+      logger.error('Failed to upload file:', error);
       return null;
     }
   };
@@ -461,7 +462,7 @@ export default function ProductFormPage() {
 
       navigate('/products');
     } catch (error: any) {
-      console.error('Failed to save product:', error);
+      logger.error('Failed to save product:', error);
       alert(error?.response?.data?.message || 'Failed to save product');
     } finally {
       setSubmitting(false);
@@ -769,7 +770,7 @@ export default function ProductFormPage() {
                             isSavingPublishStatusRef.current = true;  // Guard flag
 
                             try {
-                              console.log('💾 Saving publish status:', newValue);
+                              logger.debug('💾 Saving publish status:', newValue);
                               const response = await api.put(`/admin/products/${id}`, {
                                 is_published: newValue,
                               });
@@ -780,10 +781,10 @@ export default function ProductFormPage() {
                                 setIsPublished(Boolean(serverValue));
                               }
 
-                              console.log('✅ Publish status updated:', { newValue, serverValue });
+                              logger.debug('✅ Publish status updated:', { newValue, serverValue });
                             } catch (error: any) {
-                              console.error('❌ Failed to update publish status:', error);
-                              console.error('Error details:', error.response?.data);
+                              logger.error('❌ Failed to update publish status:', error);
+                              logger.error('Error details:', error.response?.data);
 
                               // Revert to previous value on error
                               setIsPublished(previousValue);
@@ -794,7 +795,7 @@ export default function ProductFormPage() {
                               // Clear BOTH state and ref
                               setIsSavingPublishStatus(false);
                               isSavingPublishStatusRef.current = false;
-                              console.log('🏁 Save complete, flags cleared');
+                              logger.debug('🏁 Save complete, flags cleared');
                             }
                           }
                         }}

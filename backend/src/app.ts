@@ -127,6 +127,55 @@ app.register(rateLimit, {
   }
 });
 
+// Security Headers - Protect against common web vulnerabilities
+// Applied to all responses via onSend hook
+app.addHook('onSend', async (request, reply) => {
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  // Prevent clickjacking attacks
+  reply.header('X-Frame-Options', 'DENY');
+
+  // Prevent MIME type sniffing
+  reply.header('X-Content-Type-Options', 'nosniff');
+
+  // Enable XSS filter in older browsers
+  reply.header('X-XSS-Protection', '1; mode=block');
+
+  // Control referrer information
+  reply.header('Referrer-Policy', 'strict-origin-when-cross-origin');
+
+  // Restrict browser features
+  reply.header('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
+
+  // HSTS - Force HTTPS (production only)
+  if (isProduction) {
+    reply.header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+  }
+
+  // Content Security Policy - Restrict resource loading
+  // Allows: self, Supabase, Cloudflare Turnstile, inline styles (for React)
+  const cspDirectives = [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com",
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: https: blob:",
+    "font-src 'self' data:",
+    "connect-src 'self' https://*.supabase.co https://challenges.cloudflare.com",
+    "frame-src https://challenges.cloudflare.com",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+    "upgrade-insecure-requests"
+  ];
+
+  // In development, allow all for easier debugging
+  if (isDevelopment) {
+    reply.header('Content-Security-Policy-Report-Only', cspDirectives.join('; '));
+  } else {
+    reply.header('Content-Security-Policy', cspDirectives.join('; '));
+  }
+});
+
 // 2) Public routes
 app.get('/', async () => ({ message: 'eCommerce API is running correctly! 🚀' }));
 

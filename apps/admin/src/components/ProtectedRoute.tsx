@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
 import { supabase } from '../lib/supabase';
 import { toast } from 'sonner';
+import { logger } from '../lib/logger';
 
 export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { loading, ok, logout } = useAuth();
@@ -23,7 +24,7 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
         await api.get('/admin/stats');
         setIsAdmin(true);
       } catch (error: any) {
-        console.error('Admin role check failed:', error);
+        logger.error('Admin role check failed:', error);
         // Show user-friendly error message
         toast.error('Access Denied', {
           description: 'You do not have permission to access the admin panel.',

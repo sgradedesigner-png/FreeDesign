@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
+import { logger } from '@/lib/logger';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -118,7 +119,7 @@ export default function ProductsPage() {
       const { data } = await api.get<Category[]>('/admin/categories');
       setCategories(data);
     } catch (error) {
-      console.error('Failed to fetch categories:', error);
+      logger.error('Failed to fetch categories:', error);
     }
   };
 
@@ -216,7 +217,7 @@ export default function ProductsPage() {
       queryClient.invalidateQueries({ queryKey: ['products'] });
       setDeleteDialog({ open: false, product: null });
     } catch (error) {
-      console.error('Failed to delete product:', error);
+      logger.error('Failed to delete product:', error);
     } finally {
       setDeleting(false);
     }
@@ -232,7 +233,7 @@ export default function ProductsPage() {
       setSelectedIds(new Set());
       setBulkDeleteDialog(false);
     } catch (error) {
-      console.error('Failed to delete products:', error);
+      logger.error('Failed to delete products:', error);
     } finally {
       setDeleting(false);
     }

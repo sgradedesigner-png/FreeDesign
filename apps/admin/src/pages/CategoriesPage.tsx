@@ -24,6 +24,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Edit, Plus, Trash2 } from 'lucide-react';
+import { logger } from '@/lib/logger';
 
 type Category = {
   id: string;
@@ -116,7 +117,7 @@ export default function CategoriesPage() {
       queryClient.invalidateQueries({ queryKey: ['categories'] });
       closeFormDialog();
     } catch (error: any) {
-      console.error('Failed to save category:', error);
+      logger.error('Failed to save category:', error);
       alert(error?.response?.data?.message || 'Failed to save category');
     } finally {
       setSubmitting(false);
@@ -132,7 +133,7 @@ export default function CategoriesPage() {
       queryClient.invalidateQueries({ queryKey: ['categories'] });
       setDeleteDialog({ open: false, category: null });
     } catch (error: any) {
-      console.error('Failed to delete category:', error);
+      logger.error('Failed to delete category:', error);
       alert(error?.response?.data?.message || 'Failed to delete category');
     } finally {
       setDeleting(false);

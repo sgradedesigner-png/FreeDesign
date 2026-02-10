@@ -1,5 +1,6 @@
 import axios, { AxiosHeaders } from 'axios';
 import { supabase } from './supabase';
+import { logger } from './logger';
 
 export const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL ?? 'http://localhost:3000',
@@ -47,7 +48,7 @@ api.interceptors.response.use(
 
     // Handle 403 Forbidden - user is not admin
     if (status === 403) {
-      console.error('403 Forbidden: User is not an admin');
+      logger.error('403 Forbidden: User is not an admin');
       localStorage.removeItem('sb-access-token');
       // Don't redirect here - let ProtectedRoute handle it
       return Promise.reject(error);

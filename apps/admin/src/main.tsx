@@ -6,7 +6,12 @@ import { Toaster } from 'sonner';
 import App from './App';
 import { AuthProvider } from './auth/AuthContext';
 import { LanguageProvider } from './context/LanguageContext';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { validateEnv } from './lib/env';
 import './index.css';
+
+// Validate environment variables before app starts
+validateEnv();
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -20,15 +25,17 @@ const queryClient = new QueryClient({
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <LanguageProvider>
-        <AuthProvider>
-          <BrowserRouter>
-            <Toaster position="top-right" richColors />
-            <App />
-          </BrowserRouter>
-        </AuthProvider>
-      </LanguageProvider>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <LanguageProvider>
+          <AuthProvider>
+            <BrowserRouter>
+              <Toaster position="top-right" richColors />
+              <App />
+            </BrowserRouter>
+          </AuthProvider>
+        </LanguageProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   </React.StrictMode>
 );
