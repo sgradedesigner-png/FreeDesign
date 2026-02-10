@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { Prisma } from '@prisma/client';
 import { adminGuard } from '../../supabaseauth';
 import { prisma } from '../../lib/prisma';
+import { productsCache } from '../../lib/cache';
 import { deleteProductImages } from '../../lib/r2';
 import { importRemoteImageToR2, isHttpUrl, isR2PublicUrl } from '../../lib/remote-image-import';
 
@@ -196,6 +197,7 @@ export async function adminProductRoutes(app: FastifyInstance) {
       },
     });
 
+    productsCache.clear();
     return product;
   });
 
@@ -397,6 +399,7 @@ export async function adminProductRoutes(app: FastifyInstance) {
       },
     });
 
+    productsCache.clear();
     return updated;
   });
 
@@ -438,6 +441,7 @@ export async function adminProductRoutes(app: FastifyInstance) {
       await prisma.product.delete({ where: { id } });
       console.log('[Delete Product] ✅ Product and all variants deleted from database');
 
+      productsCache.clear();
       console.log('[Delete Product] ========== DELETE COMPLETE ==========\n');
       return {
         ok: true,
