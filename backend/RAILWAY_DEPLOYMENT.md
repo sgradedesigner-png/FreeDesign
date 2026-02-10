@@ -161,7 +161,7 @@ LOG_LEVEL=info  # Options: debug, info, warn, error
 
 ```bash
 # Comma-separated list of allowed origins
-CORS_ORIGIN=https://your-store-app.pages.dev,https://your-admin-app.pages.dev
+CORS_ORIGIN=https://ecommerce-final-project.pages.dev,https://korean-goods.com,https://www.korean-goods.com,https://admin.korean-goods.com
 ```
 
 ---
