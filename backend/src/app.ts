@@ -5,6 +5,8 @@ import rateLimit from '@fastify/rate-limit';
 import compress from '@fastify/compress';
 import cookie from '@fastify/cookie';
 import csrf from '@fastify/csrf-protection';
+import swagger from '@fastify/swagger';
+import swaggerUi from '@fastify/swagger-ui';
 import dotenv from 'dotenv';
 
 // Load environment variables first
@@ -47,6 +49,64 @@ const app = fastify({
   genReqId: () => {
     return `req-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
   }
+});
+
+// Register Swagger/OpenAPI documentation
+app.register(swagger, {
+  openapi: {
+    info: {
+      title: 'Korean Goods E-commerce API',
+      description: 'Солонгос хувцас, гоо сайхны бүтээгдэхүүний онлайн худалдааны платформын Backend API',
+      version: '1.0.0',
+      contact: {
+        name: 'API Support',
+        email: 'support@koreangoods.mn',
+      },
+    },
+    servers: [
+      {
+        url: 'http://localhost:3000',
+        description: 'Хөгжүүлэлтийн сервер (Development)',
+      },
+      {
+        url: 'https://api.koreangoods.mn',
+        description: 'Продакшн сервер (Production)',
+      },
+    ],
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+          description: 'Supabase JWT token (Authorization: Bearer <token>)',
+        },
+      },
+    },
+    tags: [
+      { name: 'Products', description: 'Бүтээгдэхүүн' },
+      { name: 'Categories', description: 'Ангилал' },
+      { name: 'Orders', description: 'Захиалга' },
+      { name: 'Payment', description: 'Төлбөр' },
+      { name: 'Profile', description: 'Хэрэглэгчийн мэдээлэл' },
+      { name: 'Admin', description: 'Админ удирдлага' },
+      { name: 'Health', description: 'Эрүүл мэнд шалгалт' },
+    ],
+  },
+});
+
+app.register(swaggerUi, {
+  routePrefix: '/docs',
+  uiConfig: {
+    docExpansion: 'list',
+    deepLinking: true,
+    displayRequestDuration: true,
+    filter: true,
+    showExtensions: true,
+    showCommonExtensions: true,
+  },
+  staticCSP: true,
+  transformStaticCSP: (header) => header,
 });
 
 // 1) Plugins
@@ -196,16 +256,79 @@ app.addHook('onSend', async (request, reply) => {
 });
 
 // 2) Public routes
-app.get('/', async () => ({ message: 'eCommerce API is running correctly! 🚀' }));
+app.get('/', {
+  schema: {
+    description: 'API анхны хуудас - Статус шалгах',
+    tags: ['Health'],
+    response: {
+      200: {
+        type: 'object',
+        properties: {
+          message: { type: 'string', example: 'eCommerce API is running correctly! 🚀' }
+        }
+      }
+    }
+  }
+}, async () => ({ message: 'eCommerce API is running correctly! 🚀' }));
 
 // CSRF token endpoint - Frontend can fetch this token before making state-changing requests
-app.get('/csrf-token', async (request, reply) => {
+app.get('/csrf-token', {
+  schema: {
+    description: 'CSRF токен авах (Суурьлуулсан cookie-д хадгална)',
+    tags: ['Health'],
+    response: {
+      200: {
+        type: 'object',
+        properties: {
+          csrfToken: { type: 'string', description: 'CSRF хамгаалалтын токен' }
+        }
+      }
+    }
+  }
+}, async (request, reply) => {
   const token = await reply.generateCsrf();
   return { csrfToken: token };
 });
 
 // Health check endpoint - detailed health status
-app.get('/health', async (_request, reply) => {
+app.get('/health', {
+  schema: {
+    description: 'Серверийн эрүүл мэндийн дэлгэрэнгүй статус',
+    tags: ['Health'],
+    response: {
+      200: {
+        type: 'object',
+        properties: {
+          status: { type: 'string', enum: ['healthy'], example: 'healthy' },
+          timestamp: { type: 'string', format: 'date-time' },
+          database: {
+            type: 'object',
+            properties: {
+              connected: { type: 'boolean', example: true },
+              activeConnections: { type: 'number', example: 5 }
+            }
+          },
+          uptime: { type: 'number', description: 'Серверийн ажиллаж байгаа хугацаа (секунд)', example: 12345.67 },
+          memory: { type: 'object', description: 'Санах ойн ашиглалт' }
+        }
+      },
+      503: {
+        type: 'object',
+        properties: {
+          status: { type: 'string', enum: ['unhealthy'], example: 'unhealthy' },
+          timestamp: { type: 'string', format: 'date-time' },
+          database: {
+            type: 'object',
+            properties: {
+              connected: { type: 'boolean', example: false },
+              error: { type: 'string', example: 'Connection refused' }
+            }
+          }
+        }
+      }
+    }
+  }
+}, async (_request, reply) => {
   const { checkDatabaseHealth, getDatabaseMetrics } = await import('./lib/prisma');
 
   const dbHealthy = await checkDatabaseHealth();
@@ -236,7 +359,27 @@ app.get('/health', async (_request, reply) => {
 
 // Readiness check endpoint - for Kubernetes/Docker
 // Returns 200 only when the app is ready to serve traffic
-app.get('/ready', async (_request, reply) => {
+app.get('/ready', {
+  schema: {
+    description: 'Бэлэн байдал шалгах (Kubernetes/Railway-д зориулсан)',
+    tags: ['Health'],
+    response: {
+      200: {
+        type: 'object',
+        properties: {
+          ready: { type: 'boolean', example: true }
+        }
+      },
+      503: {
+        type: 'object',
+        properties: {
+          ready: { type: 'boolean', example: false },
+          reason: { type: 'string', example: 'database_disconnected' }
+        }
+      }
+    }
+  }
+}, async (_request, reply) => {
   const { checkDatabaseHealth } = await import('./lib/prisma');
 
   const dbHealthy = await checkDatabaseHealth();
@@ -249,7 +392,46 @@ app.get('/ready', async (_request, reply) => {
 });
 
 // Metrics endpoint - for monitoring systems
-app.get('/metrics', async (_request, reply) => {
+app.get('/metrics', {
+  schema: {
+    description: 'Серверийн дэлгэрэнгүй метрик мэдээлэл (хяналт, шинжилгээнд)',
+    tags: ['Health'],
+    response: {
+      200: {
+        type: 'object',
+        properties: {
+          timestamp: { type: 'string', format: 'date-time' },
+          uptime: { type: 'number', description: 'Серверийн ажиллаж байгаа хугацаа (секунд)' },
+          memory: {
+            type: 'object',
+            properties: {
+              rss: { type: 'number', description: 'RSS санах ой (bytes)' },
+              heapUsed: { type: 'number', description: 'Heap ашиглаж байгаа (bytes)' },
+              heapTotal: { type: 'number', description: 'Heap нийт (bytes)' },
+              external: { type: 'number', description: 'External санах ой (bytes)' }
+            }
+          },
+          database: {
+            type: 'object',
+            properties: {
+              healthy: { type: 'boolean' },
+              activeConnections: { type: 'number' },
+              error: { type: 'string', nullable: true }
+            }
+          },
+          process: {
+            type: 'object',
+            properties: {
+              pid: { type: 'number', description: 'Process ID' },
+              platform: { type: 'string', example: 'linux' },
+              nodeVersion: { type: 'string', example: 'v20.11.0' }
+            }
+          }
+        }
+      }
+    }
+  }
+}, async (_request, reply) => {
   const { getDatabaseMetrics } = await import('./lib/prisma');
 
   const dbMetrics = await getDatabaseMetrics();
@@ -277,7 +459,23 @@ app.get('/metrics', async (_request, reply) => {
 });
 
 // Circuit Breaker Status endpoint - monitor QPay circuit breakers
-app.get('/circuit-breakers', async (_request, reply) => {
+app.get('/circuit-breakers', {
+  schema: {
+    description: 'QPay Circuit Breaker-ийн статус хянах',
+    tags: ['Health'],
+    response: {
+      200: {
+        type: 'object',
+        properties: {
+          timestamp: { type: 'string', format: 'date-time' },
+          anyCircuitOpen: { type: 'boolean', description: 'Ямар нэг circuit нээлттэй эсэх' },
+          status: { type: 'string', enum: ['healthy', 'degraded'], example: 'healthy' },
+          circuits: { type: 'object', description: 'Circuit-үүдийн дэлгэрэнгүй статус' }
+        }
+      }
+    }
+  }
+}, async (_request, reply) => {
   const { qpayCircuitBreaker } = await import('./services/qpay-circuit-breaker.service');
 
   const stats = qpayCircuitBreaker.getStats();
