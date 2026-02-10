@@ -7,6 +7,17 @@ import cookie from '@fastify/cookie';
 import csrf from '@fastify/csrf-protection';
 import dotenv from 'dotenv';
 
+// Load environment variables first
+dotenv.config();
+
+// CRITICAL: Validate environment before anything else
+import { validateEnv } from './lib/env';
+validateEnv();
+
+// Initialize Sentry (must be after env validation, before app code)
+import { initSentry, captureException } from './lib/sentry';
+initSentry();
+
 import { adminCategoryRoutes } from './routes/admin/categories';
 import { adminProductRoutes } from './routes/admin/products';
 import { adminPrefillRoutes } from './routes/admin/prefill';
@@ -23,28 +34,14 @@ import testEmailRoutes from './routes/test-email';
 import adminCronRoutes from './routes/admin/cron';
 import { prisma } from './lib/prisma'; // Use shared singleton instance
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
-import { logRateLimit } from './lib/logger';
-import pino from 'pino';
+import { logRateLimit, logger } from './lib/logger'; // Use shared logger instance
 import { cronService } from './services/cron.service';
-
-dotenv.config();
 
 const isDevelopment = process.env.NODE_ENV === 'development';
 
+// Use shared logger instance (already configured for dev/prod)
 const app = fastify({
-  logger: isDevelopment ? {
-    transport: {
-      target: 'pino-pretty',
-      options: {
-        colorize: true,
-        translateTime: 'SYS:HH:MM:ss.l',
-        ignore: 'pid,hostname',
-      }
-    },
-    level: 'debug'
-  } : {
-    level: 'info'
-  },
+  logger: logger, // Single source of truth for logging
   disableRequestLogging: false,
   requestIdLogLabel: 'requestId',
   genReqId: () => {
@@ -319,8 +316,27 @@ app.register(adminCronRoutes);
 app.register(testEmailRoutes);
 
 // 7) Error Handlers
-// Set custom error handler (handles all errors thrown in routes)
-app.setErrorHandler(errorHandler);
+// Set custom error handler with Sentry integration
+app.setErrorHandler((error, request, reply) => {
+  // Log error locally
+  request.log.error({
+    error: error.message,
+    stack: error.stack,
+    url: request.url,
+    method: request.method,
+  }, 'Request error');
+
+  // Send to Sentry (production monitoring)
+  captureException(error, {
+    url: request.url,
+    method: request.method,
+    userId: (request as any).user?.id,
+    requestId: request.id,
+  });
+
+  // Use existing error handler for response
+  return errorHandler(error, request, reply);
+});
 
 // Set custom 404 handler (handles routes that don't exist)
 app.setNotFoundHandler(notFoundHandler);

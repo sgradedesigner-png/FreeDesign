@@ -30,6 +30,8 @@
     "@fastify/jwt": "^10.0.0",
     "@fastify/multipart": "^9.4.0",
     "@fastify/rate-limit": "^10.3.0",
+    "@sentry/node": "^10.38.0",
+    "@sentry/profiling-node": "^10.38.0",
     "@smithy/node-http-handler": "^4.4.8",
     "@supabase/supabase-js": "^2.93.3",
     "axios": "^1.13.4",
