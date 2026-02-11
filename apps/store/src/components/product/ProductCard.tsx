@@ -49,12 +49,12 @@ export default function ProductCard({ product }: ProductCardProps) {
   return (
     <div
       data-testid="product-card"
-      className="group relative rounded-3xl overflow-hidden flex flex-col transition-all duration-500
+      className="group relative rounded-3xl overflow-hidden h-full flex flex-col transition-all duration-500
                  bg-card text-card-foreground border border-border/40
                  hover:shadow-2xl hover:shadow-primary/10"
     >
       {/* Image Section */}
-      <div className="relative aspect-[4/5] overflow-hidden bg-muted/20">
+      <div className="relative aspect-[4/5] overflow-hidden rounded-t-3xl bg-muted">
         <Link
           to={`/product/${product.slug}`}
           state={{ product }}
@@ -106,18 +106,18 @@ export default function ProductCard({ product }: ProductCardProps) {
       {/* Product Info Section */}
       <div className="p-5 flex-1 flex flex-col justify-between bg-card">
         <div>
-          <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">
+          <p className="mb-1 line-clamp-1 text-[10px] uppercase tracking-widest text-muted-foreground">
             {product.category}
           </p>
-          <h3 className="font-bold text-base truncate mb-2 text-foreground group-hover:text-primary transition-colors">
+          <h3 className="mb-2 line-clamp-2 min-h-[3rem] text-base font-bold text-foreground transition-colors group-hover:text-primary">
             {product.name}
           </h3>
-          <div className="flex items-baseline gap-2">
-            <p className="text-foreground font-bold text-lg">
+          <div className="flex items-baseline gap-2 overflow-hidden whitespace-nowrap">
+            <p className="shrink-0 text-lg font-bold text-foreground">
               ₮{Number(displayPrice).toLocaleString()}
             </p>
             {defaultVariant?.originalPrice && Number(defaultVariant.originalPrice) > Number(displayPrice) && (
-              <p className="text-muted-foreground text-sm line-through">
+              <p className="truncate text-sm text-muted-foreground line-through">
                 ₮{Number(defaultVariant.originalPrice).toLocaleString()}
               </p>
             )}

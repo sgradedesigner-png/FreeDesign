@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import ProductCard from '../components/product/ProductCard';
+import HomeMobileProductRail from '../components/home/HomeMobileProductRail';
 import { useTheme } from '../context/ThemeContext';
 import { ArrowRight, Package, Shield, Truck, CreditCard } from 'lucide-react';
 import { mapProductFromBackend, type Product } from '../data/products';
@@ -171,8 +172,13 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 3. Trending Products */}
-      <section className="max-w-7xl mx-auto px-6 py-20 bg-muted/20">
+      {/* 3. Mobile Product Discovery */}
+      <section className="md:hidden max-w-7xl mx-auto px-6 py-16" data-testid="home-mobile-feed">
+        <HomeMobileProductRail trending={trending} newArrivals={newArrivals} language={language} />
+      </section>
+
+      {/* 4. Trending Products (Desktop/Tablet) */}
+      <section className="hidden md:block max-w-7xl mx-auto px-6 py-20 bg-muted/20" data-testid="home-trending-desktop">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-heading font-bold text-foreground mb-4">
             🔥 {language === 'mn' ? 'Эрэлттэй бараа' : 'Trending Now'}
@@ -205,8 +211,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 4. New Arrivals */}
-      <section className="max-w-7xl mx-auto px-6 py-20">
+      {/* 5. New Arrivals (Desktop/Tablet) */}
+      <section className="hidden md:block max-w-7xl mx-auto px-6 py-20" data-testid="home-new-arrivals-desktop">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-heading font-bold text-foreground mb-4">
             ✨ {language === 'mn' ? 'Шинэ ирсэн' : 'New Arrivals'}
@@ -239,7 +245,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 5. Trust Badges */}
+      {/* 6. Trust Badges */}
       <section className="max-w-7xl mx-auto px-6 py-20 bg-muted/20">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           <div className="text-center p-8 rounded-2xl bg-card border border-border">
@@ -292,7 +298,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 6. Final CTA Banner */}
+      {/* 7. Final CTA Banner */}
       <section className="relative max-w-7xl mx-auto px-6 py-20 overflow-hidden">
         <div className="relative z-10 rounded-3xl bg-gradient-to-br from-emerald-500 via-cyan-500 to-purple-500 p-12 md:p-16 text-center">
           <h2 className="text-3xl md:text-5xl font-heading font-extrabold text-white mb-6">
