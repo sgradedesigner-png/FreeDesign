@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import ProductCard from '../components/product/ProductCard';
+import HomeCategoryShowcase from '../components/home/HomeCategoryShowcase';
 import HomeMobileProductRail from '../components/home/HomeMobileProductRail';
 import { useTheme } from '../context/ThemeContext';
 import { ArrowRight, Package, Shield, Truck, CreditCard } from 'lucide-react';
@@ -14,7 +15,30 @@ type Category = {
   name: string;
   slug: string;
   productCount?: number;
+  previewImageUrl?: string | null;
 };
+
+type CategoryPreviewVariant = {
+  imagePath?: string | null;
+  image_path?: string | null;
+  galleryPaths?: string[] | null;
+  gallery_paths?: string[] | null;
+};
+
+type CategoryPreviewProduct = {
+  categoryId?: string | null;
+  category_id?: string | null;
+  category?: {
+    id?: string | null;
+  } | null;
+  imagePath?: string | null;
+  image_path?: string | null;
+  galleryPaths?: string[] | null;
+  gallery_paths?: string[] | null;
+  variants?: CategoryPreviewVariant[] | null;
+};
+
+type ProductListResponse = CategoryPreviewProduct[] | { products?: CategoryPreviewProduct[] };
 
 export default function HomePage() {
   const { language } = useTheme();
@@ -53,6 +77,47 @@ export default function HomePage() {
     },
     staleTime: 1000 * 60 * 2,
   });
+
+  // Fetch products once and derive category -> preview image map on client
+  const { data: categoryPreviewByCategoryId = {} } = useQuery<Record<string, string>>({
+    queryKey: ['category-preview-images'],
+    queryFn: async () => {
+      const res = await fetch(`${API_URL}/api/products?limit=100&is_published=true`);
+      if (!res.ok) throw new Error('Failed to fetch products for category preview');
+      const data: ProductListResponse = await res.json();
+      const products = Array.isArray(data) ? data : data.products ?? [];
+
+      const previewByCategoryId: Record<string, string> = {};
+      for (const product of products) {
+        const categoryId = product.categoryId ?? product.category_id ?? product.category?.id;
+        if (!categoryId || previewByCategoryId[categoryId]) continue;
+
+        const firstVariant = product.variants?.[0];
+        const previewImage =
+          product.imagePath ??
+          product.image_path ??
+          product.galleryPaths?.[0] ??
+          product.gallery_paths?.[0] ??
+          firstVariant?.imagePath ??
+          firstVariant?.image_path ??
+          firstVariant?.galleryPaths?.[0] ??
+          firstVariant?.gallery_paths?.[0] ??
+          '';
+
+        if (previewImage) {
+          previewByCategoryId[categoryId] = previewImage;
+        }
+      }
+
+      return previewByCategoryId;
+    },
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const categoriesWithPreview = categories.map((category) => ({
+    ...category,
+    previewImageUrl: categoryPreviewByCategoryId[category.id] ?? null,
+  }));
 
   return (
     <div className="min-h-screen bg-background">
@@ -126,51 +191,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 2. Category Quick Access */}
-      <section className="max-w-7xl mx-auto px-6 py-20">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-heading font-bold text-foreground mb-4">
-            {language === 'mn' ? 'Ангилал' : 'Shop by Category'}
-          </h2>
-          <p className="text-muted-foreground">
-            {language === 'mn' ? 'Өөрт таалагдсан ангиллаа сонгоно уу' : 'Find what you love faster'}
-          </p>
-        </div>
-
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {categories.slice(0, 8).map((category) => (
-            <Link
-              key={category.id}
-              to={`/products?category=${category.slug}`}
-              className="group relative p-8 rounded-2xl bg-card border border-border hover:border-primary hover:shadow-xl hover:shadow-primary/10 transition-all duration-300 text-center"
-            >
-              <div className="mb-4">
-                <div className="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <Package className="text-emerald-400" size={32} />
-                </div>
-              </div>
-              <h3 className="font-bold text-foreground group-hover:text-primary transition-colors">
-                {category.name}
-              </h3>
-              {category.productCount !== undefined && (
-                <p className="text-sm text-muted-foreground mt-1">
-                  {category.productCount} {language === 'mn' ? 'бараа' : 'items'}
-                </p>
-              )}
-            </Link>
-          ))}
-        </div>
-
-        <div className="text-center mt-10">
-          <Link
-            to="/products"
-            className="inline-flex items-center gap-2 text-primary hover:text-primary/80 font-semibold transition-colors"
-          >
-            {language === 'mn' ? 'Бүгдийг харах' : 'View All Categories'}
-            <ArrowRight size={18} />
-          </Link>
-        </div>
-      </section>
+      {/* 2. Category Showcase */}
+      <HomeCategoryShowcase categories={categoriesWithPreview} language={language} />
 
       {/* 3. Mobile Product Discovery */}
       <section className="md:hidden max-w-7xl mx-auto px-6 py-16" data-testid="home-mobile-feed">

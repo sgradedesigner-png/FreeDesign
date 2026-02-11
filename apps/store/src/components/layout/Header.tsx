@@ -44,6 +44,7 @@ export default function Header() {
     { label: menuLabels.collections, href: '/products?filter=collections', icon: 'RectangleStackIcon' },
     { label: menuLabels.about, href: '/about', icon: 'InformationCircleIcon' },
   ];
+  const brandLogoSrc = theme === 'dark' ? '/kg-goods-dark.svg' : '/kg-goods-light-.svg';
 
   const handleSearch = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -63,25 +64,15 @@ export default function Header() {
     <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border transition-colors duration-300">
       <div className="container mx-auto px-3 sm:px-4 h-20 flex items-center justify-between gap-2">
 
-       {/* Logo */}
-        <Link to="/" className="flex items-center gap-2 sm:gap-3 group min-w-0">
-  {/* Real logo icon */}
-  <div className="relative w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-cyan-500 
-                  flex items-center justify-center font-black text-black text-lg
-                  shadow-lg shadow-emerald-500/30 group-hover:scale-105 transition">
-
-    KG
-
-    {/* glow effect */}
-    <div className="absolute inset-0 rounded-xl blur-md bg-emerald-400/40 -z-10" />
-  </div>
-
-  {/* Brand name */}
-  <span className="font-heading text-xl sm:text-2xl font-extrabold tracking-tight text-foreground truncate">
-    <span className="hidden sm:inline">Korean </span>
-    <span className="text-emerald-500">Goods</span>
-  </span>
-</Link>
+        {/* Logo */}
+        <Link to="/" className="group flex min-w-0 items-center gap-3">
+          <img
+            src={brandLogoSrc}
+            alt="KG Goods"
+            className="h-12 md:h-14 w-auto object-contain"
+            loading="eager"
+          />
+        </Link>
 
 
         {/* Desktop Nav */}
