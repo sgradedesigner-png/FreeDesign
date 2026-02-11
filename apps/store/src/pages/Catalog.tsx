@@ -1,9 +1,10 @@
 // src/pages/Catalog.tsx
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import FilterSidebar from '../components/layout/FilterSidebar';
 import ProductCard from '../components/product/ProductCard';
 import { useProductsQuery } from '../data/products.queries';
+import { useCategoriesQuery } from '../data/categories.queries';
 import { useTheme } from '../context/ThemeContext';
 
 import {
@@ -29,20 +30,81 @@ const normalizeCategoryKey = (value: string | null | undefined) =>
 
 export default function Catalog() {
   const { language } = useTheme();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const searchQuery = searchParams.get('search')?.toLowerCase() || '';
+  const categoryFromUrl = normalizeCategoryKey(searchParams.get('category')) || null;
 
   const { data: products = [], isLoading, error } = useProductsQuery();
+  const { data: categories = [] } = useCategoriesQuery();
   const loadError =
     error instanceof Error ? error.message : error ? 'Failed to load products.' : null;
 
+  const validCategorySlugs = useMemo(
+    () =>
+      new Set(
+        categories
+          .map((category) => normalizeCategoryKey(category.slug))
+          .filter((slug): slug is string => Boolean(slug))
+      ),
+    [categories]
+  );
+
+  const activeCategoryFromUrl = useMemo(() => {
+    if (!categoryFromUrl) return null;
+    if (validCategorySlugs.size === 0) return categoryFromUrl;
+    return validCategorySlugs.has(categoryFromUrl) ? categoryFromUrl : null;
+  }, [categoryFromUrl, validCategorySlugs]);
+
+  const maxCatalogPrice = useMemo(() => {
+    const highest = products.reduce((acc, product) => {
+      const price = Number.isFinite(product.price) ? product.price : 0;
+      return Math.max(acc, price);
+    }, 0);
+
+    return Math.max(1000, Math.ceil(highest / 1000) * 1000);
+  }, [products]);
+
   const [filters, setFilters] = useState<Filters>({
-    priceRange: [0, 1000],
+    priceRange: [0, maxCatalogPrice],
     sizes: [],
-    categories: [],
+    categories: activeCategoryFromUrl ? [activeCategoryFromUrl] : [],
   });
 
   const [sortBy, setSortBy] = useState<'newest' | 'price-low' | 'price-high'>('newest');
+
+  useEffect(() => {
+    const nextCategories = activeCategoryFromUrl ? [activeCategoryFromUrl] : [];
+
+    setFilters((prev) => {
+      const prevCategories = prev.categories
+        .map((category) => normalizeCategoryKey(category))
+        .filter((category): category is string => Boolean(category));
+      const hasSameCategories =
+        prevCategories.length === nextCategories.length &&
+        prevCategories.every((category, index) => category === nextCategories[index]);
+
+      if (hasSameCategories) return prev;
+      return { ...prev, categories: nextCategories };
+    });
+  }, [activeCategoryFromUrl]);
+
+  useEffect(() => {
+    const normalizedSelected = filters.categories
+      .map((category) => normalizeCategoryKey(category))
+      .filter((category): category is string => Boolean(category));
+    const nextCategory = normalizedSelected[0] ?? null;
+    const currentCategory = normalizeCategoryKey(searchParams.get('category')) || null;
+
+    if (nextCategory === currentCategory) return;
+
+    const nextParams = new URLSearchParams(searchParams);
+    if (nextCategory) {
+      nextParams.set('category', nextCategory);
+    } else {
+      nextParams.delete('category');
+    }
+    setSearchParams(nextParams, { replace: true });
+  }, [filters.categories, searchParams, setSearchParams]);
 
   const filteredProducts = useMemo(() => {
     let result = products.filter((product) => {
@@ -89,7 +151,11 @@ export default function Catalog() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10 pt-28">
       <div className="flex flex-col lg:flex-row gap-8">
-        <FilterSidebar onFilterChange={handleFilterChange} />
+        <FilterSidebar
+          onFilterChange={handleFilterChange}
+          maxPrice={maxCatalogPrice}
+          activeCategories={filters.categories}
+        />
 
         <div className="flex-1 min-w-0">
           {/* Header хэсэг хэвээрээ... */}
