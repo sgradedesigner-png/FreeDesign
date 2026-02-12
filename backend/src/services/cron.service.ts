@@ -34,21 +34,25 @@ class CronService {
   async start() {
     logger.info('[Cron Service] Starting cron jobs...');
 
-    // Run every hour: Check for orders expiring in 24 hours and send warning emails
-    const warningJob = cron.schedule('0 * * * *', async () => {
+    // Run daily at 09:00 Asia/Ulaanbaatar: Check for orders expiring in 24 hours and send warning emails
+    const warningJob = cron.schedule('0 9 * * *', async () => {
       await this.checkExpirationWarnings();
+    }, {
+      timezone: 'Asia/Ulaanbaatar',
     });
     this.jobs.set('expiration-warnings', warningJob);
 
-    // Run every hour: Check for expired orders and send expired emails
-    const expiredJob = cron.schedule('0 * * * *', async () => {
+    // Run daily at 09:00 Asia/Ulaanbaatar: Check for expired orders and send expired emails
+    const expiredJob = cron.schedule('0 9 * * *', async () => {
       await this.checkExpiredOrders();
+    }, {
+      timezone: 'Asia/Ulaanbaatar',
     });
     this.jobs.set('expired-orders', expiredJob);
 
     logger.info('[Cron Service] ✅ All cron jobs started successfully');
-    logger.info('[Cron Service] - Expiration warnings: Every hour (0 * * * *)');
-    logger.info('[Cron Service] - Expired orders: Every hour (0 * * * *)');
+    logger.info('[Cron Service] - Expiration warnings: Daily at 09:00 Asia/Ulaanbaatar (0 9 * * *)');
+    logger.info('[Cron Service] - Expired orders: Daily at 09:00 Asia/Ulaanbaatar (0 9 * * *)');
 
     // Run immediately on startup for testing
     if (process.env.CRON_RUN_ON_STARTUP === 'true') {
