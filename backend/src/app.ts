@@ -271,6 +271,43 @@ app.get('/', {
   }
 }, async () => ({ message: 'eCommerce API is running correctly! 🚀' }));
 
+app.get('/live', {
+  schema: {
+    description: 'Liveness check endpoint',
+    tags: ['Health'],
+    response: {
+      200: {
+        type: 'object',
+        properties: {
+          ok: { type: 'boolean', example: true },
+          timestamp: { type: 'string', format: 'date-time' },
+        },
+      },
+    },
+  },
+}, async () => ({
+  ok: true,
+  timestamp: new Date().toISOString(),
+}));
+
+app.get('/health', {
+  schema: {
+    description: 'Health check endpoint',
+    tags: ['Health'],
+    response: {
+      200: {
+        type: 'object',
+        properties: {
+          ok: { type: 'boolean', example: true },
+          timestamp: { type: 'string', format: 'date-time' },
+        },
+      },
+    },
+  },
+}, async () => ({
+  ok: true,
+  timestamp: new Date().toISOString(),
+}));
 // CSRF token endpoint - Frontend can fetch this token before making state-changing requests
 app.get('/csrf-token', {
   schema: {
@@ -291,7 +328,7 @@ app.get('/csrf-token', {
 });
 
 // Health check endpoint - detailed health status
-app.get('/health', {
+app.get('/health/details', {
   schema: {
     description: 'Серверийн эрүүл мэндийн дэлгэрэнгүй статус',
     tags: ['Health'],
