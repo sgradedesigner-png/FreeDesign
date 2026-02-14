@@ -1,50 +1,79 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+﻿import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { toast } from 'sonner';
 import type { Product, ProductVariant } from '../data/types';
 import { logger } from '@/lib/logger';
 
+type PlacementConfig = {
+  offsetX?: number;
+  offsetY?: number;
+  rotation?: number;
+  scale?: number;
+};
+
+export type CartItemCustomization = {
+  printAreaId: string;
+  printAreaLabel: string;
+  printSizeTierId: string;
+  printSizeTierLabel: string;
+  assetId: string;
+  assetOriginalUrl: string;
+  assetThumbnailUrl?: string | null;
+  printFee: number;
+  placementConfig?: PlacementConfig;
+};
+
+export type CartItemAddOn = {
+  id: string;
+  name: string;
+  fee: number;
+};
+
 type CartItem = {
   cartKey: string;
   quantity: number;
 
-  // Product info
   productId: string;
   productName: string;
   productSlug: string;
   productCategory: string;
 
-  // Variant info
   variantId: string;
   variantName: string;
   variantPrice: number;
   variantOriginalPrice: number | null;
   variantImage: string;
   variantSku: string;
-
-  // Size selection
   size: string | null;
+
+  isCustomized?: boolean;
+  customizations?: CartItemCustomization[];
+  addOns?: CartItemAddOn[];
+  rushOrder?: boolean;
+  rushFee?: number;
+  addOnFees?: number;
 };
 
 type CartContextValue = {
   cart: CartItem[];
-
-  // Add item with variant information
   addItem: (product: Product, variant: ProductVariant, selectedSize?: string | null) => void;
-
-  // Quantity controls by cartKey
+  addCustomizedItem: (params: {
+    product: Product;
+    variant: ProductVariant;
+    quantity: number;
+    unitPrice: number;
+    customizations: CartItemCustomization[];
+    addOns?: CartItemAddOn[];
+    rushOrder?: boolean;
+    rushFee?: number;
+    addOnFees?: number;
+  }) => void;
   increaseQty: (cartKey: string) => void;
   decreaseQty: (cartKey: string) => void;
-
-  // Remove item
   removeItem: (cartKey: string) => void;
-
-  // Clear all items
   clearCart: () => void;
-
   cartCount: number;
   cartTotal: number;
-
   isCartOpen: boolean;
   setIsCartOpen: (open: boolean) => void;
 };
@@ -54,12 +83,14 @@ const CartContext = createContext<CartContextValue | undefined>(undefined);
 const makeCartKey = (productId: string, variantId: string, size: string | null) =>
   `${productId}__${variantId}__${size ?? 'none'}`;
 
+const makeCustomCartKey = (productId: string, variantId: string) =>
+  `${productId}__${variantId}__custom__${Date.now()}__${Math.random().toString(36).slice(2, 8)}`;
+
 export function CartProvider({ children }: { children: ReactNode }) {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // LocalStorage-оос сэргээх (mount хийхэд 1 удаа)
   useEffect(() => {
     const savedCart = localStorage.getItem('shopping-cart');
 
@@ -73,27 +104,24 @@ export function CartProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    // Loading дууссан гэж тэмдэглэх
     setIsInitialized(true);
   }, []);
 
-  // LocalStorage-д хадгалах (initialized болсны дараа л)
   useEffect(() => {
-    // Initialized болтол бүү хадгала (race condition сэргийлэх)
     if (!isInitialized) return;
-
     localStorage.setItem('shopping-cart', JSON.stringify(cart));
   }, [cart, isInitialized]);
 
-  // Add new item (or increase if exists)
   const addItem = (product: Product, variant: ProductVariant, selectedSize: string | null = null) => {
     const cartKey = makeCartKey(product.id, variant.id, selectedSize);
 
     setCart((prev) => {
-      const existing = prev.find((i) => i.cartKey === cartKey);
+      const existing = prev.find((item) => item.cartKey === cartKey);
 
       if (existing) {
-        return prev.map((i) => (i.cartKey === cartKey ? { ...i, quantity: i.quantity + 1 } : i));
+        return prev.map((item) =>
+          item.cartKey === cartKey ? { ...item, quantity: item.quantity + 1 } : item
+        );
       }
 
       const newItem: CartItem = {
@@ -105,7 +133,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         productCategory: product.category,
         variantId: variant.id,
         variantName: variant.name,
-        variantPrice: Number(variant.price), // Convert Decimal/string to number
+        variantPrice: Number(variant.price),
         variantOriginalPrice: variant.originalPrice ? Number(variant.originalPrice) : null,
         variantImage: variant.imagePath,
         variantSku: variant.sku,
@@ -115,53 +143,96 @@ export function CartProvider({ children }: { children: ReactNode }) {
       return [...prev, newItem];
     });
 
-    toast.success(`${product.name} - ${variant.name} сагсанд нэмэгдлээ!`);
+    toast.success(`${product.name} - ${variant.name} added to cart`);
   };
 
-  // ✅ Increase qty (no “added” toast, optional: message)
+  const addCustomizedItem = (params: {
+    product: Product;
+    variant: ProductVariant;
+    quantity: number;
+    unitPrice: number;
+    customizations: CartItemCustomization[];
+    addOns?: CartItemAddOn[];
+    rushOrder?: boolean;
+    rushFee?: number;
+    addOnFees?: number;
+  }) => {
+    const {
+      product,
+      variant,
+      quantity,
+      unitPrice,
+      customizations,
+      addOns = [],
+      rushOrder = false,
+      rushFee = 0,
+      addOnFees = 0,
+    } = params;
+
+    const cartKey = makeCustomCartKey(product.id, variant.id);
+    const safeQuantity = Math.max(1, Math.round(quantity));
+    const safeUnitPrice = Math.max(0, Number.isFinite(unitPrice) ? unitPrice : 0);
+
+    const newItem: CartItem = {
+      cartKey,
+      quantity: safeQuantity,
+      productId: product.id,
+      productName: product.name,
+      productSlug: product.slug,
+      productCategory: product.category,
+      variantId: variant.id,
+      variantName: variant.name,
+      variantPrice: safeUnitPrice,
+      variantOriginalPrice: variant.originalPrice ? Number(variant.originalPrice) : null,
+      variantImage: variant.imagePath,
+      variantSku: variant.sku,
+      size: null,
+      isCustomized: true,
+      customizations,
+      addOns,
+      rushOrder,
+      rushFee,
+      addOnFees,
+    };
+
+    setCart((prev) => [...prev, newItem]);
+    toast.success(`${product.name} customized item added to cart`);
+  };
+
   const increaseQty = (cartKey: string) => {
     setCart((prev) =>
-      prev.map((i) => (i.cartKey === cartKey ? { ...i, quantity: i.quantity + 1 } : i))
+      prev.map((item) => (item.cartKey === cartKey ? { ...item, quantity: item.quantity + 1 } : item))
     );
-    // хүсвэл: toast.message('Тоо нэмэгдлээ');
   };
 
-  // Decrease qty (if becomes 0 -> remove)
   const decreaseQty = (cartKey: string) => {
     setCart((prev) => {
-      const item = prev.find((i) => i.cartKey === cartKey);
+      const item = prev.find((entry) => entry.cartKey === cartKey);
       if (!item) return prev;
 
-      // 1 байхад → устгана + toast
       if (item.quantity === 1) {
-        toast.error(`${item.productName} - ${item.variantName} сагснаас хасагдлаа`);
-        return prev.filter((i) => i.cartKey !== cartKey);
+        toast.error(`${item.productName} removed from cart`);
+        return prev.filter((entry) => entry.cartKey !== cartKey);
       }
 
-      // 2+ байхад → тоо буурна + message
-      toast.message(`${item.productName} - ${item.variantName} тоо буурлаа`);
-
-      return prev.map((i) =>
-        i.cartKey === cartKey
-          ? { ...i, quantity: i.quantity - 1 }
-          : i
+      return prev.map((entry) =>
+        entry.cartKey === cartKey
+          ? { ...entry, quantity: entry.quantity - 1 }
+          : entry
       );
     });
   };
 
-
-  // Remove item
   const removeItem = (cartKey: string) => {
     setCart((prev) => {
-      const item = prev.find((i) => i.cartKey === cartKey);
+      const item = prev.find((entry) => entry.cartKey === cartKey);
       if (item) {
-        toast.error(`${item.productName} - ${item.variantName} сагснаас хасагдлаа`);
+        toast.error(`${item.productName} removed from cart`);
       }
-      return prev.filter((i) => i.cartKey !== cartKey);
+      return prev.filter((entry) => entry.cartKey !== cartKey);
     });
   };
 
-  // Clear all items from cart
   const clearCart = () => {
     setCart([]);
   };
@@ -174,6 +245,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       value={{
         cart,
         addItem,
+        addCustomizedItem,
         increaseQty,
         decreaseQty,
         removeItem,

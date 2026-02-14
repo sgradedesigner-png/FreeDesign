@@ -329,6 +329,51 @@ class EmailService {
   }
 
   /**
+   * Send production status update email
+   */
+  async sendProductionStatusUpdate(to: string, params: {
+    orderId: string;
+    fromStatus: string;
+    toStatus: string;
+    notes?: string | null;
+  }): Promise<{ success: boolean; messageId?: string; error?: string }> {
+    const { orderId, fromStatus, toStatus, notes } = params;
+
+    const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Production Status Updated</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background-color: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0;">
+    <h1 style="margin: 0 0 16px; color: #0f172a;">Production Status Updated</h1>
+    <p>Your order <strong>#${escapeHtml(orderId.substring(0, 8).toUpperCase())}</strong> has moved in production.</p>
+
+    <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; margin: 16px 0;">
+      <p style="margin: 0 0 6px;"><strong>From:</strong> ${escapeHtml(fromStatus)}</p>
+      <p style="margin: 0;"><strong>To:</strong> ${escapeHtml(toStatus)}</p>
+      ${notes ? `<p style="margin: 10px 0 0;"><strong>Notes:</strong> ${escapeHtml(notes)}</p>` : ''}
+    </div>
+
+    <p style="margin-top: 18px; color: #475569; font-size: 14px;">
+      You can view your order details in your account orders page.
+    </p>
+  </div>
+</body>
+</html>
+    `;
+
+    return this.sendEmail({
+      to,
+      subject: `Production update - #${orderId.substring(0, 8).toUpperCase()} (${toStatus})`,
+      html,
+    });
+  }
+
+  /**
    * Send test email
    */
   async sendTestEmail(to: string): Promise<{ success: boolean; messageId?: string; error?: string }> {

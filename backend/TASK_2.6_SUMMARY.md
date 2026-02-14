@@ -303,7 +303,7 @@ NODE_ENV=development npm run dev
 npm run dev
 
 # Make request
-curl http://localhost:3000/api/products/categories
+curl http://localhost:4000/api/products/categories
 
 # Check logs for query count and duration
 ```
@@ -469,3 +469,4 @@ All HIGH priority fixes have been implemented and are production-ready:
 - ✅ N+1 query optimization
 
 **Next Phase:** Phase 3 - Testing & Validation
+

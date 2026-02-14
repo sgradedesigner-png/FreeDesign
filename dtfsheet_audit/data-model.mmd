@@ -1,0 +1,212 @@
+erDiagram
+    PRODUCT {
+      uuid id PK
+      text handle UK
+      text title
+      text description_html
+      text vendor
+      text product_type
+      numeric min_price
+      numeric max_price
+      numeric compare_at_price
+      boolean is_available
+      text status
+      timestamptz published_at
+    }
+
+    PRODUCT_TAG {
+      uuid id PK
+      uuid product_id FK
+      text tag
+    }
+
+    PRODUCT_IMAGE {
+      uuid id PK
+      uuid product_id FK
+      text src
+      text alt
+      int position
+      int width
+      int height
+    }
+
+    PRODUCT_OPTION {
+      uuid id PK
+      uuid product_id FK
+      text name
+      int position
+    }
+
+    PRODUCT_VARIANT {
+      uuid id PK
+      uuid product_id FK
+      text title
+      text sku
+      text option1
+      text option2
+      text option3
+      numeric price
+      numeric compare_at_price
+      boolean is_available
+      int position
+    }
+
+    UPLOAD_REQUIREMENT {
+      uuid id PK
+      uuid product_id FK
+      text accepted_types
+      int min_dpi
+      text background_requirement
+      text notes
+    }
+
+    COLLECTION {
+      uuid id PK
+      text handle UK
+      text title
+      text description_html
+      boolean is_active
+    }
+
+    COLLECTION_PRODUCT {
+      uuid id PK
+      uuid collection_id FK
+      uuid product_id FK
+      int position
+    }
+
+    CUSTOMER {
+      uuid id PK
+      uuid auth_user_id UK
+      text email
+      text full_name
+      text role
+      timestamptz created_at
+    }
+
+    CART {
+      uuid id PK
+      uuid customer_id FK
+      text session_key
+      text currency
+      text status
+      timestamptz created_at
+      timestamptz updated_at
+    }
+
+    CART_ITEM {
+      uuid id PK
+      uuid cart_id FK
+      uuid variant_id FK
+      int quantity
+      numeric unit_price
+      jsonb custom_options
+    }
+
+    GANG_SHEET_PROJECT {
+      uuid id PK
+      uuid customer_id FK
+      text type
+      text builder_version
+      text status
+      int width_px
+      int height_px
+      timestamptz created_at
+    }
+
+    GANG_SHEET_ITEM {
+      uuid id PK
+      uuid project_id FK
+      uuid source_asset_id FK
+      numeric x
+      numeric y
+      numeric width
+      numeric height
+      numeric rotation
+      int z_index
+    }
+
+    UPLOAD_ASSET {
+      uuid id PK
+      uuid customer_id FK
+      uuid order_item_id FK
+      uuid project_id FK
+      text cloudinary_public_id
+      text original_filename
+      text mime_type
+      int bytes
+      int width
+      int height
+      int dpi
+      text moderation_status
+      text validation_status
+      timestamptz created_at
+    }
+
+    ORDER {
+      uuid id PK
+      uuid customer_id FK
+      text order_number
+      text status
+      text payment_status
+      text fulfillment_status
+      text currency
+      numeric subtotal
+      numeric shipping_total
+      numeric tax_total
+      numeric total
+      timestamptz created_at
+    }
+
+    ORDER_ITEM {
+      uuid id PK
+      uuid order_id FK
+      uuid variant_id FK
+      uuid project_id FK
+      int quantity
+      numeric unit_price
+      jsonb selected_options
+      jsonb production_notes
+    }
+
+    REVIEW {
+      uuid id PK
+      uuid product_id FK
+      uuid customer_id FK
+      uuid order_id FK
+      int rating
+      text title
+      text body
+      boolean is_verified
+      text source
+      timestamptz created_at
+    }
+
+    PRODUCT ||--o{ PRODUCT_TAG : has
+    PRODUCT ||--o{ PRODUCT_IMAGE : has
+    PRODUCT ||--o{ PRODUCT_OPTION : has
+    PRODUCT ||--o{ PRODUCT_VARIANT : has
+    PRODUCT ||--o{ UPLOAD_REQUIREMENT : has
+
+    COLLECTION ||--o{ COLLECTION_PRODUCT : contains
+    PRODUCT ||--o{ COLLECTION_PRODUCT : appears_in
+
+    CUSTOMER ||--o{ CART : owns
+    CART ||--o{ CART_ITEM : contains
+    PRODUCT_VARIANT ||--o{ CART_ITEM : referenced_by
+
+    CUSTOMER ||--o{ GANG_SHEET_PROJECT : owns
+    GANG_SHEET_PROJECT ||--o{ GANG_SHEET_ITEM : contains
+
+    CUSTOMER ||--o{ ORDER : places
+    ORDER ||--o{ ORDER_ITEM : contains
+    PRODUCT_VARIANT ||--o{ ORDER_ITEM : sold_as
+    GANG_SHEET_PROJECT ||--o{ ORDER_ITEM : attached_to
+
+    CUSTOMER ||--o{ UPLOAD_ASSET : uploads
+    ORDER_ITEM ||--o{ UPLOAD_ASSET : uses
+    GANG_SHEET_PROJECT ||--o{ UPLOAD_ASSET : sources
+
+    PRODUCT ||--o{ REVIEW : receives
+    CUSTOMER ||--o{ REVIEW : writes
+    ORDER ||--o{ REVIEW : verifies

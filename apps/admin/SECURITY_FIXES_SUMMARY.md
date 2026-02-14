@@ -43,7 +43,7 @@ Content-Security-Policy: [detailed policy]
 
 **Testing:**
 ```bash
-curl -I http://localhost:3000/
+curl -I http://localhost:4000/
 # Verify headers present
 ```
 
@@ -235,7 +235,7 @@ npm run build
 
 ### Security Headers Test
 ```bash
-curl -I http://localhost:3000/
+curl -I http://localhost:4000/
 # ✅ All headers present
 ```
 
@@ -388,3 +388,4 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
 **Last Updated:** 2026-02-10
 **Version:** 1.0.0
 **Status:** ✅ Production Ready (after credential rotation)
+

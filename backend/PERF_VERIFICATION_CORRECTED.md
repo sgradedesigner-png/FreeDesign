@@ -27,7 +27,7 @@ This report provides **corrected verification** of performance optimization clai
 ## Test Methodology
 
 ### Test Environment
-- **Server**: localhost:3000 (development)
+- **Server**: localhost:4000 (development)
 - **Database**: Supabase PostgreSQL (production instance)
 - **Load Test Tool**: k6
 - **Duration**: 30 seconds per test
@@ -480,7 +480,7 @@ k6 run --duration 30s --vus 10 scenarios/verify_cache_miss.js
 
 # Test 3: Cache OFF (manual, unique pages)
 for i in {1..10}; do
-  curl -I "http://localhost:3000/api/products?page=$((1000+i))&limit=20"
+  curl -I "http://localhost:4000/api/products?page=$((1000+i))&limit=20"
 done
 ```
 
@@ -488,11 +488,11 @@ done
 
 ```bash
 # Check cache status
-curl -I "http://localhost:3000/api/products?page=1&limit=20" | grep -i "x-perf\|x-cache"
+curl -I "http://localhost:4000/api/products?page=1&limit=20" | grep -i "x-perf\|x-cache"
 
 # Compare cache HIT vs MISS
-curl -I "http://localhost:3000/api/products?page=1&limit=20"  # HIT (if cached)
-curl -I "http://localhost:3000/api/products?page=999&limit=20"  # MISS (new page)
+curl -I "http://localhost:4000/api/products?page=1&limit=20"  # HIT (if cached)
+curl -I "http://localhost:4000/api/products?page=999&limit=20"  # MISS (new page)
 ```
 
 ---
@@ -500,3 +500,4 @@ curl -I "http://localhost:3000/api/products?page=999&limit=20"  # MISS (new page
 **Report Status**: ✅ Corrected and verified
 **Previous Report Issue**: Logical inconsistencies fixed (p95 < avg, "miss" with 96% hits)
 **Next Steps**: Production deployment with realistic performance expectations
+

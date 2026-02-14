@@ -540,13 +540,13 @@ if (!order) {
 
 ✅ **404 Handler Test:**
 ```bash
-$ curl http://localhost:3000/nonexistent
+$ curl http://localhost:4000/nonexistent
 {"error":"Not Found","message":"GET /nonexistent олдсонгүй","statusCode":404}
 ```
 
 ✅ **Health Check:**
 ```bash
-$ curl http://localhost:3000/health
+$ curl http://localhost:4000/health
 {"status":"healthy","timestamp":"2026-02-08T10:44:54.308Z", ...}
 ```
 
@@ -698,3 +698,4 @@ When server is tested:
 **Estimated Time:** 2 hours
 **Actual Time:** ~1.5 hours
 **Next Task:** Task 2.2 - Rate Limiting
+

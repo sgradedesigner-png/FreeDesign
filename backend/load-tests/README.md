@@ -9,7 +9,7 @@ This directory contains load testing scenarios for the eCommerce backend API usi
 ### Prerequisites
 
 - k6 installed (`winget install k6` or download from https://k6.io/docs/get-started/installation/)
-- Backend server running on `http://localhost:3000`
+- Backend server running on `http://localhost:4000`
 
 ### Run Tests
 
@@ -196,3 +196,4 @@ For questions or issues with load testing:
 
 **Last Updated:** 2026-02-09
 **Maintained by:** Backend Team
+

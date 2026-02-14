@@ -1,9 +1,9 @@
-import { Link, useNavigate } from 'react-router-dom';
+﻿import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useTheme } from '../context/ThemeContext';
 import { useCheckoutGate } from '@/hooks/useCheckoutGate';
 import { Trash2, Plus, Minus, ArrowLeft, ShoppingBag } from 'lucide-react';
-import { r2Url } from "@/lib/r2";
+import { imageUrl } from "@/lib/imageUrl";
 import AuthModal from '@/components/auth/AuthModal';
 
 const PLACEHOLDER_IMG = 'https://placehold.co/800x1000/png?text=No+Image';
@@ -31,11 +31,11 @@ export default function CartPage() {
         <div className="flex items-center gap-2 text-sm text-muted-foreground mb-8">
           <Link to="/" className="hover:text-primary flex items-center gap-1">
             <ArrowLeft size={14} />
-            {language === 'mn' ? 'Нүүр' : 'Home'}
+            {language === 'mn' ? 'ÐÒ¯Ò¯Ñ€' : 'Home'}
           </Link>
           <span>/</span>
           <span className="text-foreground font-medium">
-            {language === 'mn' ? 'Сагс' : 'Shopping Cart'}
+            {language === 'mn' ? 'Ð¡Ð°Ð³Ñ' : 'Shopping Cart'}
           </span>
         </div>
 
@@ -45,16 +45,16 @@ export default function CartPage() {
             <ShoppingBag size={64} className="text-muted-foreground" />
           </div>
           <h2 className="text-2xl font-bold mb-2">
-            {language === 'mn' ? 'Таны сагс хоосон байна' : 'Your cart is empty'}
+            {language === 'mn' ? 'Ð¢Ð°Ð½Ñ‹ ÑÐ°Ð³Ñ Ñ…Ð¾Ð¾ÑÐ¾Ð½ Ð±Ð°Ð¹Ð½Ð°' : 'Your cart is empty'}
           </h2>
           <p className="text-muted-foreground mb-6">
-            {language === 'mn' ? 'Дэлгүүрээс бараа сонгож авна уу' : 'Start shopping to add items to your cart'}
+            {language === 'mn' ? 'Ð”ÑÐ»Ð³Ò¯Ò¯Ñ€ÑÑÑ Ð±Ð°Ñ€Ð°Ð° ÑÐ¾Ð½Ð³Ð¾Ð¶ Ð°Ð²Ð½Ð° ÑƒÑƒ' : 'Start shopping to add items to your cart'}
           </p>
           <Link
             to="/"
             className="px-8 py-3 bg-primary text-primary-foreground rounded-xl font-bold hover:bg-primary/90 transition-colors"
           >
-            {language === 'mn' ? 'Дэлгүүр хэсэх' : 'Continue Shopping'}
+            {language === 'mn' ? 'Ð”ÑÐ»Ð³Ò¯Ò¯Ñ€ Ñ…ÑÑÑÑ…' : 'Continue Shopping'}
           </Link>
         </div>
       </div>
@@ -67,11 +67,11 @@ export default function CartPage() {
       <div className="flex items-center gap-2 text-sm text-muted-foreground mb-8">
         <Link to="/" className="hover:text-primary flex items-center gap-1">
           <ArrowLeft size={14} />
-          {language === 'mn' ? 'Нүүр' : 'Home'}
+          {language === 'mn' ? 'ÐÒ¯Ò¯Ñ€' : 'Home'}
         </Link>
         <span>/</span>
         <span className="text-foreground font-medium">
-          {language === 'mn' ? 'Сагс' : 'Shopping Cart'}
+          {language === 'mn' ? 'Ð¡Ð°Ð³Ñ' : 'Shopping Cart'}
         </span>
       </div>
 
@@ -81,16 +81,16 @@ export default function CartPage() {
         <div className="space-y-4">
           {/* Table Header */}
           <div className="hidden md:grid grid-cols-[2fr,1fr,1fr,auto] gap-4 px-6 py-4 bg-muted/50 rounded-xl font-bold text-sm">
-            <div>{language === 'mn' ? 'Бүтээгдэхүүн' : 'Product'}</div>
-            <div className="text-center">{language === 'mn' ? 'Тоо ширхэг' : 'Quantity'}</div>
-            <div className="text-right">{language === 'mn' ? 'Нийт үнэ' : 'Total Price'}</div>
+            <div>{language === 'mn' ? 'Ð‘Ò¯Ñ‚ÑÑÐ³Ð´ÑÑ…Ò¯Ò¯Ð½' : 'Product'}</div>
+            <div className="text-center">{language === 'mn' ? 'Ð¢Ð¾Ð¾ ÑˆÐ¸Ñ€Ñ…ÑÐ³' : 'Quantity'}</div>
+            <div className="text-right">{language === 'mn' ? 'ÐÐ¸Ð¹Ñ‚ Ò¯Ð½Ñ' : 'Total Price'}</div>
             <div className="w-10"></div>
           </div>
 
           {/* Cart Items List */}
           <div className="space-y-4">
             {cart.map((item) => {
-              const imgSrc = r2Url(item.variantImage) || PLACEHOLDER_IMG;
+              const imgSrc = imageUrl(item.variantImage) || PLACEHOLDER_IMG;
               const itemTotal = item.variantPrice * item.quantity;
 
               return (
@@ -175,39 +175,39 @@ export default function CartPage() {
         <div className="lg:sticky lg:top-24 h-fit">
           <div className="bg-card border border-border rounded-2xl p-6 space-y-6">
             <h2 className="text-2xl font-bold">
-              {language === 'mn' ? 'Захиалгын дүн' : 'Order Summary'}
+              {language === 'mn' ? 'Ð—Ð°Ñ…Ð¸Ð°Ð»Ð³Ñ‹Ð½ Ð´Ò¯Ð½' : 'Order Summary'}
             </h2>
 
             {/* Summary Details */}
             <div className="space-y-3">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">
-                  {language === 'mn' ? 'Нийт дүн' : 'Subtotal'}
+                  {language === 'mn' ? 'ÐÐ¸Ð¹Ñ‚ Ð´Ò¯Ð½' : 'Subtotal'}
                 </span>
                 <span className="font-semibold">${cartTotal.toFixed(2)}</span>
               </div>
 
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">
-                  {language === 'mn' ? 'Хүргэлт' : 'Delivery'}
+                  {language === 'mn' ? 'Ð¥Ò¯Ñ€Ð³ÑÐ»Ñ‚' : 'Delivery'}
                 </span>
                 <span className="font-semibold text-primary">
-                  {language === 'mn' ? 'Үнэгүй' : 'Free'}
+                  {language === 'mn' ? 'Ò®Ð½ÑÐ³Ò¯Ð¹' : 'Free'}
                 </span>
               </div>
 
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">
-                  {language === 'mn' ? 'Татвар' : 'Tax'}
+                  {language === 'mn' ? 'Ð¢Ð°Ñ‚Ð²Ð°Ñ€' : 'Tax'}
                 </span>
                 <span className="font-semibold text-primary">
-                  {language === 'mn' ? 'Үнэгүй' : 'Free'}
+                  {language === 'mn' ? 'Ò®Ð½ÑÐ³Ò¯Ð¹' : 'Free'}
                 </span>
               </div>
 
               <div className="border-t border-border pt-3">
                 <div className="flex justify-between text-lg font-bold">
-                  <span>{language === 'mn' ? 'НИЙТ' : 'TOTAL'}</span>
+                  <span>{language === 'mn' ? 'ÐÐ˜Ð™Ð¢' : 'TOTAL'}</span>
                   <span className="text-primary">${total.toFixed(2)}</span>
                 </div>
               </div>
@@ -217,11 +217,11 @@ export default function CartPage() {
             <div className="space-y-2">
               <input
                 type="text"
-                placeholder={language === 'mn' ? 'Купон код оруулах' : 'Enter coupon'}
+                placeholder={language === 'mn' ? 'ÐšÑƒÐ¿Ð¾Ð½ ÐºÐ¾Ð´ Ð¾Ñ€ÑƒÑƒÐ»Ð°Ñ…' : 'Enter coupon'}
                 className="w-full px-4 py-3 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary bg-background"
               />
               <button className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-bold hover:bg-primary/90 transition-colors">
-                {language === 'mn' ? 'ХЭРЭГЛЭХ' : 'APPLY'}
+                {language === 'mn' ? 'Ð¥Ð­Ð Ð­Ð“Ð›Ð­Ð¥' : 'APPLY'}
               </button>
             </div>
 
@@ -230,7 +230,7 @@ export default function CartPage() {
               onClick={handleCheckout}
               className="w-full py-4 bg-primary text-primary-foreground rounded-xl font-bold text-lg hover:bg-primary/90 transition-colors shadow-lg shadow-primary/25"
             >
-              {language === 'mn' ? 'ХУДАЛДАН АВАХ' : 'PROCEED TO CHECKOUT'}
+              {language === 'mn' ? 'Ð¥Ð£Ð”ÐÐ›Ð”ÐÐ ÐÐ’ÐÐ¥' : 'PROCEED TO CHECKOUT'}
             </button>
           </div>
         </div>
@@ -245,3 +245,4 @@ export default function CartPage() {
     </div>
   );
 }
+

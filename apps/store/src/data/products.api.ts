@@ -1,6 +1,6 @@
 // src/data/products.api.ts
 import { supabase } from '../lib/supabase';
-import type { BackendProduct, ProductVariant } from './types';
+import type { BackendProduct, ProductFamily, ProductVariant } from './types';
 import { mapProductFromBackend, type Product } from './products';
 
 type RawRow = Record<string, unknown>;
@@ -16,10 +16,22 @@ const asNumber = (value: unknown, fallback = 0): number => {
   }
   return fallback;
 };
-
 const asStringArray = (value: unknown): string[] =>
   Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
+const PRODUCT_FAMILY_SET = new Set<ProductFamily>([
+  'BY_SIZE',
+  'GANG_UPLOAD',
+  'GANG_BUILDER',
+  'BLANKS',
+  'UV_BY_SIZE',
+  'UV_GANG_UPLOAD',
+  'UV_GANG_BUILDER',
+]);
 
+const asProductFamily = (value: unknown): ProductFamily => {
+  const family = asString(value, 'BLANKS') as ProductFamily;
+  return PRODUCT_FAMILY_SET.has(family) ? family : 'BLANKS';
+};
 const pick = (row: RawRow, ...keys: string[]): unknown => {
   for (const key of keys) {
     if (row[key] !== undefined && row[key] !== null) return row[key];
@@ -81,6 +93,19 @@ const toBackendProduct = (row: RawRow, variants: ProductVariant[]): BackendProdu
       pick(row, 'description') == null ? null : asString(pick(row, 'description')),
     basePrice: asNumber(pick(row, 'basePrice', 'base_price')),
     categoryId,
+    productFamily: asProductFamily(pick(row, 'productFamily', 'product_family')),
+    productSubfamily:
+      pick(row, 'productSubfamily', 'product_subfamily') == null
+        ? null
+        : asString(pick(row, 'productSubfamily', 'product_subfamily')),
+    requiresUpload: Boolean(pick(row, 'requiresUpload', 'requires_upload')),
+    requiresBuilder: Boolean(pick(row, 'requiresBuilder', 'requires_builder')),
+    uploadProfileId:
+      pick(row, 'uploadProfileId', 'upload_profile_id') == null
+        ? null
+        : asString(pick(row, 'uploadProfileId', 'upload_profile_id')),
+    isCustomizable: Boolean(pick(row, 'isCustomizable', 'is_customizable')),
+    mockupImagePath: asString(pick(row, 'mockupImagePath', 'mockup_image_path')) || null,
     category: {
       id: categoryId,
       name: categoryName || 'Uncategorized',
@@ -208,3 +233,6 @@ export async function fetchProductBySlug(slug: string): Promise<Product | null> 
 
   return mapProductFromBackend(toBackendProduct(raw, variants));
 }
+
+
+

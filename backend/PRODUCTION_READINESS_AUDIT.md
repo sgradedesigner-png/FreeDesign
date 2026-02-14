@@ -1856,7 +1856,7 @@ USER nodejs
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3000/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"
+  CMD node -e "require('http').get('http://localhost:4000/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"
 
 EXPOSE 3000
 
@@ -1902,7 +1902,7 @@ services:
       - R2_BUCKET_NAME=${R2_BUCKET_NAME}
       - R2_PUBLIC_BASE_URL=${R2_PUBLIC_BASE_URL}
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:4000/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
       interval: 30s
       timeout: 3s
       retries: 3
@@ -1918,7 +1918,7 @@ docker build -t ecommerce-backend:latest .
 docker run -p 3000:3000 --env-file .env.production ecommerce-backend:latest
 
 # Test health check
-curl http://localhost:3000/health
+curl http://localhost:4000/health
 ```
 
 **Priority:** P0 - Required for deployment
@@ -2418,7 +2418,7 @@ await app.register(swagger, {
     },
     servers: [
       {
-        url: 'http://localhost:3000',
+        url: 'http://localhost:4000',
         description: 'Development server',
       },
       {
@@ -2536,7 +2536,7 @@ app.post('/api/orders',
 
 **Access documentation:**
 ```
-http://localhost:3000/docs
+http://localhost:4000/docs
 ```
 
 **Benefits:**
@@ -2778,3 +2778,4 @@ With these fixes, the backend will be **production-ready** and match the securit
 **Document Version:** 1.0
 **Last Updated:** 2026-02-10
 **Audit Completed By:** Claude Code
+

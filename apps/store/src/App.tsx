@@ -11,6 +11,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import HomePage from './pages/HomePage';
 import Catalog from './pages/Catalog';
 import ProductDetails from './pages/ProductDetails';
+import CustomizePage from './pages/CustomizePage';
 import CartPage from './pages/CartPage';
 import WishlistPage from './pages/WishlistPage';
 import CheckoutPage from './pages/CheckoutPage';
@@ -28,7 +29,7 @@ function Layout() {
   const location = useLocation();
 
   // Хэрэв бид '/customize' хуудас дээр байгаа бол тусгай горим (Full Screen)
-  const isConfigurator = location.pathname === '/customize';
+  const isConfigurator = location.pathname.startsWith('/customize');
 
   return (
     <div className={`min-h-screen bg-background text-foreground font-sans transition-colors duration-300 ${isConfigurator ? 'overflow-hidden' : ''}`}>
@@ -60,6 +61,7 @@ function Layout() {
           <Route path="/" element={<HomePage />} />
           <Route path="/products" element={<Catalog />} />
           <Route path="/product/:id" element={<ProductDetails />} />
+          <Route path="/customize/:productSlug" element={<CustomizePage />} />
           <Route path="/cart" element={<CartPage />} />
           <Route path="/wishlist" element={<WishlistPage />} />
           <Route path="/checkout" element={<CheckoutPage />} />

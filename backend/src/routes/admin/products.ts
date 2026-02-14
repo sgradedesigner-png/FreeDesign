@@ -6,10 +6,10 @@ import { Prisma } from '@prisma/client';
 import { adminGuard } from '../../supabaseauth';
 import { prisma } from '../../lib/prisma';
 import { productsCache } from '../../lib/cache';
-import { deleteProductImages } from '../../lib/r2';
-import { importRemoteImageToR2, isHttpUrl, isR2PublicUrl } from '../../lib/remote-image-import';
+import { deleteFolder } from '../../lib/cloudinary';
+import { importRemoteImageToCloudinary, isCloudinaryUrl, isHttpUrl } from '../../lib/remote-image-import';
 
-// price Decimal-д зориулж number/string аль алиныг зөвшөөрнө
+// price Decimal-Ð´ Ð·Ð¾Ñ€Ð¸ÑƒÐ»Ð¶ number/string Ð°Ð»ÑŒ Ð°Ð»Ð¸Ð½Ñ‹Ð³ Ð·Ó©Ð²ÑˆÓ©Ó©Ñ€Ð½Ó©
 const priceSchema = z.union([
   z.number(),
   z.string().regex(/^\d+(\.\d+)?$/, 'Invalid price format'),
@@ -31,8 +31,18 @@ const variantSchema = z.object({
 
 type VariantInput = z.infer<typeof variantSchema>;
 
+const productFamilySchema = z.enum([
+  'BY_SIZE',
+  'GANG_UPLOAD',
+  'GANG_BUILDER',
+  'BLANKS',
+  'UV_BY_SIZE',
+  'UV_GANG_UPLOAD',
+  'UV_GANG_BUILDER',
+]);
+
 const REMOTE_IMAGE_IMPORT_CONCURRENCY = (() => {
-  const rawValue = Number(process.env.R2_REMOTE_IMPORT_CONCURRENCY ?? 4);
+  const rawValue = Number(process.env.REMOTE_IMAGE_IMPORT_CONCURRENCY ?? process.env.R2_REMOTE_IMPORT_CONCURRENCY ?? 4);
   if (!Number.isFinite(rawValue)) return 4;
   return Math.min(8, Math.max(1, Math.floor(rawValue)));
 })();
@@ -58,7 +68,7 @@ async function runWithConcurrency<T>(
   await Promise.all(runners);
 }
 
-async function normalizeVariantMediaForR2(
+async function normalizeVariantMediaForCloudinary(
   variants: VariantInput[],
   productId: string
 ): Promise<VariantInput[]> {
@@ -68,12 +78,12 @@ async function normalizeVariantMediaForR2(
     const uniqueRemoteUrls = new Set<string>();
 
     for (const variant of variants) {
-      if (variant.imagePath && isHttpUrl(variant.imagePath) && !isR2PublicUrl(variant.imagePath)) {
+      if (variant.imagePath && isHttpUrl(variant.imagePath) && !isCloudinaryUrl(variant.imagePath)) {
         uniqueRemoteUrls.add(variant.imagePath);
       }
 
       for (const path of variant.galleryPaths ?? []) {
-        if (isHttpUrl(path) && !isR2PublicUrl(path)) {
+        if (isHttpUrl(path) && !isCloudinaryUrl(path)) {
           uniqueRemoteUrls.add(path);
         }
       }
@@ -88,7 +98,7 @@ async function normalizeVariantMediaForR2(
     remoteUrls,
     REMOTE_IMAGE_IMPORT_CONCURRENCY,
     async (url) => {
-      const imported = await importRemoteImageToR2({ imageUrl: url, productId });
+      const imported = await importRemoteImageToCloudinary({ imageUrl: url, productId });
       cache.set(url, imported.publicUrl);
     }
   );
@@ -119,15 +129,20 @@ async function normalizeVariantMediaForR2(
 }
 
 export async function adminProductRoutes(app: FastifyInstance) {
-  // 🔐 Admin guard — бүх product route-д
+  // ðŸ” Admin guard â€” Ð±Ò¯Ñ… product route-Ð´
   app.addHook('preHandler', adminGuard);
 
-  // ➕ CREATE product with variants
+  // âž• CREATE product with variants
   app.post('/', async (request, reply) => {
     const schema = z.object({
       title: z.string().min(1),
       slug: z.string().min(1),
       is_published: z.boolean().optional().default(false),
+      product_family: productFamilySchema.optional().default('BLANKS'),
+      product_subfamily: z.string().trim().min(1).nullable().optional(),
+      requires_upload: z.boolean().optional().default(false),
+      requires_builder: z.boolean().optional().default(false),
+      upload_profile_id: z.string().trim().min(1).nullable().optional(),
       subtitle: z.string().optional().nullable(),
       description: z.string().optional(),
       basePrice: priceSchema.optional().default(0),
@@ -160,7 +175,7 @@ export async function adminProductRoutes(app: FastifyInstance) {
     }
 
     const productId = randomUUID();
-    const normalizedVariants = await normalizeVariantMediaForR2(body.variants, productId);
+    const normalizedVariants = await normalizeVariantMediaForCloudinary(body.variants, productId);
 
     const product = await prisma.product.create({
       data: {
@@ -168,6 +183,11 @@ export async function adminProductRoutes(app: FastifyInstance) {
         title: body.title,
         slug: body.slug,
         is_published: body.is_published,
+        productFamily: body.product_family,
+        productSubfamily: body.product_subfamily ?? null,
+        requiresUpload: body.requires_upload,
+        requiresBuilder: body.requires_builder,
+        uploadProfileId: body.upload_profile_id ?? null,
         subtitle: body.subtitle ?? null,
         description: body.description,
         basePrice: body.basePrice,
@@ -202,7 +222,7 @@ export async function adminProductRoutes(app: FastifyInstance) {
     return product;
   });
 
-  // 📄 LIST products (pagination + search + filters + sorting) - OPTIMIZED
+  // ðŸ“„ LIST products (pagination + search + filters + sorting) - OPTIMIZED
   app.get('/', async (request) => {
     const schema = z.object({
       q: z.string().optional(),
@@ -254,6 +274,7 @@ export async function adminProductRoutes(app: FastifyInstance) {
           title: true,
           slug: true,
           is_published: true,
+          productFamily: true,
           categoryId: true,
           createdAt: true,
           updatedAt: true,
@@ -285,7 +306,7 @@ export async function adminProductRoutes(app: FastifyInstance) {
     };
   });
 
-  // 🔎 GET by id with variants
+  // ðŸ”Ž GET by id with variants
   app.get('/:id', async (request, reply) => {
     const schema = z.object({ id: z.string().uuid() });
     const { id } = schema.parse(request.params);
@@ -302,7 +323,125 @@ export async function adminProductRoutes(app: FastifyInstance) {
     return product;
   });
 
-  // ✏️ UPDATE product with variants
+  // âœï¸ UPDATE product with variants
+  app.get('/:id/print-areas', async (request, reply) => {
+    const schema = z.object({ id: z.string().uuid() });
+    const { id } = schema.parse(request.params);
+
+    const [product, availablePrintAreas] = await Promise.all([
+      prisma.product.findUnique({
+        where: { id },
+        select: {
+          id: true,
+          isCustomizable: true,
+          printAreas: {
+            include: { printArea: true },
+            orderBy: { printArea: { sortOrder: 'asc' } },
+          },
+        },
+      }),
+      prisma.printArea.findMany({
+        where: { isActive: true },
+        orderBy: { sortOrder: 'asc' },
+      }),
+    ]);
+
+    if (!product) {
+      return reply.status(404).send({ message: 'Product not found' });
+    }
+
+    return {
+      productId: product.id,
+      isCustomizable: product.isCustomizable,
+      configuredPrintAreas: product.printAreas,
+      availablePrintAreas,
+    };
+  });
+
+  app.put('/:id/print-areas', async (request, reply) => {
+    const paramsSchema = z.object({ id: z.string().uuid() });
+    const bodySchema = z.object({
+      printAreaIds: z.array(z.string().uuid()).max(10).default([]),
+      defaultPrintAreaId: z.string().uuid().nullable().optional(),
+      isCustomizable: z.boolean().optional(),
+    });
+
+    const { id } = paramsSchema.parse(request.params);
+    const { printAreaIds, defaultPrintAreaId, isCustomizable } = bodySchema.parse(request.body);
+    const uniquePrintAreaIds = Array.from(new Set(printAreaIds));
+
+    if (defaultPrintAreaId && !uniquePrintAreaIds.includes(defaultPrintAreaId)) {
+      return reply.status(400).send({
+        message: 'defaultPrintAreaId must be included in printAreaIds',
+      });
+    }
+
+    const [product, validAreaCount] = await Promise.all([
+      prisma.product.findUnique({
+        where: { id },
+        select: { id: true },
+      }),
+      uniquePrintAreaIds.length > 0
+        ? prisma.printArea.count({
+          where: {
+            id: { in: uniquePrintAreaIds },
+            isActive: true,
+          },
+        })
+        : Promise.resolve(0),
+    ]);
+
+    if (!product) {
+      return reply.status(404).send({ message: 'Product not found' });
+    }
+
+    if (validAreaCount !== uniquePrintAreaIds.length) {
+      return reply.status(400).send({ message: 'One or more print areas are invalid/inactive' });
+    }
+
+    const resolvedDefaultId =
+      uniquePrintAreaIds.length === 0
+        ? null
+        : (defaultPrintAreaId ?? uniquePrintAreaIds[0]);
+
+    const updated = await prisma.$transaction(async (tx) => {
+      await tx.productPrintArea.deleteMany({
+        where: { productId: id },
+      });
+
+      if (uniquePrintAreaIds.length > 0) {
+        await tx.productPrintArea.createMany({
+          data: uniquePrintAreaIds.map((printAreaId) => ({
+            productId: id,
+            printAreaId,
+            isDefault: printAreaId === resolvedDefaultId,
+          })),
+        });
+      }
+
+      await tx.product.update({
+        where: { id },
+        data: {
+          isCustomizable: isCustomizable ?? uniquePrintAreaIds.length > 0,
+        },
+      });
+
+      return tx.product.findUnique({
+        where: { id },
+        select: {
+          id: true,
+          isCustomizable: true,
+          printAreas: {
+            include: { printArea: true },
+            orderBy: { printArea: { sortOrder: 'asc' } },
+          },
+        },
+      });
+    });
+
+    return updated;
+  });
+
   app.put('/:id', async (request, reply) => {
     const paramsSchema = z.object({ id: z.string().uuid() });
 
@@ -310,6 +449,11 @@ export async function adminProductRoutes(app: FastifyInstance) {
       title: z.string().min(1).optional(),
       slug: z.string().min(1).optional(),
       is_published: z.boolean().optional(),
+      product_family: productFamilySchema.optional(),
+      product_subfamily: z.string().trim().min(1).nullable().optional(),
+      requires_upload: z.boolean().optional(),
+      requires_builder: z.boolean().optional(),
+      upload_profile_id: z.string().trim().min(1).nullable().optional(),
       subtitle: z.string().nullable().optional(),
       description: z.string().nullable().optional(),
       basePrice: priceSchema.optional(),
@@ -353,7 +497,7 @@ export async function adminProductRoutes(app: FastifyInstance) {
         return reply.status(409).send({ message: `SKU already exists: ${existingSku.sku}` });
       }
 
-      normalizedVariants = await normalizeVariantMediaForR2(data.variants, id);
+      normalizedVariants = await normalizeVariantMediaForCloudinary(data.variants, id);
 
       // Delete old variants and create new ones
       await prisma.productVariant.deleteMany({ where: { productId: id } });
@@ -364,6 +508,11 @@ export async function adminProductRoutes(app: FastifyInstance) {
     if (data.title !== undefined) updateData.title = data.title;
     if (data.slug !== undefined) updateData.slug = data.slug;
     if (data.is_published !== undefined) updateData.is_published = data.is_published;
+    if (data.product_family !== undefined) updateData.productFamily = data.product_family;
+    if (data.product_subfamily !== undefined) updateData.productSubfamily = data.product_subfamily;
+    if (data.requires_upload !== undefined) updateData.requiresUpload = data.requires_upload;
+    if (data.requires_builder !== undefined) updateData.requiresBuilder = data.requires_builder;
+    if (data.upload_profile_id !== undefined) updateData.uploadProfileId = data.upload_profile_id;
     if (data.subtitle !== undefined) updateData.subtitle = data.subtitle;
     if (data.description !== undefined) updateData.description = data.description;
     if (data.basePrice !== undefined) updateData.basePrice = data.basePrice;
@@ -404,7 +553,7 @@ export async function adminProductRoutes(app: FastifyInstance) {
     return updated;
   });
 
-  // 🗑️ DELETE product (variants cascade deleted automatically)
+  // ðŸ—‘ï¸ DELETE product (variants cascade deleted automatically)
   app.delete('/:id', async (request, reply) => {
     const schema = z.object({ id: z.string().uuid() });
     const { id } = schema.parse(request.params);
@@ -419,20 +568,20 @@ export async function adminProductRoutes(app: FastifyInstance) {
       });
 
       if (!product) {
-        logger.info('[Delete Product] ❌ Product not found');
+        logger.info('[Delete Product] âŒ Product not found');
         return reply.status(404).send({ message: 'Product not found' });
       }
 
       logger.info({ title: product.title, variantCount: product.variants.length }, '[Delete Product] Product found');
 
-      // Step 2: Delete all variant images from R2 storage
-      logger.info('[Delete Product] Step 1: Deleting variant images from R2...');
+      // Step 2: Delete all variant images from Cloudinary storage
+      logger.info('[Delete Product] Step 1: Deleting variant images from Cloudinary...');
       try {
-        const deletedCount = await deleteProductImages(id);
-        logger.info({ deletedCount }, '[Delete Product] Deleted files from R2');
-      } catch (r2Error) {
-        logger.error({ error: r2Error }, '[Delete Product] R2 deletion failed, but continuing...');
-        // Continue even if R2 deletion fails - don't block product deletion
+        await deleteFolder(`products/${id}`);
+        logger.info('[Delete Product] Deleted product folder from Cloudinary');
+      } catch (cloudinaryError) {
+        logger.error({ error: cloudinaryError }, '[Delete Product] Cloudinary deletion failed, but continuing...');
+        // Continue even if media cleanup fails - do not block product deletion
       }
 
       // Step 3: Delete product from database (variants auto-deleted via CASCADE)
@@ -455,3 +604,5 @@ export async function adminProductRoutes(app: FastifyInstance) {
     }
   });
 }
+
+

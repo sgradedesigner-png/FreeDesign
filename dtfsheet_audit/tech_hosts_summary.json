@@ -1,0 +1,190 @@
+﻿[
+    {
+        "host":  "cdn.instant.so",
+        "count":  2560
+    },
+    {
+        "host":  "cdn.shopify.com",
+        "count":  1055
+    },
+    {
+        "host":  "cdn.ecomposer.app",
+        "count":  171
+    },
+    {
+        "host":  "judge.me",
+        "count":  135
+    },
+    {
+        "host":  "cdnwidget.judge.me",
+        "count":  75
+    },
+    {
+        "host":  "client.instant.so",
+        "count":  60
+    },
+    {
+        "host":  "loyalty-admin.appstle.com",
+        "count":  60
+    },
+    {
+        "host":  "fonts.googleapis.com",
+        "count":  60
+    },
+    {
+        "host":  "cache-essential-apps.cc",
+        "count":  60
+    },
+    {
+        "host":  "api.config-security.com",
+        "count":  45
+    },
+    {
+        "host":  "monorail-edge.shopifysvc.com",
+        "count":  45
+    },
+    {
+        "host":  "assets.instant.so",
+        "count":  45
+    },
+    {
+        "host":  "fraud.blockifyapp.com",
+        "count":  45
+    },
+    {
+        "host":  "conf.config-security.com",
+        "count":  30
+    },
+    {
+        "host":  "designer.antigro.com",
+        "count":  30
+    },
+    {
+        "host":  "shop.app",
+        "count":  30
+    },
+    {
+        "host":  "cdn.judge.me",
+        "count":  30
+    },
+    {
+        "host":  "account.dtfsheet.com",
+        "count":  30
+    },
+    {
+        "host":  "api.judge.me",
+        "count":  30
+    },
+    {
+        "host":  "www.facebook.com",
+        "count":  16
+    },
+    {
+        "host":  "www.instagram.com",
+        "count":  15
+    },
+    {
+        "host":  "extensions.shopifycdn.com",
+        "count":  15
+    },
+    {
+        "host":  "www.youtube.com",
+        "count":  15
+    },
+    {
+        "host":  "www.tiktok.com",
+        "count":  15
+    },
+    {
+        "host":  "facebook.com",
+        "count":  15
+    },
+    {
+        "host":  "option.ymq.cool",
+        "count":  15
+    },
+    {
+        "host":  "b2b-solution-api.bsscommerce.com",
+        "count":  15
+    },
+    {
+        "host":  "b2b-solution.bsscommerce.com",
+        "count":  15
+    },
+    {
+        "host":  "geo-ip-service.bsscommerce.com",
+        "count":  15
+    },
+    {
+        "host":  "cdn-widgetsrepository.yotpo.com",
+        "count":  15
+    },
+    {
+        "host":  "storage.synctrack.io",
+        "count":  15
+    },
+    {
+        "host":  "assets.cloudlift.app",
+        "count":  15
+    },
+    {
+        "host":  "b2b-solution-checkout.bsscommerce.com",
+        "count":  15
+    },
+    {
+        "host":  "cdn2.judge.me",
+        "count":  15
+    },
+    {
+        "host":  "dsi3m4nj2ri0m.cloudfront.net",
+        "count":  15
+    },
+    {
+        "host":  "fonts.shopifycdn.com",
+        "count":  15
+    },
+    {
+        "host":  "app.judge.me",
+        "count":  15
+    },
+    {
+        "host":  "static.klaviyo.com",
+        "count":  15
+    },
+    {
+        "host":  "cdn1.judge.me",
+        "count":  15
+    },
+    {
+        "host":  "creativecommons.org",
+        "count":  12
+    },
+    {
+        "host":  "purl.org",
+        "count":  4
+    },
+    {
+        "host":  "openclipart.org",
+        "count":  4
+    },
+    {
+        "host":  "dtfsheet.myshopify.com",
+        "count":  4
+    },
+    {
+        "host":  "tango.freedesktop.org",
+        "count":  4
+    },
+    {
+        "host":  "twitter.com",
+        "count":  1
+    },
+    {
+        "host":  "pinterest.com",
+        "count":  1
+    },
+    {
+        "host":  "www.youtube-nocookie.com",
+        "count":  1
+    }
+]

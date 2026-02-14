@@ -16,6 +16,15 @@ export type ProductVariant = {
   updatedAt: string;
 };
 
+export type ProductFamily =
+  | 'BY_SIZE'
+  | 'GANG_UPLOAD'
+  | 'GANG_BUILDER'
+  | 'BLANKS'
+  | 'UV_BY_SIZE'
+  | 'UV_GANG_UPLOAD'
+  | 'UV_GANG_BUILDER';
+
 // Backend Product with Variants
 export type BackendProduct = {
   id: string;
@@ -25,6 +34,13 @@ export type BackendProduct = {
   description: string | null;
   basePrice: number;
   categoryId: string;
+  productFamily?: ProductFamily;
+  productSubfamily?: string | null;
+  requiresUpload?: boolean;
+  requiresBuilder?: boolean;
+  uploadProfileId?: string | null;
+  isCustomizable?: boolean;
+  mockupImagePath?: string | null;
   category?: {
     id: string;
     name: string;
@@ -57,6 +73,11 @@ export type Product = {
   features: string[];
   benefits: string[];
   productDetails: string[];
+  productFamily: ProductFamily;
+  productSubfamily?: string | null;
+  requiresUpload?: boolean;
+  requiresBuilder?: boolean;
+  uploadProfileId?: string | null;
 
   // Variant-based properties
   variants: ProductVariant[];
@@ -71,4 +92,7 @@ export type Product = {
 
   is_new?: boolean;
   created_at?: string;
+  isCustomizable?: boolean;
+  mockupImagePath?: string | null;
 };
+

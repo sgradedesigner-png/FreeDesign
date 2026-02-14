@@ -250,13 +250,13 @@ request.log.error({
 
 ### ✅ Test 1: 404 Not Found
 ```bash
-$ curl http://localhost:3000/nonexistent
+$ curl http://localhost:4000/nonexistent
 {"error":"Not Found","message":"GET /nonexistent олдсонгүй","statusCode":404}
 ```
 
 ### ✅ Test 2: Health Check
 ```bash
-$ curl http://localhost:3000/health
+$ curl http://localhost:4000/health
 {"status":"healthy","timestamp":"2026-02-08T10:44:54.308Z", ...}
 ```
 
@@ -410,3 +410,4 @@ try {
 ---
 
 **Next Task:** Task 2.4 - QPay Circuit Breaker
+

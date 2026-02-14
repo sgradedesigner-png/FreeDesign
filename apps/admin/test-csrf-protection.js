@@ -31,7 +31,7 @@ async function testCsrfProtection() {
 
   // Capture network requests
   page.on('request', request => {
-    if (request.url().includes('localhost:3000')) {
+    if (request.url().includes('localhost:4000')) {
       const headers = request.headers();
       results.networkRequests.push({
         url: request.url(),
@@ -56,7 +56,7 @@ async function testCsrfProtection() {
 
     // Test 1: Backend CSRF token endpoint
     console.log('Test 1: Testing /csrf-token endpoint...');
-    const response = await page.goto('http://localhost:3000/csrf-token');
+    const response = await page.goto('http://localhost:4000/csrf-token');
     const tokenData = await response.json();
 
     const test1 = {
@@ -192,3 +192,4 @@ testCsrfProtection().then(results => {
   console.error('Fatal error:', error);
   process.exit(1);
 });
+

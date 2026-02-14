@@ -19,74 +19,130 @@ enum Role {
 enum OrderStatus {
   PENDING
   PAID
-  EXPIRED              // QPay invoice expired (unpaid after 48 hours)
+  EXPIRED // QPay invoice expired (unpaid after 48 hours)
   SHIPPED
   COMPLETED
   CANCELLED
-  CANCELLING           // Order is being cancelled (QPay invoice cancellation in progress)
-  CANCELLATION_FAILED  // QPay invoice cancellation failed
+  CANCELLING // Order is being cancelled (QPay invoice cancellation in progress)
+  CANCELLATION_FAILED // QPay invoice cancellation failed
 }
 
+enum ProductionStatus {
+  NEW
+  ART_CHECK
+  READY_TO_PRINT
+  PRINTING
+  QC
+  PACKED
+  SHIPPED
+  DONE
+}
+
+
+enum CartStatus {
+  ACTIVE
+  CHECKED_OUT
+  ABANDONED
+}
 model Profile {
-  id        String   @id  // = auth.users.id
+  id        String   @id // = auth.users.id
   role      Role     @default(CUSTOMER)
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
   email     String?
-  name      String?  // User full name
-  phone     String?  // User phone number
-  address   String?  // JSON string for multiple addresses
+  name      String? // User full name
+  phone     String? // User phone number
+  address   String? // JSON string for multiple addresses
 
-  // Relations
-  orders    Order[]  // User's orders
+    carts  Cart[]
 
   @@index([email])
   @@map("profiles")
 }
 
 
-model Category {
-  id        String    @id @default(uuid())
-  name      String
-  slug      String    @unique
-  products  Product[]
-  createdAt DateTime  @default(now())
+model Cart {
+  id          String     @id @default(uuid())
+  userId      String?    @map(""user_id"")
+  guestCartId String?    @map(""guest_cart_id"")
+  status      CartStatus @default(ACTIVE)
+  createdAt   DateTime   @default(now()) @map(""created_at"")
+  updatedAt   DateTime   @updatedAt @map(""updated_at"")
 
-  @@index([slug])
-  @@map("categories")
+  user  Profile?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  items CartItem[]
+
+  @@index([userId, status])
+  @@index([guestCartId, status])
+  @@map(""carts"")
+}
+
+model CartItem {
+  id                   String   @id @default(uuid())
+  cartId               String   @map(""cart_id"")
+  cart                 Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  cartKey              String   @map(""cart_key"")
+  quantity             Int      @default(1)
+  productId            String   @map(""product_id"")
+  productName          String   @map(""product_name"")
+  productSlug          String   @map(""product_slug"")
+  productCategory      String   @map(""product_category"")
+  variantId            String   @map(""variant_id"")
+  variantName          String   @map(""variant_name"")
+  variantPrice         Decimal  @map(""variant_price"")
+  variantOriginalPrice Decimal? @map(""variant_original_price"")
+  variantImage         String   @map(""variant_image"")
+  variantSku           String   @map(""variant_sku"")
+  size                 String?
+  isCustomized         Boolean  @default(false) @map(""is_customized"")
+  optionPayload        Json     @default(dbgenerated(""'{}'::jsonb"")) @map(""option_payload"")
+  createdAt            DateTime @default(now()) @map(""created_at"")
+  updatedAt            DateTime @updatedAt @map(""updated_at"")
+
+  @@unique([cartId, cartKey])
+  @@index([cartId, updatedAt(sort: Desc)])
+  @@index([variantId])
+  @@map(""cart_items"")
 }
 
 model Product {
-  id          String           @id @default(uuid())
-  title       String
-  slug        String           @unique
-  is_published Boolean         @default(false)
-  subtitle    String?
-  description String?
-  basePrice   Decimal          @default(0) // Base price (variants can override)
-  categoryId  String
-  category    Category         @relation(fields: [categoryId], references: [id])
-  variants    ProductVariant[] // Product variants
-  rating      Float            @default(0)
-  reviews     Int              @default(0)
-  features    String[]         @default([])
-  benefits    String[]         @default([])
-  productDetails String[]      @default([])
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
+  id              String             @id @default(uuid())
+  title           String
+  slug            String             @unique
+  is_published    Boolean            @default(false)
+  productFamily   ProductFamily      @default(BLANKS) @map("product_family")
+  productSubfamily String?           @map("product_subfamily")
+  requiresUpload  Boolean            @default(false) @map("requires_upload")
+  requiresBuilder Boolean            @default(false) @map("requires_builder")
+  uploadProfileId String?            @map("upload_profile_id")
+  isCustomizable  Boolean            @default(false)
+  subtitle        String?
+  description     String?
+  mockupImagePath String?
+  basePrice       Decimal            @default(0) // Base price (variants can override)
+  categoryId      String
+  category        Category           @relation(fields: [categoryId], references: [id])
+  variants        ProductVariant[] // Product variants
+  printAreas      ProductPrintArea[]
+  rating          Float              @default(0)
+  reviews         Int                @default(0)
+  features        String[]           @default([])
+  benefits        String[]           @default([])
+  productDetails  String[]           @default([])
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
 
   // Single column indexes
   @@index([slug])
   @@index([createdAt(sort: Desc)])
   @@index([categoryId])
   @@index([title])
-  @@index([is_published])  // NEW: Filter published products
-
+  @@index([is_published]) // NEW: Filter published products
   // Composite indexes for common query patterns (Phase 3.3 - Performance Optimization)
-  @@index([is_published, createdAt(sort: Desc)])  // NEW: Published products sorted by date (most common query)
-  @@index([categoryId, is_published])              // NEW: Products by category (filtered by published)
-  @@index([is_published, categoryId, createdAt(sort: Desc)])  // NEW: Covering index for filtered category queries
-
+  @@index([is_published, createdAt(sort: Desc)]) // NEW: Published products sorted by date (most common query)
+  @@index([categoryId, is_published]) // NEW: Products by category (filtered by published)
+  @@index([productFamily, is_published]) // NEW: Product family browse for DTF storefront routes
+  @@index([is_published, categoryId, createdAt(sort: Desc)]) // NEW: Covering index for filtered category queries
   @@map("products")
 }
 
@@ -94,12 +150,12 @@ model ProductVariant {
   id            String   @id @default(uuid())
   productId     String
   product       Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  name          String   // Variant name (e.g., "Black/Red", "Ocean Blue")
+  name          String // Variant name (e.g., "Black/Red", "Ocean Blue")
   sku           String   @unique // Unique SKU for this variant
-  price         Decimal  // Variant-specific price
+  price         Decimal // Variant-specific price
   originalPrice Decimal? // Original price if on sale
   sizes         String[] @default([]) // Available sizes for this variant
-  imagePath     String   // Main thumbnail image
+  imagePath     String // Main thumbnail image
   galleryPaths  String[] @default([]) // Additional gallery images
   stock         Int      @default(0) // Variant stock
   isAvailable   Boolean  @default(true) // Availability flag
@@ -111,51 +167,56 @@ model ProductVariant {
   @@index([productId])
   @@index([sku])
   @@index([stock])
-
   // Composite index for variant loading (Phase 3.3 - Performance Optimization)
-  @@index([productId, sortOrder])  // NEW: Fast variant loading in correct order
-
+  @@index([productId, sortOrder]) // NEW: Fast variant loading in correct order
   @@map("product_variants")
 }
 
 model Order {
-  id              String      @id @default(uuid())
-  userId          String      // Link to auth.users.id
-  total           Decimal
-  status          OrderStatus @default(PENDING)
-  items           Json        // Order items (snapshot)
-  shippingAddress String?     // JSON string with shipping details
+  id               String           @id @default(uuid())
+  userId           String // Link to auth.users.id
+  total            Decimal
+  status           OrderStatus      @default(PENDING)
+  productionStatus ProductionStatus @default(NEW)
+  isCustomOrder    Boolean          @default(false)
+  rushFee          Decimal?
+  addOnFees        Decimal?
+  items            Json // Order items (snapshot)
+  shippingAddress  String? // JSON string with shipping details
 
   // QPay Payment Fields
-  qpayInvoiceId   String?     @unique  // QPay invoice_id
-  qpayPaymentId   String?     @unique  // QPay payment_id (after paid)
-  paymentStatus   String      @default("UNPAID") // UNPAID, PAID, REFUNDED
-  paymentMethod   String?     // "QPAY", "CASH", etc.
-  qrCode          String?     @db.Text // QR code text (base64 image)
-  qrCodeUrl       String?     // QPay short URL
-  qrText          String?     @db.Text // QR text URL (for sandbox testing)
-  paymentDate     DateTime?
+  qpayInvoiceId String?   @unique // QPay invoice_id
+  qpayPaymentId String?   @unique // QPay payment_id (after paid)
+  paymentStatus String    @default("UNPAID") // UNPAID, PAID, REFUNDED
+  paymentMethod String? // "QPAY", "CASH", etc.
+  qrCode        String?   @db.Text // QR code text (base64 image)
+  qrCodeUrl     String? // QPay short URL
+  qrText        String?   @db.Text // QR text URL (for sandbox testing)
+  paymentDate   DateTime?
 
   // Expiration Management (Phase 1)
-  qpayInvoiceExpiresAt DateTime?  // QPay invoice expiration time (48 hours from creation)
-  expiredAt            DateTime?  // When order was marked as expired
+  qpayInvoiceExpiresAt DateTime? // QPay invoice expiration time (48 hours from creation)
+  expiredAt            DateTime? // When order was marked as expired
 
   // Email Notifications (Phase 2)
-  confirmationEmailSent       Boolean   @default(false)  // Order confirmation email sent
-  confirmationEmailSentAt     DateTime?                  // When confirmation email was sent
-  expirationWarningEmailSent  Boolean   @default(false)  // 24h warning email sent
-  expirationWarningEmailSentAt DateTime?                 // When warning email was sent
-  expiredEmailSent            Boolean   @default(false)  // Order expired email sent
-  expiredEmailSentAt          DateTime?                  // When expired email was sent
+  confirmationEmailSent        Boolean   @default(false) // Order confirmation email sent
+  confirmationEmailSentAt      DateTime? // When confirmation email was sent
+  expirationWarningEmailSent   Boolean   @default(false) // 24h warning email sent
+  expirationWarningEmailSentAt DateTime? // When warning email was sent
+  expiredEmailSent             Boolean   @default(false) // Order expired email sent
+  expiredEmailSentAt           DateTime? // When expired email was sent
 
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  user            Profile     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user             Profile                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  customizations   OrderItemCustomization[]
+  productionEvents ProductionStatusEvent[]
 
   @@index([userId])
   @@index([status])
+  @@index([productionStatus])
   @@index([createdAt])
   @@index([qpayInvoiceId])
   @@index([qpayPaymentId])
@@ -165,16 +226,144 @@ model Order {
   @@map("orders")
 }
 
+model PrintArea {
+  id                String                   @id @default(uuid())
+  name              String
+  label             String
+  labelEn           String?
+  maxWidthCm        Float
+  maxHeightCm       Float
+  sortOrder         Int                      @default(0)
+  isActive          Boolean                  @default(true)
+  createdAt         DateTime                 @default(now())
+  productPrintAreas ProductPrintArea[]
+  customizations    OrderItemCustomization[]
+  pricingRules      PricingRule[]
+
+  @@unique([name])
+  @@index([isActive, sortOrder])
+  @@map("print_areas")
+}
+
+model ProductPrintArea {
+  id          String    @id @default(uuid())
+  productId   String
+  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  printAreaId String
+  printArea   PrintArea @relation(fields: [printAreaId], references: [id], onDelete: Cascade)
+  isDefault   Boolean   @default(false)
+
+  @@unique([productId, printAreaId])
+  @@index([productId])
+  @@index([printAreaId])
+  @@map("product_print_areas")
+}
+
+model PrintSizeTier {
+  id             String                   @id @default(uuid())
+  name           String
+  label          String
+  widthCm        Float
+  heightCm       Float
+  sortOrder      Int                      @default(0)
+  isActive       Boolean                  @default(true)
+  pricingRules   PricingRule[]
+  customizations OrderItemCustomization[]
+
+  @@unique([name])
+  @@index([isActive, sortOrder])
+  @@map("print_size_tiers")
+}
+
+model PricingRule {
+  id              String         @id @default(uuid())
+  name            String
+  ruleType        String
+  printSizeTierId String?
+  printSizeTier   PrintSizeTier? @relation(fields: [printSizeTierId], references: [id])
+  printAreaId     String?
+  printArea       PrintArea?     @relation(fields: [printAreaId], references: [id])
+  minQuantity     Int?
+  maxQuantity     Int?
+  price           Decimal
+  discountPercent Float?
+  isActive        Boolean        @default(true)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([ruleType, isActive])
+  @@index([printSizeTierId])
+  @@index([printAreaId])
+  @@map("pricing_rules")
+}
+
+model CustomizationAsset {
+  id             String                   @id @default(uuid())
+  userId         String
+  originalUrl    String
+  thumbnailUrl   String?
+  cloudinaryId   String?
+  fileName       String
+  mimeType       String
+  fileSizeBytes  Int
+  widthPx        Int?
+  heightPx       Int?
+  dpi            Int?
+  isValid        Boolean                  @default(false)
+  createdAt      DateTime                 @default(now())
+  customizations OrderItemCustomization[]
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("customization_assets")
+}
+
+model OrderItemCustomization {
+  id              String             @id @default(uuid())
+  orderId         String
+  order           Order              @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderItemIndex  Int
+  printAreaId     String
+  printArea       PrintArea          @relation(fields: [printAreaId], references: [id])
+  printSizeTierId String
+  printSizeTier   PrintSizeTier      @relation(fields: [printSizeTierId], references: [id])
+  assetId         String
+  asset           CustomizationAsset @relation(fields: [assetId], references: [id])
+  placementConfig Json?
+  printFee        Decimal
+  createdAt       DateTime           @default(now())
+
+  @@index([orderId])
+  @@index([orderId, orderItemIndex])
+  @@index([assetId])
+  @@map("order_item_customizations")
+}
+
+model ProductionStatusEvent {
+  id         String            @id @default(uuid())
+  orderId    String
+  order      Order             @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  fromStatus ProductionStatus?
+  toStatus   ProductionStatus
+  changedBy  String
+  notes      String?
+  createdAt  DateTime          @default(now())
+
+  @@index([orderId])
+  @@index([toStatus])
+  @@map("production_status_events")
+}
+
 model PaymentWebhookLog {
-  id          String   @id @default(uuid())
-  paymentId   String   @unique  // QPay payment_id (idempotency key)
-  invoiceId   String?              // QPay invoice_id
-  orderId     String?              // Associated order ID
-  status      String               // success, failed, duplicate, invalid
-  payload     Json                 // Full webhook payload for debugging
-  receivedAt  DateTime @default(now())
-  processedAt DateTime?            // When processing completed
-  error       String?  @db.Text    // Error message if processing failed
+  id          String    @id @default(uuid())
+  paymentId   String    @unique // QPay payment_id (idempotency key)
+  invoiceId   String? // QPay invoice_id
+  orderId     String? // Associated order ID
+  status      String // success, failed, duplicate, invalid
+  payload     Json // Full webhook payload for debugging
+  receivedAt  DateTime  @default(now())
+  processedAt DateTime? // When processing completed
+  error       String?   @db.Text // Error message if processing failed
 
   @@index([invoiceId])
   @@index([orderId])
@@ -182,3 +371,6 @@ model PaymentWebhookLog {
   @@index([status])
   @@map("payment_webhook_logs")
 }
+
+
+

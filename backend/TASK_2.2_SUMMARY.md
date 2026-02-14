@@ -109,7 +109,7 @@ chmod +x tests/manual/test-rate-limit.sh
 1. **Global Limit Test:**
    ```bash
    # Send 101 requests (limit is 100)
-   for i in {1..101}; do curl http://localhost:3000/health; done
+   for i in {1..101}; do curl http://localhost:4000/health; done
    # 101st should return 429
    ```
 
@@ -121,7 +121,7 @@ chmod +x tests/manual/test-rate-limit.sh
 
 3. **Header Verification:**
    ```bash
-   curl -I http://localhost:3000/health
+   curl -I http://localhost:4000/health
    # Check for X-RateLimit-* headers
    ```
 
@@ -198,3 +198,4 @@ chmod +x tests/manual/test-rate-limit.sh
 ---
 
 **Next Task:** Task 2.3 - Comprehensive Error Handling
+

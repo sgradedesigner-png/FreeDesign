@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { Star, Truck, ShieldCheck, ArrowRight, Heart, ShoppingCart, Plus, Minus } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
 import { useWishlist } from '../../context/WishlistContext';
@@ -21,6 +22,9 @@ type EmbeddedSections = {
   intro: string;
   sections: FeatureSection[];
 };
+
+const formatMntPrice = (value: number): string =>
+  `₮${Math.max(0, Math.round(value)).toLocaleString()}`;
 
 const toNumericSize = (value: string) => {
   const match = value.match(/[\d.]+/);
@@ -292,11 +296,11 @@ export default function ProductInfo({ product, onVariantChange }: ProductInfoPro
 
         <div className="flex items-baseline gap-3">
           <span className="text-2xl sm:text-3xl font-bold text-primary">
-            ${selectedVariant.price ? selectedVariant.price.toFixed(2) : product.price.toFixed(2)}
+            {formatMntPrice(selectedVariant.price ?? product.price)}
           </span>
           {selectedVariant.originalPrice && (
             <span className="text-base sm:text-lg text-muted-foreground line-through">
-              ${selectedVariant.originalPrice.toFixed(2)}
+              {formatMntPrice(selectedVariant.originalPrice)}
             </span>
           )}
         </div>
@@ -501,10 +505,27 @@ export default function ProductInfo({ product, onVariantChange }: ProductInfoPro
             <span>{isWishlisted ? 'SAVED' : 'WISHLIST'}</span>
           </button>
         </div>
+
+        {product.slug ? (
+          <Link
+            to={`/customize/${product.slug}`}
+            className="hidden sm:flex h-12 items-center justify-center rounded-xl border-2 border-primary text-primary font-bold hover:bg-primary/5 transition-colors"
+          >
+            CUSTOMIZE DESIGN
+          </Link>
+        ) : null}
       </div>
 
       {/* Mobile Sticky Actions */}
       <div className="sm:hidden sticky bottom-[max(0.5rem,env(safe-area-inset-bottom))] z-30 border border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 p-2 rounded-2xl shadow-lg">
+        {product.slug ? (
+          <Link
+            to={`/customize/${product.slug}`}
+            className="mb-2 flex h-10 items-center justify-center rounded-xl border border-primary text-xs font-bold text-primary"
+          >
+            CUSTOMIZE DESIGN
+          </Link>
+        ) : null}
         <div className="grid grid-cols-[1fr,56px] gap-2">
           <button
             data-testid="add-to-cart-btn"
@@ -586,7 +607,7 @@ export default function ProductInfo({ product, onVariantChange }: ProductInfoPro
                 {displayTitle}
               </p>
               <p className="text-3xl sm:text-[2.2rem] font-bold text-primary leading-tight">
-                ${modalPrice != null ? modalPrice.toFixed(2) : product.price.toFixed(2)}
+                {formatMntPrice(modalPrice ?? product.price)}
               </p>
             </div>
           </div>

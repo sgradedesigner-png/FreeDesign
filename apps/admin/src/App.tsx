@@ -8,6 +8,8 @@ import CategoriesPage from './pages/CategoriesPage';
 import OrdersPage from './pages/OrdersPage';
 import SettingsPage from './pages/SettingsPage';
 import EmailTestPage from './pages/EmailTestPage';
+import ProductionDashboardPage from './pages/ProductionDashboardPage';
+import PricingRulesPage from './pages/PricingRulesPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AdminLayout } from './components/layout/AdminLayout';
 import { useAuth } from './auth/AuthContext';
@@ -37,6 +39,8 @@ export default function App() {
         <Route path="/products/:id" element={<ProductFormPage />} />
         <Route path="/categories" element={<CategoriesPage />} />
         <Route path="/orders" element={<OrdersPage />} />
+        <Route path="/production" element={<ProductionDashboardPage />} />
+        <Route path="/pricing" element={<PricingRulesPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/email-test" element={<EmailTestPage />} />
         {/* More routes will be added here */}

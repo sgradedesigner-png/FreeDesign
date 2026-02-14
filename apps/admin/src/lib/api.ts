@@ -3,7 +3,7 @@ import { supabase } from './supabase';
 import { logger } from './logger';
 
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL ?? 'http://localhost:3000',
+  baseURL: import.meta.env.VITE_API_URL ?? 'http://localhost:4000',
   withCredentials: true, // Enable cookies for CSRF protection
 });
 
@@ -37,7 +37,7 @@ async function getCsrfToken(): Promise<string> {
   csrfTokenPromise = (async () => {
     try {
       const response = await axios.get<{ csrfToken: string }>(
-        `${import.meta.env.VITE_API_URL ?? 'http://localhost:3000'}/csrf-token`,
+        `${import.meta.env.VITE_API_URL ?? 'http://localhost:4000'}/csrf-token`,
         { withCredentials: true }
       );
       csrfToken = response.data.csrfToken;
@@ -171,3 +171,4 @@ export async function getNikePrefill(sku: string): Promise<NikePrefillResponse> 
   });
   return data;
 }
+

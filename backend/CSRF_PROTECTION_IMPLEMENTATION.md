@@ -107,7 +107,7 @@ api.interceptors.request.use(async (config) => {
 
 **Command:**
 ```bash
-curl -s -c /tmp/cookies.txt http://localhost:3000/csrf-token
+curl -s -c /tmp/cookies.txt http://localhost:4000/csrf-token
 ```
 
 **Result:** ✅ **PASS**
@@ -376,7 +376,7 @@ cookieOpts: {
 
 ```bash
 # 1. Get CSRF token and save cookies
-curl -c cookies.txt http://localhost:3000/csrf-token
+curl -c cookies.txt http://localhost:4000/csrf-token
 
 # 2. Extract token from response
 TOKEN="extracted-token-here"
@@ -386,7 +386,7 @@ curl -b cookies.txt \
   -H "X-CSRF-Token: $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"test": "data"}' \
-  http://localhost:3000/api/some-endpoint
+  http://localhost:4000/api/some-endpoint
 
 # Expected: 200 OK (if endpoint exists) or 404 (if not)
 ```
@@ -400,7 +400,7 @@ curl -b cookies.txt \
 curl -X POST \
   -H "Content-Type: application/json" \
   -d '{"test": "data"}' \
-  http://localhost:3000/api/some-endpoint
+  http://localhost:4000/api/some-endpoint
 
 # Expected: 403 Forbidden
 ```
@@ -415,7 +415,7 @@ curl -X POST \
   -H "X-CSRF-Token: wrong-token" \
   -H "Content-Type: application/json" \
   -d '{"test": "data"}' \
-  http://localhost:3000/api/some-endpoint
+  http://localhost:4000/api/some-endpoint
 
 # Expected: 403 Forbidden
 ```
@@ -479,3 +479,4 @@ Before deploying to production:
 **Implementation Date:** 2026-02-10
 **Tested:** Backend + Frontend
 **Status:** Production Ready
+

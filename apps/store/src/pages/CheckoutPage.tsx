@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+﻿import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useCart } from '@/context/CartContext'
 import { useAuth } from '@/context/AuthContext'
@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import Icon from '@/components/ui/AppIcon'
 import { toast } from 'sonner'
-import { r2Url } from '@/lib/r2'
+import { imageUrl } from '@/lib/imageUrl'
 import { logger } from '@/lib/logger'
 
 interface PaymentInfo {
@@ -75,6 +75,8 @@ function CheckoutPage() {
 
   const [shippingInfo, setShippingInfo] = useState(getInitialShippingInfo())
   const [savedAddress, setSavedAddress] = useState<any>(null)
+  const rushFeeTotal = cart.reduce((sum, item: any) => sum + Number(item.rushFee || 0), 0)
+  const addOnFeeTotal = cart.reduce((sum, item: any) => sum + Number(item.addOnFees || 0), 0)
 
   // Save shipping info to sessionStorage whenever it changes
   useEffect(() => {
@@ -121,7 +123,7 @@ function CheckoutPage() {
 
       if (data.paid) {
         setPaymentStatus('paid')
-        toast.success(language === 'en' ? 'Payment successful!' : 'Төлбөр амжилттай!')
+        toast.success(language === 'en' ? 'Payment successful!' : 'Ð¢Ó©Ð»Ð±Ó©Ñ€ Ð°Ð¼Ð¶Ð¸Ð»Ñ‚Ñ‚Ð°Ð¹!')
 
         // Clear cart
         try {
@@ -145,7 +147,7 @@ function CheckoutPage() {
     } catch (error) {
       logger.error('Payment check error:', error)
       setPaymentStatus('failed')
-      const errorMsg = language === 'en' ? 'Failed to check payment status' : 'Төлбөрийн төлөв шалгахад алдаа гарлаа'
+      const errorMsg = language === 'en' ? 'Failed to check payment status' : 'Ð¢Ó©Ð»Ð±Ó©Ñ€Ð¸Ð¹Ð½ Ñ‚Ó©Ð»Ó©Ð² ÑˆÐ°Ð»Ð³Ð°Ñ…Ð°Ð´ Ð°Ð»Ð´Ð°Ð° Ð³Ð°Ñ€Ð»Ð°Ð°'
       setPaymentError(errorMsg)
       toast.error(errorMsg)
     }
@@ -156,7 +158,7 @@ function CheckoutPage() {
     if (!orderId || paymentStatus !== 'pending') return
 
     let pollCount = 0
-    const MAX_POLLS = 60 // 60 polls × 5 seconds = 5 minutes max
+    const MAX_POLLS = 60 // 60 polls Ã— 5 seconds = 5 minutes max
     const startTime = Date.now()
     const MAX_DURATION = 5 * 60 * 1000 // 5 minutes in milliseconds
 
@@ -171,7 +173,7 @@ function CheckoutPage() {
         toast.error(
           language === 'en'
             ? 'Payment verification timed out. Please check your order status manually.'
-            : 'Төлбөрийн баталгаажуулалт хугацаа хэтэрсэн. Захиалгын төлвийг гараар шалгана уу.'
+            : 'Ð¢Ó©Ð»Ð±Ó©Ñ€Ð¸Ð¹Ð½ Ð±Ð°Ñ‚Ð°Ð»Ð³Ð°Ð°Ð¶ÑƒÑƒÐ»Ð°Ð»Ñ‚ Ñ…ÑƒÐ³Ð°Ñ†Ð°Ð° Ñ…ÑÑ‚ÑÑ€ÑÑÐ½. Ð—Ð°Ñ…Ð¸Ð°Ð»Ð³Ñ‹Ð½ Ñ‚Ó©Ð»Ð²Ð¸Ð¹Ð³ Ð³Ð°Ñ€Ð°Ð°Ñ€ ÑˆÐ°Ð»Ð³Ð°Ð½Ð° ÑƒÑƒ.'
         )
         logger.warn(`Payment polling timed out after ${pollCount} attempts (${Math.round(elapsed / 1000)}s)`)
         return
@@ -235,7 +237,7 @@ function CheckoutPage() {
   const useSavedAddress = () => {
     if (savedAddress) {
       setShippingInfo(savedAddress)
-      toast.success(language === 'en' ? 'Saved address loaded' : 'Хадгалсан хаяг ачааллагдлаа')
+      toast.success(language === 'en' ? 'Saved address loaded' : 'Ð¥Ð°Ð´Ð³Ð°Ð»ÑÐ°Ð½ Ñ…Ð°ÑÐ³ Ð°Ñ‡Ð°Ð°Ð»Ð»Ð°Ð³Ð´Ð»Ð°Ð°')
     }
   }
 
@@ -246,7 +248,7 @@ function CheckoutPage() {
     try {
       // Validate cart is not empty
       if (!cart || cart.length === 0) {
-        toast.error(language === 'en' ? 'Your cart is empty' : 'Таны сагс хоосон байна')
+        toast.error(language === 'en' ? 'Your cart is empty' : 'Ð¢Ð°Ð½Ñ‹ ÑÐ°Ð³Ñ Ñ…Ð¾Ð¾ÑÐ¾Ð½ Ð±Ð°Ð¹Ð½Ð°')
         setLoading(false)
         navigate('/products')
         return
@@ -254,7 +256,7 @@ function CheckoutPage() {
 
       // Validate form
       if (!shippingInfo.fullName || !shippingInfo.phone || !shippingInfo.address) {
-        toast.error(language === 'en' ? 'Please complete all required fields' : 'Бүх шаардлагатай талбарыг бөглөнө үү')
+        toast.error(language === 'en' ? 'Please complete all required fields' : 'Ð‘Ò¯Ñ… ÑˆÐ°Ð°Ñ€Ð´Ð»Ð°Ð³Ð°Ñ‚Ð°Ð¹ Ñ‚Ð°Ð»Ð±Ð°Ñ€Ñ‹Ð³ Ð±Ó©Ð³Ð»Ó©Ð½Ó© Ò¯Ò¯')
         setLoading(false)
         return
       }
@@ -264,7 +266,7 @@ function CheckoutPage() {
         toast.error(
           language === 'en'
             ? 'Address is too short. Please enter at least 5 characters'
-            : 'Хаяг хэт богино байна. Доод тал нь 5 тэмдэгт оруулна уу'
+            : 'Ð¥Ð°ÑÐ³ Ñ…ÑÑ‚ Ð±Ð¾Ð³Ð¸Ð½Ð¾ Ð±Ð°Ð¹Ð½Ð°. Ð”Ð¾Ð¾Ð´ Ñ‚Ð°Ð» Ð½ÑŒ 5 Ñ‚ÑÐ¼Ð´ÑÐ³Ñ‚ Ð¾Ñ€ÑƒÑƒÐ»Ð½Ð° ÑƒÑƒ'
         )
         setLoading(false)
         return
@@ -275,7 +277,7 @@ function CheckoutPage() {
         toast.error(
           language === 'en'
             ? 'Phone number must be 8 digits'
-            : 'Утасны дугаар 8 оронтой байх ёстой'
+            : 'Ð£Ñ‚Ð°ÑÐ½Ñ‹ Ð´ÑƒÐ³Ð°Ð°Ñ€ 8 Ð¾Ñ€Ð¾Ð½Ñ‚Ð¾Ð¹ Ð±Ð°Ð¹Ñ… Ñ‘ÑÑ‚Ð¾Ð¹'
         )
         setLoading(false)
         return
@@ -284,7 +286,7 @@ function CheckoutPage() {
       // Check if user is logged in
       const { data: { session } } = await supabase.auth.getSession()
       if (!session?.access_token) {
-        toast.error(language === 'en' ? 'Please login to continue' : 'Нэвтэрч орно уу')
+        toast.error(language === 'en' ? 'Please login to continue' : 'ÐÑÐ²Ñ‚ÑÑ€Ñ‡ Ð¾Ñ€Ð½Ð¾ ÑƒÑƒ')
         const returnTo = encodeURIComponent(window.location.pathname)
         navigate(`/login?returnTo=${returnTo}`)
         return
@@ -292,14 +294,30 @@ function CheckoutPage() {
 
       // Create order with QPay invoice
       // Convert cart items to proper format for backend
-      const orderItems = cart.map(item => ({
+      const orderItems = cart.map((item) => ({
         id: item.variantId,
         productName: item.productName,
         variantName: item.variantName,
         variantPrice: Number(item.variantPrice),
         quantity: item.quantity,
         imagePath: item.variantImage,
-      }))
+        addOns: item.addOns?.map((addOn) => ({
+          id: addOn.id,
+          name: addOn.name,
+          fee: Number(addOn.fee),
+        })),
+        customizations: item.customizations?.map((customization) => ({
+          printAreaId: customization.printAreaId,
+          printSizeTierId: customization.printSizeTierId,
+          assetId: customization.assetId,
+          printFee: Number(customization.printFee),
+          placementConfig: customization.placementConfig,
+        })),
+      }));
+
+      const rushOrder = cart.some((item) => item.rushOrder);
+      const rushFee = cart.reduce((sum, item) => sum + Number(item.rushFee || 0), 0);
+      const addOnFees = cart.reduce((sum, item) => sum + Number(item.addOnFees || 0), 0);
 
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/orders`, {
         method: 'POST',
@@ -310,6 +328,9 @@ function CheckoutPage() {
         body: JSON.stringify({
           items: orderItems,
           shippingAddress: shippingInfo,
+          rushOrder,
+          rushFee,
+          addOnFees,
           total: Number(cartTotal)
         })
       })
@@ -332,14 +353,14 @@ function CheckoutPage() {
 
       setOrderId(order.id)
       setPaymentInfo(payment)
-      toast.success(language === 'en' ? 'Order created! Please complete payment' : 'Захиалга үүсгэгдлээ! Төлбөрөө төлнө үү')
+      toast.success(language === 'en' ? 'Order created! Please complete payment' : 'Ð—Ð°Ñ…Ð¸Ð°Ð»Ð³Ð° Ò¯Ò¯ÑÐ³ÑÐ³Ð´Ð»ÑÑ! Ð¢Ó©Ð»Ð±Ó©Ñ€Ó©Ó© Ñ‚Ó©Ð»Ð½Ó© Ò¯Ò¯')
 
       // Start checking payment status
       setPaymentStatus('pending')
 
     } catch (error: any) {
       logger.error('Order creation error:', error)
-      const errorMsg = error.message || (language === 'en' ? 'Failed to create order' : 'Захиалга үүсгэхэд алдаа гарлаа')
+      const errorMsg = error.message || (language === 'en' ? 'Failed to create order' : 'Ð—Ð°Ñ…Ð¸Ð°Ð»Ð³Ð° Ò¯Ò¯ÑÐ³ÑÑ…ÑÐ´ Ð°Ð»Ð´Ð°Ð° Ð³Ð°Ñ€Ð»Ð°Ð°')
       setCheckoutError(errorMsg)
       toast.error(errorMsg)
     } finally {
@@ -355,7 +376,7 @@ function CheckoutPage() {
           {/* Header with Progress - PAYMENT STEP */}
           <div className="mb-8">
             <h1 className="text-3xl md:text-4xl font-bold mb-4">
-              {language === 'en' ? 'Checkout' : 'Төлбөр төлөх'}
+              {language === 'en' ? 'Checkout' : 'Ð¢Ó©Ð»Ð±Ó©Ñ€ Ñ‚Ó©Ð»Ó©Ñ…'}
             </h1>
 
             {/* Progress Steps - Step 2 Active */}
@@ -365,7 +386,7 @@ function CheckoutPage() {
                   <Icon name="Check" className="h-5 w-5" />
                 </div>
                 <span className="text-sm font-semibold text-muted-foreground">
-                  {language === 'en' ? 'Shipping Info' : 'Хүргэлтийн мэдээлэл'}
+                  {language === 'en' ? 'Shipping Info' : 'Ð¥Ò¯Ñ€Ð³ÑÐ»Ñ‚Ð¸Ð¹Ð½ Ð¼ÑÐ´ÑÑÐ»ÑÐ»'}
                 </span>
               </div>
               <div className="h-[2px] flex-1 bg-primary"></div>
@@ -374,7 +395,7 @@ function CheckoutPage() {
                   2
                 </div>
                 <span className="text-sm font-semibold">
-                  {language === 'en' ? 'Payment' : 'Төлбөр'}
+                  {language === 'en' ? 'Payment' : 'Ð¢Ó©Ð»Ð±Ó©Ñ€'}
                 </span>
               </div>
             </div>
@@ -390,36 +411,36 @@ function CheckoutPage() {
               size="sm"
             >
               <Icon name="ArrowLeft" className="mr-2 h-4 w-4" />
-              {language === 'en' ? 'Back to Shipping Info' : 'Буцах'}
+              {language === 'en' ? 'Back to Shipping Info' : 'Ð‘ÑƒÑ†Ð°Ñ…'}
             </Button>
           </div>
 
           {/* Page Title & Status */}
           <div className="text-center mb-6 md:mb-8">
             <h2 className="text-2xl md:text-3xl font-bold mb-3">
-              {language === 'en' ? 'Complete Your Payment' : 'Төлбөрөө төлөх'}
+              {language === 'en' ? 'Complete Your Payment' : 'Ð¢Ó©Ð»Ð±Ó©Ñ€Ó©Ó© Ñ‚Ó©Ð»Ó©Ñ…'}
             </h2>
 
             {/* Large Status Badge */}
             {paymentStatus === 'paid' ? (
               <div className="inline-flex items-center gap-2 md:gap-3 px-4 md:px-6 py-2 md:py-3 bg-green-500 text-white rounded-full font-semibold text-sm md:text-lg animate-pulse">
                 <Icon name="CheckCircle2" className="h-5 w-5 md:h-6 md:w-6" />
-                {language === 'en' ? 'Payment Confirmed!' : 'Төлбөр баталгаажлаа!'}
+                {language === 'en' ? 'Payment Confirmed!' : 'Ð¢Ó©Ð»Ð±Ó©Ñ€ Ð±Ð°Ñ‚Ð°Ð»Ð³Ð°Ð°Ð¶Ð»Ð°Ð°!'}
               </div>
             ) : paymentStatus === 'timeout' ? (
               <div className="inline-flex items-center gap-2 md:gap-3 px-4 md:px-6 py-2 md:py-3 bg-orange-500 text-white rounded-full font-semibold text-sm md:text-lg">
                 <Icon name="AlertCircle" className="h-5 w-5 md:h-6 md:w-6" />
-                {language === 'en' ? 'Verification Timed Out' : 'Хугацаа хэтэрсэн'}
+                {language === 'en' ? 'Verification Timed Out' : 'Ð¥ÑƒÐ³Ð°Ñ†Ð°Ð° Ñ…ÑÑ‚ÑÑ€ÑÑÐ½'}
               </div>
             ) : paymentStatus === 'checking' ? (
               <div className="inline-flex items-center gap-2 md:gap-3 px-4 md:px-6 py-2 md:py-3 bg-blue-500 text-white rounded-full font-semibold text-sm md:text-lg">
                 <Icon name="Loader2" className="h-5 w-5 md:h-6 md:w-6 animate-spin" />
-                {language === 'en' ? 'Checking Payment...' : 'Шалгаж байна...'}
+                {language === 'en' ? 'Checking Payment...' : 'Ð¨Ð°Ð»Ð³Ð°Ð¶ Ð±Ð°Ð¹Ð½Ð°...'}
               </div>
             ) : (
               <div className="inline-flex items-center gap-2 md:gap-3 px-4 md:px-6 py-2 md:py-3 bg-yellow-500 text-white rounded-full font-semibold text-sm md:text-lg">
                 <Icon name="Clock" className="h-5 w-5 md:h-6 md:w-6 animate-pulse" />
-                {language === 'en' ? 'Waiting for Payment' : 'Төлбөр хүлээж байна'}
+                {language === 'en' ? 'Waiting for Payment' : 'Ð¢Ó©Ð»Ð±Ó©Ñ€ Ñ…Ò¯Ð»ÑÑÐ¶ Ð±Ð°Ð¹Ð½Ð°'}
               </div>
             )}
           </div>
@@ -430,12 +451,12 @@ function CheckoutPage() {
               <div className="text-center">
                 <div className="mb-4 md:mb-6">
                   <h2 className="text-xl md:text-2xl font-bold mb-2">
-                    {language === 'en' ? 'Scan QR Code' : 'QR код уншуулах'}
+                    {language === 'en' ? 'Scan QR Code' : 'QR ÐºÐ¾Ð´ ÑƒÐ½ÑˆÑƒÑƒÐ»Ð°Ñ…'}
                   </h2>
                   <p className="text-sm md:text-base text-muted-foreground">
                     {language === 'en'
                       ? 'Use your banking app to scan and pay'
-                      : 'Банкны апп-аараа уншуулж төлнө үү'}
+                      : 'Ð‘Ð°Ð½ÐºÐ½Ñ‹ Ð°Ð¿Ð¿-Ð°Ð°Ñ€Ð°Ð° ÑƒÐ½ÑˆÑƒÑƒÐ»Ð¶ Ñ‚Ó©Ð»Ð½Ó© Ò¯Ò¯'}
                   </p>
                 </div>
 
@@ -457,7 +478,7 @@ function CheckoutPage() {
                         <div className="text-center text-white">
                           <Icon name="CheckCircle2" className="h-16 w-16 md:h-24 md:w-24 mx-auto mb-4 animate-bounce" />
                           <p className="text-xl md:text-2xl font-bold">
-                            {language === 'en' ? 'Payment Complete!' : 'Төлбөр төлөгдлөө!'}
+                            {language === 'en' ? 'Payment Complete!' : 'Ð¢Ó©Ð»Ð±Ó©Ñ€ Ñ‚Ó©Ð»Ó©Ð³Ð´Ð»Ó©Ó©!'}
                           </p>
                         </div>
                       </div>
@@ -468,13 +489,13 @@ function CheckoutPage() {
                 {/* Order Number & Amount */}
                 <div className="mb-4 md:mb-6 p-4 md:p-6 bg-gradient-to-r from-primary/10 to-primary/5 rounded-xl">
                   <p className="text-xs md:text-sm text-muted-foreground mb-2">
-                    {language === 'en' ? 'Order #' : 'Захиалга #'}
+                    {language === 'en' ? 'Order #' : 'Ð—Ð°Ñ…Ð¸Ð°Ð»Ð³Ð° #'}
                   </p>
                   <p className="text-base md:text-lg font-mono font-semibold mb-3">
                     {orderId.substring(0, 13).toUpperCase()}
                   </p>
                   <div className="text-3xl md:text-4xl font-bold text-primary">
-                    ₮{Number(cartTotal || 0).toLocaleString()}
+                    â‚®{Number(cartTotal || 0).toLocaleString()}
                   </div>
                 </div>
 
@@ -484,7 +505,7 @@ function CheckoutPage() {
                     <div className="flex items-center gap-2 mb-2">
                       <Icon name="Link" className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                       <p className="text-xs md:text-sm font-semibold text-blue-900 dark:text-blue-100">
-                        {language === 'en' ? 'QR Text URL (For Testing)' : 'QR Текст URL (Тестлэхэд)'}
+                        {language === 'en' ? 'QR Text URL (For Testing)' : 'QR Ð¢ÐµÐºÑÑ‚ URL (Ð¢ÐµÑÑ‚Ð»ÑÑ…ÑÐ´)'}
                       </p>
                     </div>
                     <div className="bg-white dark:bg-gray-900 rounded border border-blue-200 dark:border-blue-700 p-2 md:p-3 break-all">
@@ -498,11 +519,11 @@ function CheckoutPage() {
                       className="mt-2 w-full text-xs"
                       onClick={() => {
                         navigator.clipboard.writeText(paymentInfo.qrText!)
-                        toast.success(language === 'en' ? 'QR Text URL copied!' : 'QR текст хуулагдлаа!')
+                        toast.success(language === 'en' ? 'QR Text URL copied!' : 'QR Ñ‚ÐµÐºÑÑ‚ Ñ…ÑƒÑƒÐ»Ð°Ð³Ð´Ð»Ð°Ð°!')
                       }}
                     >
                       <Icon name="Copy" className="mr-2 h-3 w-3" />
-                      {language === 'en' ? 'Copy QR Text' : 'QR текст хуулах'}
+                      {language === 'en' ? 'Copy QR Text' : 'QR Ñ‚ÐµÐºÑÑ‚ Ñ…ÑƒÑƒÐ»Ð°Ñ…'}
                     </Button>
                   </div>
                 )}
@@ -511,7 +532,7 @@ function CheckoutPage() {
                 {paymentInfo.bankUrls && paymentInfo.bankUrls.length > 0 && (
                   <div className="mb-4 md:mb-6">
                     <p className="text-xs md:text-sm font-semibold mb-3 md:mb-4 text-left">
-                      {language === 'en' ? 'Quick Pay with Banking App:' : 'Банкны апп-аар шууд төлөх:'}
+                      {language === 'en' ? 'Quick Pay with Banking App:' : 'Ð‘Ð°Ð½ÐºÐ½Ñ‹ Ð°Ð¿Ð¿-Ð°Ð°Ñ€ ÑˆÑƒÑƒÐ´ Ñ‚Ó©Ð»Ó©Ñ…:'}
                     </p>
                     <div className="grid grid-cols-2 gap-2 md:gap-3">
                       {paymentInfo.bankUrls.map((bank, index) => {
@@ -563,12 +584,12 @@ function CheckoutPage() {
                           <Icon name="AlertCircle" className="h-5 w-5 flex-shrink-0 mt-0.5" />
                           <div>
                             <p className="font-semibold mb-1">
-                              {language === 'en' ? 'Verification Timeout' : 'Баталгаажуулалт хугацаа хэтэрсэн'}
+                              {language === 'en' ? 'Verification Timeout' : 'Ð‘Ð°Ñ‚Ð°Ð»Ð³Ð°Ð°Ð¶ÑƒÑƒÐ»Ð°Ð»Ñ‚ Ñ…ÑƒÐ³Ð°Ñ†Ð°Ð° Ñ…ÑÑ‚ÑÑ€ÑÑÐ½'}
                             </p>
                             <p className="text-xs">
                               {language === 'en'
                                 ? 'Automatic verification has timed out after 5 minutes. If you completed the payment, please click "Check Payment Status" below or check your order history.'
-                                : '5 минутын дараа автомат шалгалт зогссон. Хэрэв та төлбөрөө төлсөн бол "Төлбөрийн төлөв шалгах" товчийг дарах эсвэл захиалгын түүхээ шалгана уу.'}
+                                : '5 Ð¼Ð¸Ð½ÑƒÑ‚Ñ‹Ð½ Ð´Ð°Ñ€Ð°Ð° Ð°Ð²Ñ‚Ð¾Ð¼Ð°Ñ‚ ÑˆÐ°Ð»Ð³Ð°Ð»Ñ‚ Ð·Ð¾Ð³ÑÑÐ¾Ð½. Ð¥ÑÑ€ÑÐ² Ñ‚Ð° Ñ‚Ó©Ð»Ð±Ó©Ñ€Ó©Ó© Ñ‚Ó©Ð»ÑÓ©Ð½ Ð±Ð¾Ð» "Ð¢Ó©Ð»Ð±Ó©Ñ€Ð¸Ð¹Ð½ Ñ‚Ó©Ð»Ó©Ð² ÑˆÐ°Ð»Ð³Ð°Ñ…" Ñ‚Ð¾Ð²Ñ‡Ð¸Ð¹Ð³ Ð´Ð°Ñ€Ð°Ñ… ÑÑÐ²ÑÐ» Ð·Ð°Ñ…Ð¸Ð°Ð»Ð³Ñ‹Ð½ Ñ‚Ò¯Ò¯Ñ…ÑÑ ÑˆÐ°Ð»Ð³Ð°Ð½Ð° ÑƒÑƒ.'}
                             </p>
                           </div>
                         </div>
@@ -596,21 +617,21 @@ function CheckoutPage() {
                       <>
                         <Icon name="Loader2" className="mr-2 h-4 w-4 md:h-5 md:w-5 animate-spin" />
                         <span className="text-sm md:text-base">
-                          {language === 'en' ? 'Checking...' : 'Шалгаж байна...'}
+                          {language === 'en' ? 'Checking...' : 'Ð¨Ð°Ð»Ð³Ð°Ð¶ Ð±Ð°Ð¹Ð½Ð°...'}
                         </span>
                       </>
                     ) : paymentStatus === 'paid' ? (
                       <>
                         <Icon name="CheckCircle2" className="mr-2 h-4 w-4 md:h-5 md:w-5" />
                         <span className="text-sm md:text-base">
-                          {language === 'en' ? 'Payment Confirmed' : 'Баталгаажсан'}
+                          {language === 'en' ? 'Payment Confirmed' : 'Ð‘Ð°Ñ‚Ð°Ð»Ð³Ð°Ð°Ð¶ÑÐ°Ð½'}
                         </span>
                       </>
                     ) : (
                       <>
                         <Icon name="RefreshCw" className="mr-2 h-4 w-4 md:h-5 md:w-5" />
                         <span className="text-sm md:text-base">
-                          {language === 'en' ? 'Check Payment Status' : 'Төлбөрийн төлөв шалгах'}
+                          {language === 'en' ? 'Check Payment Status' : 'Ð¢Ó©Ð»Ð±Ó©Ñ€Ð¸Ð¹Ð½ Ñ‚Ó©Ð»Ó©Ð² ÑˆÐ°Ð»Ð³Ð°Ñ…'}
                         </span>
                       </>
                     )}
@@ -623,7 +644,7 @@ function CheckoutPage() {
                   >
                     <Icon name="Package" className="mr-2 h-4 w-4" />
                     <span className="text-sm md:text-base">
-                      {language === 'en' ? 'View My Orders' : 'Миний захиалгууд'}
+                      {language === 'en' ? 'View My Orders' : 'ÐœÐ¸Ð½Ð¸Ð¹ Ð·Ð°Ñ…Ð¸Ð°Ð»Ð³ÑƒÑƒÐ´'}
                     </span>
                   </Button>
                 </div>
@@ -635,14 +656,14 @@ function CheckoutPage() {
               <Card className="p-4 md:p-6">
                 <h3 className="text-lg md:text-xl font-bold mb-3 md:mb-4 flex items-center gap-2">
                   <Icon name="ShoppingBag" className="h-4 w-4 md:h-5 md:w-5 text-primary" />
-                  {language === 'en' ? 'Order Summary' : 'Захиалгын дэлгэрэнгүй'}
+                  {language === 'en' ? 'Order Summary' : 'Ð—Ð°Ñ…Ð¸Ð°Ð»Ð³Ñ‹Ð½ Ð´ÑÐ»Ð³ÑÑ€ÑÐ½Ð³Ò¯Ð¹'}
                 </h3>
 
                 <div className="space-y-3 md:space-y-4 mb-4 md:mb-6">
                   {cart && cart.map((item: any) => (
                     <div key={item.cartKey} className="flex gap-3 md:gap-4 pb-3 md:pb-4 border-b last:border-0">
                       <img
-                        src={r2Url(item.variantImage) || '/placeholder.png'}
+                        src={imageUrl(item.variantImage) || '/placeholder.png'}
                         alt={item.productName}
                         className="w-16 h-16 md:w-20 md:h-20 object-cover rounded-lg shadow-sm flex-shrink-0"
                       />
@@ -652,13 +673,18 @@ function CheckoutPage() {
                         {item.size && item.size !== 'none' && (
                           <p className="text-xs text-muted-foreground">Size: {item.size}</p>
                         )}
+                        {item.customizations?.length ? (
+                          <p className="text-xs text-muted-foreground">
+                            Custom areas: {item.customizations.length}
+                          </p>
+                        ) : null}
                         <p className="text-xs md:text-sm font-semibold mt-1 text-primary">
-                          ₮{Number(item.variantPrice).toLocaleString()} × {item.quantity}
+                          â‚®{Number(item.variantPrice).toLocaleString()} Ã— {item.quantity}
                         </p>
                       </div>
                       <div className="text-right flex-shrink-0">
                         <p className="font-bold text-base md:text-lg">
-                          ₮{(Number(item.variantPrice) * item.quantity).toLocaleString()}
+                          â‚®{(Number(item.variantPrice) * item.quantity).toLocaleString()}
                         </p>
                       </div>
                     </div>
@@ -669,10 +695,10 @@ function CheckoutPage() {
                 <div className="pt-3 md:pt-4 border-t-2">
                   <div className="flex justify-between items-center">
                     <span className="text-base md:text-lg font-semibold">
-                      {language === 'en' ? 'Total Amount' : 'Нийт дүн'}
+                      {language === 'en' ? 'Total Amount' : 'ÐÐ¸Ð¹Ñ‚ Ð´Ò¯Ð½'}
                     </span>
                     <span className="text-2xl md:text-3xl font-bold text-primary">
-                      ₮{Number(cartTotal || 0).toLocaleString()}
+                      â‚®{Number(cartTotal || 0).toLocaleString()}
                     </span>
                   </div>
                 </div>
@@ -682,7 +708,7 @@ function CheckoutPage() {
               <Card className="p-4 md:p-6 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 border-blue-200 dark:border-blue-800">
                 <h4 className="font-bold mb-3 flex items-center gap-2 text-blue-900 dark:text-blue-100 text-sm md:text-base">
                   <Icon name="Info" className="h-4 w-4 md:h-5 md:w-5" />
-                  {language === 'en' ? 'How to Pay' : 'Төлөх заавар'}
+                  {language === 'en' ? 'How to Pay' : 'Ð¢Ó©Ð»Ó©Ñ… Ð·Ð°Ð°Ð²Ð°Ñ€'}
                 </h4>
                 <ol className="space-y-2 text-xs md:text-sm text-blue-800 dark:text-blue-200">
                   <li className="flex gap-2">
@@ -690,7 +716,7 @@ function CheckoutPage() {
                     <span>
                       {language === 'en'
                         ? 'Open your banking app (Khan Bank, TDB, Golomt, etc.)'
-                        : 'Банкны апп-аа нээнэ үү (Хаан банк, ХХБ, Голомт гэх мэт)'}
+                        : 'Ð‘Ð°Ð½ÐºÐ½Ñ‹ Ð°Ð¿Ð¿-Ð°Ð° Ð½ÑÑÐ½Ñ Ò¯Ò¯ (Ð¥Ð°Ð°Ð½ Ð±Ð°Ð½Ðº, Ð¥Ð¥Ð‘, Ð“Ð¾Ð»Ð¾Ð¼Ñ‚ Ð³ÑÑ… Ð¼ÑÑ‚)'}
                     </span>
                   </li>
                   <li className="flex gap-2">
@@ -698,7 +724,7 @@ function CheckoutPage() {
                     <span>
                       {language === 'en'
                         ? 'Find the QR code scanner feature'
-                        : 'QR код уншигч хэсгийг олоно уу'}
+                        : 'QR ÐºÐ¾Ð´ ÑƒÐ½ÑˆÐ¸Ð³Ñ‡ Ñ…ÑÑÐ³Ð¸Ð¹Ð³ Ð¾Ð»Ð¾Ð½Ð¾ ÑƒÑƒ'}
                     </span>
                   </li>
                   <li className="flex gap-2">
@@ -706,7 +732,7 @@ function CheckoutPage() {
                     <span>
                       {language === 'en'
                         ? 'Scan the QR code shown above'
-                        : 'Дээрх QR кодыг уншуулна уу'}
+                        : 'Ð”ÑÑÑ€Ñ… QR ÐºÐ¾Ð´Ñ‹Ð³ ÑƒÐ½ÑˆÑƒÑƒÐ»Ð½Ð° ÑƒÑƒ'}
                     </span>
                   </li>
                   <li className="flex gap-2">
@@ -714,7 +740,7 @@ function CheckoutPage() {
                     <span>
                       {language === 'en'
                         ? 'Confirm the payment in your banking app'
-                        : 'Банкны апп дээрээ төлбөрөө баталгаажуулна уу'}
+                        : 'Ð‘Ð°Ð½ÐºÐ½Ñ‹ Ð°Ð¿Ð¿ Ð´ÑÑÑ€ÑÑ Ñ‚Ó©Ð»Ð±Ó©Ñ€Ó©Ó© Ð±Ð°Ñ‚Ð°Ð»Ð³Ð°Ð°Ð¶ÑƒÑƒÐ»Ð½Ð° ÑƒÑƒ'}
                     </span>
                   </li>
                   <li className="flex gap-2">
@@ -722,7 +748,7 @@ function CheckoutPage() {
                     <span>
                       {language === 'en'
                         ? 'Wait for confirmation (usually instant)'
-                        : 'Баталгаажуулалт хүлээнэ үү (ихэвчлэн шууд)'}
+                        : 'Ð‘Ð°Ñ‚Ð°Ð»Ð³Ð°Ð°Ð¶ÑƒÑƒÐ»Ð°Ð»Ñ‚ Ñ…Ò¯Ð»ÑÑÐ½Ñ Ò¯Ò¯ (Ð¸Ñ…ÑÐ²Ñ‡Ð»ÑÐ½ ÑˆÑƒÑƒÐ´)'}
                     </span>
                   </li>
                 </ol>
@@ -735,7 +761,7 @@ function CheckoutPage() {
                   <span className="text-center">
                     {language === 'en'
                       ? 'Payment status is automatically checked every 5 seconds (max 5 minutes)'
-                      : 'Төлбөрийн төлөв 5 секунд тутамд автоматаар шалгагдаж байна (дээд тал нь 5 минут)'}
+                      : 'Ð¢Ó©Ð»Ð±Ó©Ñ€Ð¸Ð¹Ð½ Ñ‚Ó©Ð»Ó©Ð² 5 ÑÐµÐºÑƒÐ½Ð´ Ñ‚ÑƒÑ‚Ð°Ð¼Ð´ Ð°Ð²Ñ‚Ð¾Ð¼Ð°Ñ‚Ð°Ð°Ñ€ ÑˆÐ°Ð»Ð³Ð°Ð³Ð´Ð°Ð¶ Ð±Ð°Ð¹Ð½Ð° (Ð´ÑÑÐ´ Ñ‚Ð°Ð» Ð½ÑŒ 5 Ð¼Ð¸Ð½ÑƒÑ‚)'}
                   </span>
                 </p>
               </Card>
@@ -753,7 +779,7 @@ function CheckoutPage() {
         {/* Header with Progress */}
         <div className="mb-8">
           <h1 className="text-3xl md:text-4xl font-bold mb-4">
-            {language === 'en' ? 'Checkout' : 'Төлбөр төлөх'}
+            {language === 'en' ? 'Checkout' : 'Ð¢Ó©Ð»Ð±Ó©Ñ€ Ñ‚Ó©Ð»Ó©Ñ…'}
           </h1>
 
           {/* Progress Steps */}
@@ -763,7 +789,7 @@ function CheckoutPage() {
                 1
               </div>
               <span className="text-sm font-semibold">
-                {language === 'en' ? 'Shipping Info' : 'Хүргэлтийн мэдээлэл'}
+                {language === 'en' ? 'Shipping Info' : 'Ð¥Ò¯Ñ€Ð³ÑÐ»Ñ‚Ð¸Ð¹Ð½ Ð¼ÑÐ´ÑÑÐ»ÑÐ»'}
               </span>
             </div>
             <div className="h-[2px] flex-1 bg-muted"></div>
@@ -772,7 +798,7 @@ function CheckoutPage() {
                 2
               </div>
               <span className="text-sm text-muted-foreground">
-                {language === 'en' ? 'Payment' : 'Төлбөр'}
+                {language === 'en' ? 'Payment' : 'Ð¢Ó©Ð»Ð±Ó©Ñ€'}
               </span>
             </div>
           </div>
@@ -786,7 +812,7 @@ function CheckoutPage() {
                 <Icon name="Truck" className="h-5 w-5 text-primary" />
               </div>
               <h2 className="text-xl md:text-2xl font-bold">
-                {language === 'en' ? 'Shipping Information' : 'Хүргэлтийн мэдээлэл'}
+                {language === 'en' ? 'Shipping Information' : 'Ð¥Ò¯Ñ€Ð³ÑÐ»Ñ‚Ð¸Ð¹Ð½ Ð¼ÑÐ´ÑÑÐ»ÑÐ»'}
               </h2>
             </div>
 
@@ -797,7 +823,7 @@ function CheckoutPage() {
                   <div className="flex items-center gap-2">
                     <Icon name="MapPin" className="h-4 w-4 text-primary" />
                     <span className="text-sm font-semibold text-primary">
-                      {language === 'en' ? 'Saved Address Available' : 'Хадгалсан хаяг байна'}
+                      {language === 'en' ? 'Saved Address Available' : 'Ð¥Ð°Ð´Ð³Ð°Ð»ÑÐ°Ð½ Ñ…Ð°ÑÐ³ Ð±Ð°Ð¹Ð½Ð°'}
                     </span>
                   </div>
                 </div>
@@ -810,7 +836,7 @@ function CheckoutPage() {
                   className="w-full"
                 >
                   <Icon name="Check" className="mr-2 h-4 w-4" />
-                  {language === 'en' ? 'Use Saved Address' : 'Хадгалсан хаяг ашиглах'}
+                  {language === 'en' ? 'Use Saved Address' : 'Ð¥Ð°Ð´Ð³Ð°Ð»ÑÐ°Ð½ Ñ…Ð°ÑÐ³ Ð°ÑˆÐ¸Ð³Ð»Ð°Ñ…'}
                 </Button>
               </div>
             )}
@@ -827,14 +853,14 @@ function CheckoutPage() {
             <div>
               <Label htmlFor="fullName" className="flex items-center gap-2 mb-2">
                 <Icon name="User" className="h-4 w-4 text-primary" />
-                {language === 'en' ? 'Full Name' : 'Овог нэр'} <span className="text-red-500">*</span>
+                {language === 'en' ? 'Full Name' : 'ÐžÐ²Ð¾Ð³ Ð½ÑÑ€'} <span className="text-red-500">*</span>
               </Label>
               <Input
                 id="fullName"
                 data-testid="shipping-name"
                 value={shippingInfo.fullName}
                 onChange={(e) => setShippingInfo({ ...shippingInfo, fullName: e.target.value })}
-                placeholder={language === 'en' ? 'Enter your full name' : 'Овог нэрээ оруулна уу'}
+                placeholder={language === 'en' ? 'Enter your full name' : 'ÐžÐ²Ð¾Ð³ Ð½ÑÑ€ÑÑ Ð¾Ñ€ÑƒÑƒÐ»Ð½Ð° ÑƒÑƒ'}
                 required
                 className="h-11"
               />
@@ -844,7 +870,7 @@ function CheckoutPage() {
             <div>
               <Label htmlFor="phone" className="flex items-center gap-2 mb-2">
                 <Icon name="Phone" className="h-4 w-4 text-primary" />
-                {language === 'en' ? 'Phone Number' : 'Утасны дугаар'} <span className="text-red-500">*</span>
+                {language === 'en' ? 'Phone Number' : 'Ð£Ñ‚Ð°ÑÐ½Ñ‹ Ð´ÑƒÐ³Ð°Ð°Ñ€'} <span className="text-red-500">*</span>
               </Label>
               <Input
                 id="phone"
@@ -862,7 +888,7 @@ function CheckoutPage() {
             <div>
               <Label htmlFor="address" className="flex items-center gap-2 mb-2">
                 <Icon name="MapPin" className="h-4 w-4 text-primary" />
-                {language === 'en' ? 'Address' : 'Хаяг'} <span className="text-red-500">*</span>
+                {language === 'en' ? 'Address' : 'Ð¥Ð°ÑÐ³'} <span className="text-red-500">*</span>
               </Label>
               <Input
                 id="address"
@@ -872,7 +898,7 @@ function CheckoutPage() {
                 placeholder={
                   language === 'en'
                     ? 'e.g., Bayangol District, 5th Khoroo, Peace Avenue 123'
-                    : 'Жишээ: Баянгол дүүрэг, 5-р хороо, Энхтайвны өргөн чөлөө 123'
+                    : 'Ð–Ð¸ÑˆÑÑ: Ð‘Ð°ÑÐ½Ð³Ð¾Ð» Ð´Ò¯Ò¯Ñ€ÑÐ³, 5-Ñ€ Ñ…Ð¾Ñ€Ð¾Ð¾, Ð­Ð½Ñ…Ñ‚Ð°Ð¹Ð²Ð½Ñ‹ Ó©Ñ€Ð³Ó©Ð½ Ñ‡Ó©Ð»Ó©Ó© 123'
                 }
                 required
                 minLength={5}
@@ -881,7 +907,7 @@ function CheckoutPage() {
               <p className="text-xs text-muted-foreground mt-1">
                 {language === 'en'
                   ? 'Minimum 5 characters required'
-                  : 'Доод тал нь 5 тэмдэгт шаардлагатай'}
+                  : 'Ð”Ð¾Ð¾Ð´ Ñ‚Ð°Ð» Ð½ÑŒ 5 Ñ‚ÑÐ¼Ð´ÑÐ³Ñ‚ ÑˆÐ°Ð°Ñ€Ð´Ð»Ð°Ð³Ð°Ñ‚Ð°Ð¹'}
               </p>
             </div>
 
@@ -890,13 +916,13 @@ function CheckoutPage() {
               <div>
                 <Label htmlFor="city" className="flex items-center gap-2 mb-2">
                   <Icon name="Building" className="h-4 w-4 text-primary" />
-                  {language === 'en' ? 'City' : 'Хот'}
+                  {language === 'en' ? 'City' : 'Ð¥Ð¾Ñ‚'}
                 </Label>
                 <Input
                   id="city"
                   value={shippingInfo.city}
                   onChange={(e) => setShippingInfo({ ...shippingInfo, city: e.target.value })}
-                  placeholder={language === 'en' ? 'City' : 'Хот'}
+                  placeholder={language === 'en' ? 'City' : 'Ð¥Ð¾Ñ‚'}
                   className="h-11"
                 />
               </div>
@@ -904,13 +930,13 @@ function CheckoutPage() {
               <div>
                 <Label htmlFor="zipCode" className="flex items-center gap-2 mb-2">
                   <Icon name="Hash" className="h-4 w-4 text-primary" />
-                  {language === 'en' ? 'Zip Code' : 'Зип код'}
+                  {language === 'en' ? 'Zip Code' : 'Ð—Ð¸Ð¿ ÐºÐ¾Ð´'}
                 </Label>
                 <Input
                   id="zipCode"
                   value={shippingInfo.zipCode}
                   onChange={(e) => setShippingInfo({ ...shippingInfo, zipCode: e.target.value })}
-                  placeholder={language === 'en' ? 'Zip code' : 'Зип код'}
+                  placeholder={language === 'en' ? 'Zip code' : 'Ð—Ð¸Ð¿ ÐºÐ¾Ð´'}
                   className="h-11"
                 />
               </div>
@@ -928,19 +954,19 @@ function CheckoutPage() {
                 {loading ? (
                   <>
                     <Icon name="Loader2" className="mr-2 h-5 w-5 animate-spin" />
-                    {language === 'en' ? 'Processing...' : 'Боловсруулж байна...'}
+                    {language === 'en' ? 'Processing...' : 'Ð‘Ð¾Ð»Ð¾Ð²ÑÑ€ÑƒÑƒÐ»Ð¶ Ð±Ð°Ð¹Ð½Ð°...'}
                   </>
                 ) : (
                   <>
                     <Icon name="ArrowRight" className="mr-2 h-5 w-5" />
-                    {language === 'en' ? 'Continue to Payment' : 'Төлбөр төлөх'}
+                    {language === 'en' ? 'Continue to Payment' : 'Ð¢Ó©Ð»Ð±Ó©Ñ€ Ñ‚Ó©Ð»Ó©Ñ…'}
                   </>
                 )}
               </Button>
               <p className="text-xs text-muted-foreground text-center mt-3">
                 {language === 'en'
                   ? 'You will be redirected to payment page'
-                  : 'Төлбөрийн хуудас руу шилжих болно'}
+                  : 'Ð¢Ó©Ð»Ð±Ó©Ñ€Ð¸Ð¹Ð½ Ñ…ÑƒÑƒÐ´Ð°Ñ Ñ€ÑƒÑƒ ÑˆÐ¸Ð»Ð¶Ð¸Ñ… Ð±Ð¾Ð»Ð½Ð¾'}
               </p>
             </div>
           </form>
@@ -955,7 +981,7 @@ function CheckoutPage() {
                 <Icon name="ShoppingCart" className="h-5 w-5 text-primary" />
               </div>
               <h2 className="text-xl md:text-2xl font-bold">
-                {language === 'en' ? 'Order Summary' : 'Захиалгын дэлгэрэнгүй'}
+                {language === 'en' ? 'Order Summary' : 'Ð—Ð°Ñ…Ð¸Ð°Ð»Ð³Ñ‹Ð½ Ð´ÑÐ»Ð³ÑÑ€ÑÐ½Ð³Ò¯Ð¹'}
               </h2>
             </div>
 
@@ -965,7 +991,7 @@ function CheckoutPage() {
                 <div key={item.cartKey} className="flex gap-4 pb-4 border-b last:border-0">
                   <div className="relative">
                     <img
-                      src={r2Url(item.variantImage) || '/placeholder.png'}
+                      src={imageUrl(item.variantImage) || '/placeholder.png'}
                       alt={item.productName}
                       className="w-20 h-20 object-cover rounded-lg shadow-sm"
                     />
@@ -982,13 +1008,25 @@ function CheckoutPage() {
                         Size: {item.size}
                       </p>
                     )}
+                    {item.customizations?.length ? (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        <Icon name="Palette" className="inline h-3 w-3 mr-1" />
+                        Custom areas: {item.customizations.length}
+                      </p>
+                    ) : null}
+                    {item.addOns?.length ? (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        <Icon name="SparklesIcon" className="inline h-3 w-3 mr-1" />
+                        Add-ons: {item.addOns.length}
+                      </p>
+                    ) : null}
                     <p className="text-xs text-primary font-semibold mt-1">
-                      ₮{Number(item.variantPrice || 0).toLocaleString()} × {item.quantity}
+                      â‚®{Number(item.variantPrice || 0).toLocaleString()} Ã— {item.quantity}
                     </p>
                   </div>
                   <div className="text-right flex-shrink-0">
                     <p className="font-bold text-lg">
-                      ₮{(Number(item.variantPrice || 0) * item.quantity).toLocaleString()}
+                      â‚®{(Number(item.variantPrice || 0) * item.quantity).toLocaleString()}
                     </p>
                   </div>
                 </div>
@@ -999,27 +1037,47 @@ function CheckoutPage() {
             <div className="space-y-3 pt-4 border-t-2">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">
-                  {language === 'en' ? 'Subtotal' : 'Дэд дүн'}
+                  {language === 'en' ? 'Subtotal' : 'Ð”ÑÐ´ Ð´Ò¯Ð½'}
                 </span>
                 <span className="font-semibold">
-                  ₮{Number(cartTotal || 0).toLocaleString()}
+                  â‚®{Number(cartTotal || 0).toLocaleString()}
                 </span>
               </div>
+              {addOnFeeTotal > 0 ? (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">
+                    {language === 'en' ? 'Add-ons' : 'ÐÑÐ¼ÑÐ»Ñ‚ ÑÐ¾Ð½Ð³Ð¾Ð»Ñ‚ÑƒÑƒÐ´'}
+                  </span>
+                  <span className="font-semibold">
+                    â‚®{Number(addOnFeeTotal || 0).toLocaleString()}
+                  </span>
+                </div>
+              ) : null}
+              {rushFeeTotal > 0 ? (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">
+                    {language === 'en' ? 'Rush fee' : 'Ð¯Ð°Ñ€Ð°Ð»Ñ‚Ð°Ð¹ Ò¯Ð¹Ð»Ñ‡Ð¸Ð»Ð³ÑÑ'}
+                  </span>
+                  <span className="font-semibold">
+                    â‚®{Number(rushFeeTotal || 0).toLocaleString()}
+                  </span>
+                </div>
+              ) : null}
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">
-                  {language === 'en' ? 'Shipping' : 'Хүргэлт'}
+                  {language === 'en' ? 'Shipping' : 'Ð¥Ò¯Ñ€Ð³ÑÐ»Ñ‚'}
                 </span>
                 <span className="font-semibold text-green-600">
-                  {language === 'en' ? 'FREE' : 'Үнэгүй'}
+                  {language === 'en' ? 'FREE' : 'Ò®Ð½ÑÐ³Ò¯Ð¹'}
                 </span>
               </div>
               <div className="border-t pt-3">
                 <div className="flex justify-between items-center">
                   <span className="text-lg font-bold">
-                    {language === 'en' ? 'Total' : 'Нийт дүн'}
+                    {language === 'en' ? 'Total' : 'ÐÐ¸Ð¹Ñ‚ Ð´Ò¯Ð½'}
                   </span>
                   <span className="text-2xl md:text-3xl font-bold text-primary">
-                    ₮{Number(cartTotal || 0).toLocaleString()}
+                    â‚®{Number(cartTotal || 0).toLocaleString()}
                   </span>
                 </div>
               </div>
@@ -1034,12 +1092,12 @@ function CheckoutPage() {
               </div>
               <div className="flex-1">
                 <h4 className="font-bold mb-1 text-green-900 dark:text-green-100 text-sm">
-                  {language === 'en' ? 'Secure Checkout' : 'Найдвартай төлбөр'}
+                  {language === 'en' ? 'Secure Checkout' : 'ÐÐ°Ð¹Ð´Ð²Ð°Ñ€Ñ‚Ð°Ð¹ Ñ‚Ó©Ð»Ð±Ó©Ñ€'}
                 </h4>
                 <p className="text-xs text-green-800 dark:text-green-200">
                   {language === 'en'
                     ? 'Your payment information is encrypted and secure. We never store your card details.'
-                    : 'Таны төлбөрийн мэдээлэл шифрлэгдсэн, найдвартай хадгалагдана. Картын мэдээллийг бид хэзээ ч хадгалдаггүй.'}
+                    : 'Ð¢Ð°Ð½Ñ‹ Ñ‚Ó©Ð»Ð±Ó©Ñ€Ð¸Ð¹Ð½ Ð¼ÑÐ´ÑÑÐ»ÑÐ» ÑˆÐ¸Ñ„Ñ€Ð»ÑÐ³Ð´ÑÑÐ½, Ð½Ð°Ð¹Ð´Ð²Ð°Ñ€Ñ‚Ð°Ð¹ Ñ…Ð°Ð´Ð³Ð°Ð»Ð°Ð³Ð´Ð°Ð½Ð°. ÐšÐ°Ñ€Ñ‚Ñ‹Ð½ Ð¼ÑÐ´ÑÑÐ»Ð»Ð¸Ð¹Ð³ Ð±Ð¸Ð´ Ñ…ÑÐ·ÑÑ Ñ‡ Ñ…Ð°Ð´Ð³Ð°Ð»Ð´Ð°Ð³Ð³Ò¯Ð¹.'}
                 </p>
               </div>
             </div>
@@ -1049,12 +1107,12 @@ function CheckoutPage() {
           <Card className="p-4 md:p-6 bg-muted/50">
             <h4 className="font-semibold mb-3 text-sm flex items-center gap-2">
               <Icon name="HelpCircle" className="h-4 w-4 text-primary" />
-              {language === 'en' ? 'Need Help?' : 'Тусламж хэрэгтэй юу?'}
+              {language === 'en' ? 'Need Help?' : 'Ð¢ÑƒÑÐ»Ð°Ð¼Ð¶ Ñ…ÑÑ€ÑÐ³Ñ‚ÑÐ¹ ÑŽÑƒ?'}
             </h4>
             <p className="text-xs text-muted-foreground mb-3">
               {language === 'en'
                 ? 'Contact our support team if you have any questions.'
-                : 'Асуулт байвал манай дэмжлэгийн багтай холбогдоно уу.'}
+                : 'ÐÑÑƒÑƒÐ»Ñ‚ Ð±Ð°Ð¹Ð²Ð°Ð» Ð¼Ð°Ð½Ð°Ð¹ Ð´ÑÐ¼Ð¶Ð»ÑÐ³Ð¸Ð¹Ð½ Ð±Ð°Ð³Ñ‚Ð°Ð¹ Ñ…Ð¾Ð»Ð±Ð¾Ð³Ð´Ð¾Ð½Ð¾ ÑƒÑƒ.'}
             </p>
             <div className="flex flex-col gap-2 text-xs">
               <div className="flex items-center gap-2">
@@ -1072,7 +1130,7 @@ function CheckoutPage() {
           <Card className="p-4 md:p-6 bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
             <h4 className="font-bold mb-4 text-sm flex items-center gap-2">
               <Icon name="Info" className="h-4 w-4 text-primary" />
-              {language === 'en' ? "What's Next?" : 'Дараагийн алхам'}
+              {language === 'en' ? "What's Next?" : 'Ð”Ð°Ñ€Ð°Ð°Ð³Ð¸Ð¹Ð½ Ð°Ð»Ñ…Ð°Ð¼'}
             </h4>
             <div className="space-y-3 text-xs">
               <div className="flex gap-3">
@@ -1081,12 +1139,12 @@ function CheckoutPage() {
                 </div>
                 <div>
                   <p className="font-semibold mb-1">
-                    {language === 'en' ? 'Complete shipping information' : 'Хүргэлтийн мэдээлэл бөглөх'}
+                    {language === 'en' ? 'Complete shipping information' : 'Ð¥Ò¯Ñ€Ð³ÑÐ»Ñ‚Ð¸Ð¹Ð½ Ð¼ÑÐ´ÑÑÐ»ÑÐ» Ð±Ó©Ð³Ð»Ó©Ñ…'}
                   </p>
                   <p className="text-muted-foreground">
                     {language === 'en'
                       ? 'Fill out the form with your delivery details'
-                      : 'Хүргэлтийн хаягаа оруулна уу'}
+                      : 'Ð¥Ò¯Ñ€Ð³ÑÐ»Ñ‚Ð¸Ð¹Ð½ Ñ…Ð°ÑÐ³Ð°Ð° Ð¾Ñ€ÑƒÑƒÐ»Ð½Ð° ÑƒÑƒ'}
                   </p>
                 </div>
               </div>
@@ -1096,12 +1154,12 @@ function CheckoutPage() {
                 </div>
                 <div>
                   <p className="font-semibold mb-1">
-                    {language === 'en' ? 'Scan QR code to pay' : 'QR код уншуулж төлөх'}
+                    {language === 'en' ? 'Scan QR code to pay' : 'QR ÐºÐ¾Ð´ ÑƒÐ½ÑˆÑƒÑƒÐ»Ð¶ Ñ‚Ó©Ð»Ó©Ñ…'}
                   </p>
                   <p className="text-muted-foreground">
                     {language === 'en'
                       ? 'Use your banking app to complete payment'
-                      : 'Банкны апп-аараа төлбөрөө төлнө'}
+                      : 'Ð‘Ð°Ð½ÐºÐ½Ñ‹ Ð°Ð¿Ð¿-Ð°Ð°Ñ€Ð°Ð° Ñ‚Ó©Ð»Ð±Ó©Ñ€Ó©Ó© Ñ‚Ó©Ð»Ð½Ó©'}
                   </p>
                 </div>
               </div>
@@ -1111,12 +1169,12 @@ function CheckoutPage() {
                 </div>
                 <div>
                   <p className="font-semibold mb-1">
-                    {language === 'en' ? 'Receive confirmation' : 'Баталгаажуулалт хүлээн авах'}
+                    {language === 'en' ? 'Receive confirmation' : 'Ð‘Ð°Ñ‚Ð°Ð»Ð³Ð°Ð°Ð¶ÑƒÑƒÐ»Ð°Ð»Ñ‚ Ñ…Ò¯Ð»ÑÑÐ½ Ð°Ð²Ð°Ñ…'}
                   </p>
                   <p className="text-muted-foreground">
                     {language === 'en'
                       ? 'Get instant confirmation once payment is complete'
-                      : 'Төлбөр амжилттай болсны дараа баталгаа авна'}
+                      : 'Ð¢Ó©Ð»Ð±Ó©Ñ€ Ð°Ð¼Ð¶Ð¸Ð»Ñ‚Ñ‚Ð°Ð¹ Ð±Ð¾Ð»ÑÐ½Ñ‹ Ð´Ð°Ñ€Ð°Ð° Ð±Ð°Ñ‚Ð°Ð»Ð³Ð°Ð° Ð°Ð²Ð½Ð°'}
                   </p>
                 </div>
               </div>
@@ -1145,23 +1203,23 @@ export default function CheckoutPageWithErrorBoundary() {
                 </div>
                 <div className="flex-1">
                   <h2 className="text-xl font-bold text-red-800 dark:text-red-200 mb-2">
-                    Checkout алдаа
+                    Checkout Ð°Ð»Ð´Ð°Ð°
                   </h2>
                   <p className="text-red-700 dark:text-red-300 mb-4">
-                    Төлбөрийн хуудас ачаалахад алдаа гарлаа. Таны сагсан дахь бараанууд хадгалагдсан байгаа.
+                    Ð¢Ó©Ð»Ð±Ó©Ñ€Ð¸Ð¹Ð½ Ñ…ÑƒÑƒÐ´Ð°Ñ Ð°Ñ‡Ð°Ð°Ð»Ð°Ñ…Ð°Ð´ Ð°Ð»Ð´Ð°Ð° Ð³Ð°Ñ€Ð»Ð°Ð°. Ð¢Ð°Ð½Ñ‹ ÑÐ°Ð³ÑÐ°Ð½ Ð´Ð°Ñ…ÑŒ Ð±Ð°Ñ€Ð°Ð°Ð½ÑƒÑƒÐ´ Ñ…Ð°Ð´Ð³Ð°Ð»Ð°Ð³Ð´ÑÐ°Ð½ Ð±Ð°Ð¹Ð³Ð°Ð°.
                   </p>
                   <div className="flex flex-col sm:flex-row gap-3">
                     <button
                       onClick={() => window.location.reload()}
                       className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition-colors"
                     >
-                      Дахин оролдох
+                      Ð”Ð°Ñ…Ð¸Ð½ Ð¾Ñ€Ð¾Ð»Ð´Ð¾Ñ…
                     </button>
                     <button
                       onClick={() => window.location.href = '/cart'}
                       className="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-lg font-semibold transition-colors"
                     >
-                      Сагс руу буцах
+                      Ð¡Ð°Ð³Ñ Ñ€ÑƒÑƒ Ð±ÑƒÑ†Ð°Ñ…
                     </button>
                   </div>
                 </div>
@@ -1175,3 +1233,4 @@ export default function CheckoutPageWithErrorBoundary() {
     </ErrorBoundary>
   )
 }
+

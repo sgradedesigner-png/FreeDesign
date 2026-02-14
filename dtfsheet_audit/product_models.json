@@ -1,0 +1,557 @@
+﻿[
+    {
+        "handle":  "custom-image-dtfsheet-transfer",
+        "title":  "DTF Transfers by Size",
+        "type":  "DTF Transfers",
+        "vendor":  "DTF Sheet",
+        "tags":  [
+                     "easyup",
+                     "Transfers by Size"
+                 ],
+        "image_count":  21,
+        "option_names":  [
+                             "Select a size",
+                             "Finishing Service"
+                         ],
+        "variant_count":  36,
+        "variant_samples":  [
+                                {
+                                    "id":  45294968799518,
+                                    "title":  "2\" x 2\" / Roll (Uncut)",
+                                    "option1":  "2\" x 2\"",
+                                    "option2":  "Roll (Uncut)",
+                                    "option3":  null,
+                                    "price":  "1.48",
+                                    "available":  null,
+                                    "sku":  "EASY2x2"
+                                },
+                                {
+                                    "id":  45294968832286,
+                                    "title":  "2\" x 2\" / Pre-Cut: Ready to Press (+$0.35)",
+                                    "option1":  "2\" x 2\"",
+                                    "option2":  "Pre-Cut: Ready to Press (+$0.35)",
+                                    "option3":  null,
+                                    "price":  "1.73",
+                                    "available":  null,
+                                    "sku":  "EASY2x2-PRECUT"
+                                },
+                                {
+                                    "id":  45294968865054,
+                                    "title":  "3\" x 3\" / Roll (Uncut)",
+                                    "option1":  "3\" x 3\"",
+                                    "option2":  "Roll (Uncut)",
+                                    "option3":  null,
+                                    "price":  "2.48",
+                                    "available":  null,
+                                    "sku":  "EASY3x3"
+                                },
+                                {
+                                    "id":  45294968897822,
+                                    "title":  "3\" x 3\" / Pre-Cut: Ready to Press (+$0.35)",
+                                    "option1":  "3\" x 3\"",
+                                    "option2":  "Pre-Cut: Ready to Press (+$0.35)",
+                                    "option3":  null,
+                                    "price":  "2.73",
+                                    "available":  null,
+                                    "sku":  "EASY3x3-PRECUT"
+                                },
+                                {
+                                    "id":  45294968733982,
+                                    "title":  "4\" x 2\" / Roll (Uncut)",
+                                    "option1":  "4\" x 2\"",
+                                    "option2":  "Roll (Uncut)",
+                                    "option3":  null,
+                                    "price":  "1.98",
+                                    "available":  null,
+                                    "sku":  "EASY4x2"
+                                },
+                                {
+                                    "id":  45294968766750,
+                                    "title":  "4\" x 2\" / Pre-Cut: Ready to Press (+$0.35)",
+                                    "option1":  "4\" x 2\"",
+                                    "option2":  "Pre-Cut: Ready to Press (+$0.35)",
+                                    "option3":  null,
+                                    "price":  "2.23",
+                                    "available":  null,
+                                    "sku":  "EASY4x2-PRECUT"
+                                },
+                                {
+                                    "id":  45294968930590,
+                                    "title":  "4\" x 4\" / Roll (Uncut)",
+                                    "option1":  "4\" x 4\"",
+                                    "option2":  "Roll (Uncut)",
+                                    "option3":  null,
+                                    "price":  "2.98",
+                                    "available":  null,
+                                    "sku":  "EASY4x4"
+                                },
+                                {
+                                    "id":  45294968963358,
+                                    "title":  "4\" x 4\" / Pre-Cut: Ready to Press (+$0.35)",
+                                    "option1":  "4\" x 4\"",
+                                    "option2":  "Pre-Cut: Ready to Press (+$0.35)",
+                                    "option3":  null,
+                                    "price":  "3.23",
+                                    "available":  null,
+                                    "sku":  "EASY4x4-PRECUT"
+                                }
+                            ],
+        "price_min":  1.48,
+        "price_max":  14.73
+    },
+    {
+        "handle":  "dtfsheet-custom-gang-sheet-order",
+        "title":  "DTF Gang Sheet Upload (Ready-to-Print)",
+        "type":  "DTF Transfers",
+        "vendor":  "DTF Sheet",
+        "tags":  [
+                     "fileup",
+                     "Gang Sheet"
+                 ],
+        "image_count":  10,
+        "option_names":  [
+                             "Select size (all sizes 22 inches wide)"
+                         ],
+        "variant_count":  8,
+        "variant_samples":  [
+                                {
+                                    "id":  45310071111966,
+                                    "title":  "2 Feet",
+                                    "option1":  "2 Feet",
+                                    "option2":  null,
+                                    "option3":  null,
+                                    "price":  "19.99",
+                                    "available":  null,
+                                    "sku":  "GANG22X2"
+                                },
+                                {
+                                    "id":  45310071144734,
+                                    "title":  "5 Feet",
+                                    "option1":  "5 Feet",
+                                    "option2":  null,
+                                    "option3":  null,
+                                    "price":  "39.99",
+                                    "available":  null,
+                                    "sku":  "GANG22X5"
+                                },
+                                {
+                                    "id":  45310071177502,
+                                    "title":  "7 Feet",
+                                    "option1":  "7 Feet",
+                                    "option2":  null,
+                                    "option3":  null,
+                                    "price":  "49.99",
+                                    "available":  null,
+                                    "sku":  "GANG22X7"
+                                },
+                                {
+                                    "id":  45310071210270,
+                                    "title":  "10 Feet",
+                                    "option1":  "10 Feet",
+                                    "option2":  null,
+                                    "option3":  null,
+                                    "price":  "59.99",
+                                    "available":  null,
+                                    "sku":  "GANG22X10"
+                                },
+                                {
+                                    "id":  45310071243038,
+                                    "title":  "12 Feet",
+                                    "option1":  "12 Feet",
+                                    "option2":  null,
+                                    "option3":  null,
+                                    "price":  "69.99",
+                                    "available":  null,
+                                    "sku":  "GANG22X12"
+                                },
+                                {
+                                    "id":  45310071275806,
+                                    "title":  "15 Feet",
+                                    "option1":  "15 Feet",
+                                    "option2":  null,
+                                    "option3":  null,
+                                    "price":  "79.99",
+                                    "available":  null,
+                                    "sku":  "GANG22X15"
+                                },
+                                {
+                                    "id":  45310071308574,
+                                    "title":  "17 Feet",
+                                    "option1":  "17 Feet",
+                                    "option2":  null,
+                                    "option3":  null,
+                                    "price":  "89.99",
+                                    "available":  null,
+                                    "sku":  "GANG22X17"
+                                },
+                                {
+                                    "id":  45310071341342,
+                                    "title":  "20 Feet",
+                                    "option1":  "20 Feet",
+                                    "option2":  null,
+                                    "option3":  null,
+                                    "price":  "99.99",
+                                    "available":  null,
+                                    "sku":  "GANG22X20"
+                                }
+                            ],
+        "price_min":  19.99,
+        "price_max":  99.99
+    },
+    {
+        "handle":  "dtfsheet™-custom-gang-sheet-order-builder",
+        "title":  "DTF Gang Sheet Builder",
+        "type":  "DTF Transfers",
+        "vendor":  "DTF Sheet",
+        "tags":  [
+                     ""
+                 ],
+        "image_count":  7,
+        "option_names":  [
+                             "Select size (all sizes 22 inches wide)"
+                         ],
+        "variant_count":  6,
+        "variant_samples":  [
+                                {
+                                    "id":  46074392379678,
+                                    "title":  "2 Feet",
+                                    "option1":  "2 Feet",
+                                    "option2":  null,
+                                    "option3":  null,
+                                    "price":  "19.99",
+                                    "available":  null,
+                                    "sku":  "builder-2feet"
+                                },
+                                {
+                                    "id":  46074392445214,
+                                    "title":  "5 Feet",
+                                    "option1":  "5 Feet",
+                                    "option2":  null,
+                                    "option3":  null,
+                                    "price":  "39.99",
+                                    "available":  null,
+                                    "sku":  "builder-5feet"
+                                },
+                                {
+                                    "id":  46074392510750,
+                                    "title":  "7 Feet",
+                                    "option1":  "7 Feet",
+                                    "option2":  null,
+                                    "option3":  null,
+                                    "price":  "49.99",
+                                    "available":  null,
+                                    "sku":  "builder-7feet"
+                                },
+                                {
+                                    "id":  46074392609054,
+                                    "title":  "10 Feet",
+                                    "option1":  "10 Feet",
+                                    "option2":  null,
+                                    "option3":  null,
+                                    "price":  "59.99",
+                                    "available":  null,
+                                    "sku":  "builder-10feet"
+                                },
+                                {
+                                    "id":  46259710951710,
+                                    "title":  "15 Feet",
+                                    "option1":  "15 Feet",
+                                    "option2":  null,
+                                    "option3":  null,
+                                    "price":  "79.99",
+                                    "available":  null,
+                                    "sku":  "builder-15feet"
+                                },
+                                {
+                                    "id":  46259728515358,
+                                    "title":  "20 Feet",
+                                    "option1":  "20 Feet",
+                                    "option2":  null,
+                                    "option3":  null,
+                                    "price":  "99.99",
+                                    "available":  null,
+                                    "sku":  "builder-20feet"
+                                }
+                            ],
+        "price_min":  19.99,
+        "price_max":  99.99
+    },
+    {
+        "handle":  "uv-dtf-easy",
+        "title":  "UV DTF Transfers by Size",
+        "type":  "UVDTF",
+        "vendor":  "DTF Sheet",
+        "tags":  [
+                     "UV Transfers by Size",
+                     "uveasy"
+                 ],
+        "image_count":  10,
+        "option_names":  [
+                             "Select a size",
+                             "Receive as roll or pre-cut?"
+                         ],
+        "variant_count":  21,
+        "variant_samples":  [
+                                {
+                                    "id":  49241142460702,
+                                    "title":  "2\" X 2\" / Receive as roll",
+                                    "option1":  "2\" X 2\"",
+                                    "option2":  "Receive as roll",
+                                    "option3":  null,
+                                    "price":  "1.39",
+                                    "available":  null,
+                                    "sku":  "UVEASY2x2"
+                                },
+                                {
+                                    "id":  49241142493470,
+                                    "title":  "2\" X 2\" / Pre-cut (+¢35 ea.)",
+                                    "option1":  "2\" X 2\"",
+                                    "option2":  "Pre-cut (+¢35 ea.)",
+                                    "option3":  null,
+                                    "price":  "1.74",
+                                    "available":  null,
+                                    "sku":  "UVEASY2x2-PRECUT"
+                                },
+                                {
+                                    "id":  49241142526238,
+                                    "title":  "3\" x 3\" / Receive as roll",
+                                    "option1":  "3\" x 3\"",
+                                    "option2":  "Receive as roll",
+                                    "option3":  null,
+                                    "price":  "1.79",
+                                    "available":  null,
+                                    "sku":  "UVEASY3x3"
+                                },
+                                {
+                                    "id":  49241142559006,
+                                    "title":  "3\" x 3\" / Pre-cut (+¢35 ea.)",
+                                    "option1":  "3\" x 3\"",
+                                    "option2":  "Pre-cut (+¢35 ea.)",
+                                    "option3":  null,
+                                    "price":  "2.14",
+                                    "available":  null,
+                                    "sku":  "UVEASY3x3-PRECUT"
+                                },
+                                {
+                                    "id":  49241142657310,
+                                    "title":  "4\" x 4\" / Receive as roll",
+                                    "option1":  "4\" x 4\"",
+                                    "option2":  "Receive as roll",
+                                    "option3":  null,
+                                    "price":  "2.19",
+                                    "available":  null,
+                                    "sku":  "UVEASY4x4"
+                                },
+                                {
+                                    "id":  49241142690078,
+                                    "title":  "4\" x 4\" / Pre-cut (+¢35 ea.)",
+                                    "option1":  "4\" x 4\"",
+                                    "option2":  "Pre-cut (+¢35 ea.)",
+                                    "option3":  null,
+                                    "price":  "2.54",
+                                    "available":  null,
+                                    "sku":  "UVEASY4x4-PRECUT"
+                                },
+                                {
+                                    "id":  49241142853918,
+                                    "title":  "5\" x 5\" / Receive as roll",
+                                    "option1":  "5\" x 5\"",
+                                    "option2":  "Receive as roll",
+                                    "option3":  null,
+                                    "price":  "2.59",
+                                    "available":  null,
+                                    "sku":  "UVEASY5x5"
+                                },
+                                {
+                                    "id":  49241142886686,
+                                    "title":  "5\" x 5\" / Pre-cut (+¢35 ea.)",
+                                    "option1":  "5\" x 5\"",
+                                    "option2":  "Pre-cut (+¢35 ea.)",
+                                    "option3":  null,
+                                    "price":  "2.94",
+                                    "available":  null,
+                                    "sku":  "UVEASY5x5-PRECUT"
+                                }
+                            ],
+        "price_min":  1.39,
+        "price_max":  16.99
+    },
+    {
+        "handle":  "uv-dtf-transfers-gang-sheets",
+        "title":  "UV DTF Transfers Gang Sheets",
+        "type":  "UVDTF",
+        "vendor":  "DTF Sheet",
+        "tags":  [
+                     "UV DTF Gang Sheets",
+                     "UVgangsheet"
+                 ],
+        "image_count":  10,
+        "option_names":  [
+                             "Select a size"
+                         ],
+        "variant_count":  7,
+        "variant_samples":  [
+                                {
+                                    "id":  49265023189278,
+                                    "title":  "22 in X 6 in",
+                                    "option1":  "22 in X 6 in",
+                                    "option2":  null,
+                                    "option3":  null,
+                                    "price":  "8.49",
+                                    "available":  null,
+                                    "sku":  null
+                                },
+                                {
+                                    "id":  49265023254814,
+                                    "title":  "22 in X 12 in",
+                                    "option1":  "22 in X 12 in",
+                                    "option2":  null,
+                                    "option3":  null,
+                                    "price":  "11.99",
+                                    "available":  null,
+                                    "sku":  null
+                                },
+                                {
+                                    "id":  49265023320350,
+                                    "title":  "22 in X 24 in  (2 ft)",
+                                    "option1":  "22 in X 24 in  (2 ft)",
+                                    "option2":  null,
+                                    "option3":  null,
+                                    "price":  "17.99",
+                                    "available":  null,
+                                    "sku":  null
+                                },
+                                {
+                                    "id":  49265023385886,
+                                    "title":  "22 in X 60 in  (5 ft)",
+                                    "option1":  "22 in X 60 in  (5 ft)",
+                                    "option2":  null,
+                                    "option3":  null,
+                                    "price":  "42.99",
+                                    "available":  null,
+                                    "sku":  null
+                                },
+                                {
+                                    "id":  49265023451422,
+                                    "title":  "22 in X 120 in  (10 ft)",
+                                    "option1":  "22 in X 120 in  (10 ft)",
+                                    "option2":  null,
+                                    "option3":  null,
+                                    "price":  "87.99",
+                                    "available":  null,
+                                    "sku":  null
+                                },
+                                {
+                                    "id":  49265023844638,
+                                    "title":  "22 in X 180 in  (15 ft)",
+                                    "option1":  "22 in X 180 in  (15 ft)",
+                                    "option2":  null,
+                                    "option3":  null,
+                                    "price":  "129.99",
+                                    "available":  null,
+                                    "sku":  null
+                                },
+                                {
+                                    "id":  49265023516958,
+                                    "title":  "22 in X 240 in  (20 ft)",
+                                    "option1":  "22 in X 240 in  (20 ft)",
+                                    "option2":  null,
+                                    "option3":  null,
+                                    "price":  "164.99",
+                                    "available":  null,
+                                    "sku":  null
+                                }
+                            ],
+        "price_min":  8.49,
+        "price_max":  164.99
+    },
+    {
+        "handle":  "uv-dtf-transfers-gang-sheets-auto-builder",
+        "title":  "UV DTF - Gang Sheet Builder",
+        "type":  "UVDTF",
+        "vendor":  "DTF Sheet",
+        "tags":  [
+                     "UV DTF Gang Sheets",
+                     "UVantigro"
+                 ],
+        "image_count":  10,
+        "option_names":  [
+                             "Select a size"
+                         ],
+        "variant_count":  7,
+        "variant_samples":  [
+                                {
+                                    "id":  49285732401438,
+                                    "title":  "22 in X 6 in",
+                                    "option1":  "22 in X 6 in",
+                                    "option2":  null,
+                                    "option3":  null,
+                                    "price":  "8.49",
+                                    "available":  null,
+                                    "sku":  null
+                                },
+                                {
+                                    "id":  49285732434206,
+                                    "title":  "22 in X 12 in",
+                                    "option1":  "22 in X 12 in",
+                                    "option2":  null,
+                                    "option3":  null,
+                                    "price":  "11.99",
+                                    "available":  null,
+                                    "sku":  null
+                                },
+                                {
+                                    "id":  49285732466974,
+                                    "title":  "22 in X 24 in  (2 ft)",
+                                    "option1":  "22 in X 24 in  (2 ft)",
+                                    "option2":  null,
+                                    "option3":  null,
+                                    "price":  "17.99",
+                                    "available":  null,
+                                    "sku":  null
+                                },
+                                {
+                                    "id":  49285732499742,
+                                    "title":  "22 in X 60 in  (5 ft)",
+                                    "option1":  "22 in X 60 in  (5 ft)",
+                                    "option2":  null,
+                                    "option3":  null,
+                                    "price":  "42.99",
+                                    "available":  null,
+                                    "sku":  null
+                                },
+                                {
+                                    "id":  49285732532510,
+                                    "title":  "22 in X 120 in  (10 ft)",
+                                    "option1":  "22 in X 120 in  (10 ft)",
+                                    "option2":  null,
+                                    "option3":  null,
+                                    "price":  "87.99",
+                                    "available":  null,
+                                    "sku":  null
+                                },
+                                {
+                                    "id":  49285732565278,
+                                    "title":  "22 in X 180 in  (15 ft)",
+                                    "option1":  "22 in X 180 in  (15 ft)",
+                                    "option2":  null,
+                                    "option3":  null,
+                                    "price":  "129.99",
+                                    "available":  null,
+                                    "sku":  null
+                                },
+                                {
+                                    "id":  49285732598046,
+                                    "title":  "22 in X 240 in  (20 ft)",
+                                    "option1":  "22 in X 240 in  (20 ft)",
+                                    "option2":  null,
+                                    "option3":  null,
+                                    "price":  "164.99",
+                                    "available":  null,
+                                    "sku":  null
+                                }
+                            ],
+        "price_min":  8.49,
+        "price_max":  164.99
+    }
+]

@@ -347,7 +347,7 @@ VITE_SUPABASE_URL=https://your-project-id.supabase.co
 VITE_SUPABASE_ANON_KEY=your_anon_key_here
 
 # Backend API
-VITE_API_URL=http://localhost:3000
+VITE_API_URL=http://localhost:4000
 
 # Cloudflare R2 (Product Images)
 VITE_R2_PUBLIC_BASE_URL=https://pub-xxxx.r2.dev
@@ -2133,3 +2133,4 @@ The store app has good fundamentals (authentication, payment integration, error 
 ---
 
 *For questions or clarifications, refer to the detailed sections above or compare with the admin app audit results for context on previously fixed issues.*
+

@@ -18,8 +18,8 @@ if (-not (Test-Path $K6_PATH)) {
 
 # Check if backend is running
 try {
-    $response = Invoke-WebRequest -Uri "http://localhost:3000/health" -TimeoutSec 5 -UseBasicParsing
-    Write-Host "✅ Backend is running on http://localhost:3000" -ForegroundColor Green
+    $response = Invoke-WebRequest -Uri "http://localhost:4000/health" -TimeoutSec 5 -UseBasicParsing
+    Write-Host "✅ Backend is running on http://localhost:4000" -ForegroundColor Green
 } catch {
     Write-Host "❌ Backend is not running!" -ForegroundColor Red
     Write-Host "Please start the backend: npm run dev" -ForegroundColor Yellow
@@ -85,3 +85,4 @@ Write-Host "Total time: $($totalElapsed.ToString('hh\:mm\:ss'))" -ForegroundColo
 Write-Host ""
 Write-Host "📊 Check results in: load-tests\results\" -ForegroundColor Cyan
 Write-Host ""
+

@@ -1,7 +1,7 @@
-import { Link } from 'react-router-dom';
+﻿import { Link } from 'react-router-dom';
 import { useCart } from '../../context/CartContext';
 import { useTheme } from '../../context/ThemeContext';
-import { r2Url } from '@/lib/r2';
+import { imageUrl } from '@/lib/imageUrl';
 import { ShoppingBag } from 'lucide-react';
 import type { Product } from '../../data/products';
 import { useQueryClient } from '@tanstack/react-query';
@@ -21,7 +21,7 @@ export default function ProductCard({ product }: ProductCardProps) {
 
   // Get default variant (first available variant)
   const defaultVariant = product.variants?.[0];
-  const imgSrc = r2Url(defaultVariant?.imagePath ?? product.image_path ?? '') || PLACEHOLDER_IMG;
+  const imgSrc = imageUrl(defaultVariant?.imagePath ?? product.image_path ?? '') || PLACEHOLDER_IMG;
 
   // Get price from default variant or product
   const displayPrice = defaultVariant?.price ?? product.price ?? 0;
@@ -85,7 +85,7 @@ export default function ProductCard({ product }: ProductCardProps) {
             onFocus={handlePrefetch}
             onTouchStart={handlePrefetch}
           >
-            {language === 'mn' ? 'ДЭЛГЭРЭНГҮЙ' : 'VIEW DETAILS'}
+            {language === 'mn' ? 'Ð”Ð­Ð›Ð“Ð­Ð Ð­ÐÐ“Ò®Ð™' : 'VIEW DETAILS'}
           </Link>
 
           {/* Add to Cart Button */}
@@ -93,7 +93,7 @@ export default function ProductCard({ product }: ProductCardProps) {
             data-testid="add-to-cart-btn"
             onClick={handleAddToCart}
             className="w-12 h-12 bg-white text-slate-900 rounded-xl flex items-center justify-center shadow-lg hover:bg-primary hover:text-white transition-all duration-300"
-            title={language === 'mn' ? 'Сагсанд нэмэх' : 'Add to cart'}
+            title={language === 'mn' ? 'Ð¡Ð°Ð³ÑÐ°Ð½Ð´ Ð½ÑÐ¼ÑÑ…' : 'Add to cart'}
           >
             <ShoppingBag size={20} />
           </button>
@@ -114,11 +114,11 @@ export default function ProductCard({ product }: ProductCardProps) {
           </h3>
           <div className="flex items-baseline gap-2 overflow-hidden whitespace-nowrap">
             <p className="shrink-0 text-lg font-bold text-foreground">
-              ₮{Number(displayPrice).toLocaleString()}
+              â‚®{Number(displayPrice).toLocaleString()}
             </p>
             {defaultVariant?.originalPrice && Number(defaultVariant.originalPrice) > Number(displayPrice) && (
               <p className="truncate text-sm text-muted-foreground line-through">
-                ₮{Number(defaultVariant.originalPrice).toLocaleString()}
+                â‚®{Number(defaultVariant.originalPrice).toLocaleString()}
               </p>
             )}
           </div>
@@ -127,3 +127,4 @@ export default function ProductCard({ product }: ProductCardProps) {
     </div>
   );
 }
+

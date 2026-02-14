@@ -25,7 +25,7 @@ This report provides **independent verification** of the performance optimizatio
 ## Methodology
 
 ### Test Environment
-- **Server**: Local development (localhost:3000)
+- **Server**: Local development (localhost:4000)
 - **Database**: Supabase PostgreSQL (production instance)
 - **Diagnostic Mode**: PERF_DIAG=true (headers enabled without changing behavior)
 - **Load Test Tool**: k6 (v0.54+)
@@ -65,7 +65,7 @@ When `PERF_DIAG=true` OR `NODE_ENV !== 'production'`:
 ### Test 1: Cache HOT (Optimal Caching Scenario)
 
 **Configuration**:
-- URL: `http://localhost:3000/api/products?page=1&limit=20`
+- URL: `http://localhost:4000/api/products?page=1&limit=20`
 - Pattern: Same page repeated
 - Duration: 30 seconds
 - Virtual Users: 10
@@ -103,7 +103,7 @@ Performance Diagnostics (X-PERF-* headers):
 ### Test 2: Cache MISS (Production-like Scenario)
 
 **Configuration**:
-- URL: `http://localhost:3000/api/products?page=[1-50]&limit=20`
+- URL: `http://localhost:4000/api/products?page=[1-50]&limit=20`
 - Pattern: Random pages 1-50
 - Duration: 30 seconds
 - Virtual Users: 10
@@ -460,15 +460,15 @@ Deploy to production with current settings, but:
 ### Manual Verification
 ```bash
 # Test cache MISS (first request)
-curl -I "http://localhost:3000/api/products?page=99&limit=5"
+curl -I "http://localhost:4000/api/products?page=99&limit=5"
 # Look for: X-PERF-TOTAL-MS, X-PERF-DB-MS, X-PERF-CACHE: MISS
 
 # Test cache HIT (second request, same page)
-curl -I "http://localhost:3000/api/products?page=99&limit=5"
+curl -I "http://localhost:4000/api/products?page=99&limit=5"
 # Look for: X-PERF-CACHE: HIT, X-PERF-DB-MS: 0
 
 # Test COUNT overhead
-curl -I "http://localhost:3000/api/products?page=1&limit=20&include_total=true"
+curl -I "http://localhost:4000/api/products?page=1&limit=20&include_total=true"
 # Look for: X-PERF-QUERY-COUNT: 2, X-PERF-DB-MS > 1000
 ```
 
@@ -491,3 +491,4 @@ k6 run scenarios/verify_count_overhead.js
 **Report Generated**: 2026-02-10
 **Verification Status**: ✅ Complete
 **Next Review**: After production deployment (measure real cache hit rate)
+

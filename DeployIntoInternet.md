@@ -1223,3 +1223,34 @@ jobs:
 **korean-goods.com одоо дэлхий нийтээр хүртээмжтэй! 🌍🚀**
 
 **Амжилт хүсье!** 🎉
+
+---
+
+## Phase 0 DTF Env Contract Additions
+
+Use these variables for staged rollout on Cloudflare Pages + Railway.
+
+### Store (Cloudflare Pages)
+
+- VITE_FF_DTF_NAV_V1=false
+- VITE_FF_CART_DB_V1=false
+- VITE_FF_UPLOAD_ASYNC_VALIDATION_V1=false
+- VITE_FF_BUILDER_MVP_V1=false
+
+### Admin (Cloudflare Pages)
+
+- VITE_FF_DTF_ADMIN_V1=false
+
+### Backend (Railway)
+
+- CLOUDINARY_SIGNATURE_TTL_SEC=300
+- UPLOAD_MAX_MB=25
+- UPLOAD_ALLOWED_MIME=image/jpeg,image/jpg,image/png,image/webp,application/pdf
+- FF_DTF_NAV_V1=false
+- FF_CART_DB_V1=false
+- FF_UPLOAD_ASYNC_VALIDATION_V1=false
+- FF_BUILDER_MVP_V1=false
+
+Security boundary:
+- Never expose CLOUDINARY_API_SECRET, DATABASE_URL, or other backend secrets with a VITE_ prefix.
+- Only non-secret feature flags should be in Cloudflare Pages VITE_ variables.

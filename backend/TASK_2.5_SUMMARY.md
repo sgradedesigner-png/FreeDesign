@@ -332,7 +332,7 @@ npm run dev
 
 **2. Make a request:**
 ```bash
-curl http://localhost:3000/api/products
+curl http://localhost:4000/api/products
 ```
 
 **3. Check logs:**
@@ -355,7 +355,7 @@ INFO - Request completed
 
 **1. Make invalid request:**
 ```bash
-curl -X POST http://localhost:3000/api/orders \
+curl -X POST http://localhost:4000/api/orders \
   -H "Content-Type: application/json" \
   -d '{"invalid": "data"}'
 ```
@@ -387,7 +387,7 @@ ERROR - Request error occurred
 
 **1. Exceed rate limit:**
 ```bash
-for i in {1..110}; do curl http://localhost:3000/api/products; done
+for i in {1..110}; do curl http://localhost:4000/api/products; done
 ```
 
 **2. Check rate limit logs:**
@@ -654,3 +654,4 @@ if (!isValidToken(token)) {
 ---
 
 **Next Task:** Task 2.6 - N+1 Query Optimization
+

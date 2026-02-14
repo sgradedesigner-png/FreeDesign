@@ -1,7 +1,7 @@
 # Security Headers Test Results
 
 **Date:** 2026-02-10
-**Test Environment:** Development (localhost:3000)
+**Test Environment:** Development (localhost:4000)
 **Status:** ✅ All Headers Present
 
 ---
@@ -12,7 +12,7 @@
 
 **Command:**
 ```bash
-curl -I http://localhost:3000/
+curl -I http://localhost:4000/
 ```
 
 **Result:** ✅ **PASS**
@@ -34,7 +34,7 @@ content-security-policy-report-only: default-src 'self'; script-src 'self' 'unsa
 
 **Command:**
 ```bash
-curl -I http://localhost:3000/health
+curl -I http://localhost:4000/health
 ```
 
 **Result:** ✅ **PASS**
@@ -56,7 +56,7 @@ content-security-policy-report-only: [full CSP policy]
 
 **Command:**
 ```bash
-curl -s http://localhost:3000/
+curl -s http://localhost:4000/
 ```
 
 **Result:** ✅ **PASS**
@@ -172,14 +172,14 @@ HSTS: max-age=31536000; includeSubDomains; preload
 **Test protected routes:**
 ```bash
 # Test admin endpoint
-curl -I http://localhost:3000/admin/ping \
+curl -I http://localhost:4000/admin/ping \
   -H "Authorization: Bearer YOUR_TOKEN"
 ```
 
 **Test CORS headers:**
 ```bash
 # Test CORS preflight
-curl -I http://localhost:3000/ \
+curl -I http://localhost:4000/ \
   -H "Origin: http://localhost:5175" \
   -X OPTIONS
 ```
@@ -303,3 +303,4 @@ Grade: A
 **Tested By:** Automated Security Header Verification
 **Status:** ✅ All Tests Passed
 **Recommendation:** Ready for production deployment (after full regression testing)
+

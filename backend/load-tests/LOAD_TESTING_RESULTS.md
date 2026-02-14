@@ -4,7 +4,7 @@
 
 **Date:** 2026-02-09
 **Tool:** k6 v1.5.0
-**Backend:** http://localhost:3000
+**Backend:** http://localhost:4000
 
 ## ✅ Smoke Test Results (Baseline)
 
@@ -224,3 +224,4 @@ cd load-tests
 **Last Updated:** 2026-02-09 23:25
 **Maintained By:** Backend Team
 **Next Review:** After implementing optimizations
+

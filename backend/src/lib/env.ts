@@ -1,25 +1,39 @@
 import { z } from 'zod';
 
-/**
- * Environment variable validation schema
- *
- * Validates all required environment variables on startup.
- * If any are missing or invalid, the app exits immediately with clear error messages.
- */
+const booleanFlagSchema = z
+  .enum(['true', 'false'])
+  .default('false')
+  .transform((value) => value === 'true');
+
+const mimeCsvSchema = z
+  .string()
+  .transform((value) =>
+    value
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean)
+  )
+  .refine((items) => items.length > 0, {
+    message: 'UPLOAD_ALLOWED_MIME must contain at least one MIME type',
+  });
+
 const envSchema = z.object({
-  // Node environment
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.string().default('3000'),
 
   // Database (Supabase PostgreSQL)
   DATABASE_URL: z.string().url('DATABASE_URL must be a valid PostgreSQL connection string'),
+  DIRECT_URL: z.string().url('DIRECT_URL must be a valid PostgreSQL connection string').optional(),
 
   // Supabase Auth
   SUPABASE_URL: z.string().url('SUPABASE_URL must be a valid URL'),
+  SUPABASE_ANON_KEY: z.string().min(1, 'SUPABASE_ANON_KEY is required'),
   SUPABASE_JWT_SECRET: z.string().min(32, 'SUPABASE_JWT_SECRET must be at least 32 characters'),
 
   // Session & Cookies
-  COOKIE_SECRET: z.string().min(32, 'COOKIE_SECRET must be at least 32 characters (use: openssl rand -base64 32)'),
+  COOKIE_SECRET: z
+    .string()
+    .min(32, 'COOKIE_SECRET must be at least 32 characters (use: openssl rand -base64 32)'),
 
   // QPay Payment Gateway
   QPAY_BASE_URL: z.string().url().default('https://merchant.qpay.mn/v2'),
@@ -32,12 +46,39 @@ const envSchema = z.object({
   RESEND_API_KEY: z.string().startsWith('re_', 'RESEND_API_KEY must start with "re_"'),
   FROM_EMAIL: z.string().email('FROM_EMAIL must be a valid email address'),
 
-  // Cloudflare R2 Storage
-  R2_ACCOUNT_ID: z.string().min(1, 'R2_ACCOUNT_ID is required'),
-  R2_ACCESS_KEY_ID: z.string().min(1, 'R2_ACCESS_KEY_ID is required'),
-  R2_SECRET_ACCESS_KEY: z.string().min(1, 'R2_SECRET_ACCESS_KEY is required'),
-  R2_BUCKET_NAME: z.string().min(1, 'R2_BUCKET_NAME is required'),
-  R2_PUBLIC_BASE_URL: z.string().url('R2_PUBLIC_BASE_URL must be a valid URL'),
+  // Asset Storage
+  ASSET_STORAGE_PROVIDER: z.enum(['cloudinary', 'r2']).optional().default('cloudinary'),
+
+  // Cloudinary Storage
+  CLOUDINARY_CLOUD_NAME: z.string().min(1, 'CLOUDINARY_CLOUD_NAME is required'),
+  CLOUDINARY_API_KEY: z.string().min(1, 'CLOUDINARY_API_KEY is required'),
+  CLOUDINARY_API_SECRET: z.string().min(1, 'CLOUDINARY_API_SECRET is required'),
+
+  // DTF Upload Security
+  CLOUDINARY_SIGNATURE_TTL_SEC: z
+    .coerce
+    .number()
+    .int('CLOUDINARY_SIGNATURE_TTL_SEC must be an integer')
+    .min(30, 'CLOUDINARY_SIGNATURE_TTL_SEC must be at least 30 seconds')
+    .max(3600, 'CLOUDINARY_SIGNATURE_TTL_SEC must be at most 3600 seconds')
+    .default(300),
+  UPLOAD_MAX_MB: z
+    .coerce
+    .number()
+    .int('UPLOAD_MAX_MB must be an integer')
+    .min(1, 'UPLOAD_MAX_MB must be at least 1 MB')
+    .max(512, 'UPLOAD_MAX_MB must be at most 512 MB')
+    .default(25),
+  UPLOAD_ALLOWED_MIME: z
+    .string()
+    .default('image/jpeg,image/jpg,image/png,image/webp,application/pdf')
+    .pipe(mimeCsvSchema),
+
+  // Phase Feature Flags (backend)
+  FF_DTF_NAV_V1: booleanFlagSchema,
+  FF_CART_DB_V1: booleanFlagSchema,
+  FF_UPLOAD_ASYNC_VALIDATION_V1: booleanFlagSchema,
+  FF_BUILDER_MVP_V1: booleanFlagSchema,
 
   // Optional: Rate Limiting
   RATE_LIMIT_MAX: z.string().optional().default('100'),
@@ -68,32 +109,26 @@ const envSchema = z.object({
 
 export type Env = z.infer<typeof envSchema>;
 
-/**
- * Validate environment variables on startup
- *
- * @throws {Error} If validation fails (exits process)
- */
 export function validateEnv(): Env {
   try {
     const parsed = envSchema.parse(process.env);
-    console.log('✅ Environment validation passed');
+    console.log('Environment validation passed');
     return parsed;
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const zodError = error as z.ZodError<Env>;
-      console.error('\n❌ Environment validation failed:\n');
-      zodError.issues.forEach((err: z.ZodIssue) => {
-        const field = err.path.join('.');
-        console.error(`  • ${field}: ${err.message}`);
+      console.error('\nEnvironment validation failed:\n');
+      error.issues.forEach((issue: z.ZodIssue) => {
+        const field = issue.path.join('.');
+        console.error(`  - ${field}: ${issue.message}`);
       });
-      console.error('\n📝 Please check your .env file and ensure all required variables are set.');
-      console.error('📚 See backend/RAILWAY_DEPLOYMENT.md for required environment variables.\n');
+      console.error('\nCheck backend/.env and required variables.\n');
     } else {
-      console.error('\n❌ Unexpected error during environment validation:', error);
+      console.error('\nUnexpected error during environment validation:', error);
     }
+
     process.exit(1);
   }
 }
 
-// Export validated environment for type-safe access
 export const env = validateEnv();
+

@@ -1,5 +1,5 @@
-import { useMemo, useState, useEffect, useRef } from "react";
-import { r2Url } from "@/lib/r2";
+﻿import { useMemo, useState, useEffect, useRef } from "react";
+import { imageUrl } from "@/lib/imageUrl";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 type ProductGalleryProps = {
@@ -9,9 +9,9 @@ type ProductGalleryProps = {
 };
 
 export default function ProductGallery({ images, name }: ProductGalleryProps) {
-  // Normalize each image to a usable URL via r2Url helper.
+  // Normalize each image to a usable URL via imageUrl helper.
   const resolvedImages = useMemo(
-    () => (images ?? []).map((img) => r2Url(img)).filter(Boolean),
+    () => (images ?? []).map((img) => imageUrl(img)).filter(Boolean),
     [images]
   );
 
@@ -128,13 +128,13 @@ export default function ProductGallery({ images, name }: ProductGalleryProps) {
       <div className="flex-1 relative">
         <div
           ref={imageRef}
-          className="relative group bg-muted rounded-2xl overflow-hidden aspect-[4/3] sm:aspect-[5/4] lg:aspect-square max-h-[70vh]"
+          className="relative group bg-muted rounded-2xl overflow-hidden aspect-[4/5] md:aspect-[4/5] lg:aspect-[3/4] max-h-[70vh]"
           onMouseMove={handleMouseMove}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
           style={{ cursor: isZooming && !isOverNavButtons ? 'crosshair' : 'default' }}
         >
-          <img src={activeImage} alt={name} className="w-full h-full object-contain p-2 sm:p-3 md:p-4" />
+          <img src={activeImage} alt={name} className="w-full h-full object-cover object-top p-0 sm:p-4" />
 
           {/* Lens overlay - shows which area is being magnified */}
           {supportsHover && isZooming && !isOverNavButtons && (
@@ -219,3 +219,4 @@ export default function ProductGallery({ images, name }: ProductGalleryProps) {
     </div>
   );
 }
+

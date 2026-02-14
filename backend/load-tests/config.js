@@ -1,7 +1,7 @@
 // Load Testing Configuration
 // This file contains shared configuration and helper functions for k6 tests
 
-export const BASE_URL = __ENV.BASE_URL || 'http://localhost:3000';
+export const BASE_URL = __ENV.BASE_URL || 'http://localhost:4000';
 
 // Test user credentials (create these in your test database)
 export const TEST_USERS = {
@@ -99,3 +99,4 @@ export function authHeaders(token) {
     'Authorization': `Bearer ${token}`,
   };
 }
+

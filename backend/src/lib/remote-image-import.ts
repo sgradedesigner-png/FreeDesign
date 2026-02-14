@@ -1,4 +1,4 @@
-import { uploadProductImage } from './r2';
+import { uploadProductImage } from './cloudinary';
 
 const allowedRemoteImageTypes = new Set([
   'image/jpeg',
@@ -27,12 +27,7 @@ const mimeByExtension: Record<string, string> = {
   gif: 'image/gif',
 };
 
-function normalizeHost(value: string | undefined): string {
-  if (!value) return '';
-  return value.replace(/^https?:\/\//i, '').split('/')[0]?.trim().toLowerCase() ?? '';
-}
-
-const r2PublicHost = normalizeHost(process.env.R2_PUBLIC_DOMAIN);
+const CLOUDINARY_CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME?.trim().toLowerCase() ?? '';
 
 export function isHttpUrl(value: string | undefined | null): value is string {
   if (!value) return false;
@@ -45,13 +40,16 @@ export function isHttpUrl(value: string | undefined | null): value is string {
   }
 }
 
-export function isR2PublicUrl(value: string | undefined | null): boolean {
+export function isCloudinaryUrl(value: string | undefined | null): boolean {
   if (!isHttpUrl(value)) return false;
-  if (!r2PublicHost) return false;
 
   try {
-    const host = new URL(value).hostname.toLowerCase();
-    return host === r2PublicHost || host.endsWith(`.${r2PublicHost}`);
+    const parsed = new URL(value);
+    if (parsed.hostname.toLowerCase() !== 'res.cloudinary.com') return false;
+
+    if (!CLOUDINARY_CLOUD_NAME) return true;
+    const path = parsed.pathname.toLowerCase();
+    return path.startsWith(`/${CLOUDINARY_CLOUD_NAME}/`);
   } catch {
     return false;
   }
@@ -88,13 +86,14 @@ function inferContentTypeFromUrl(imageUrl: string): string | null {
     const parts = filename.toLowerCase().split('.');
     const ext = parts.length > 1 ? parts.pop() : null;
     if (!ext) return null;
+
     return mimeByExtension[ext] ?? null;
   } catch {
     return null;
   }
 }
 
-export async function importRemoteImageToR2(params: {
+export async function importRemoteImageToCloudinary(params: {
   imageUrl: string;
   productId: string;
   maxBytes?: number;
@@ -154,3 +153,7 @@ export async function importRemoteImageToR2(params: {
     contentType,
   };
 }
+
+// Backward-compatible aliases while migrating old call sites.
+export const importRemoteImageToR2 = importRemoteImageToCloudinary;
+export const isR2PublicUrl = isCloudinaryUrl;

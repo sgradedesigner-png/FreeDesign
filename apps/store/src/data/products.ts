@@ -43,6 +43,11 @@ export const mapProductFromBackend = (row: BackendProduct): Product => {
     features: row.features || [],
     benefits: row.benefits || [],
     productDetails: row.productDetails || [],
+    productFamily: row.productFamily || 'BLANKS',
+    productSubfamily: row.productSubfamily ?? null,
+    requiresUpload: Boolean(row.requiresUpload),
+    requiresBuilder: Boolean(row.requiresBuilder),
+    uploadProfileId: row.uploadProfileId ?? null,
 
     // Variant data
     variants: sortedVariants.map((v) => ({
@@ -72,5 +77,8 @@ export const mapProductFromBackend = (row: BackendProduct): Product => {
 
     is_new: isNewByDate,
     created_at: row.createdAt,
+    isCustomizable: Boolean(row.isCustomizable),
+    mockupImagePath: row.mockupImagePath || null,
   };
 };
+

@@ -247,7 +247,7 @@ try {
 ### Test Circuit Status:
 
 ```bash
-curl http://localhost:3000/circuit-breakers
+curl http://localhost:4000/circuit-breakers
 ```
 
 **Expected Response:**
@@ -449,3 +449,4 @@ try {
 ---
 
 **Next Task:** Task 2.5 - Logging System (Pino)
+

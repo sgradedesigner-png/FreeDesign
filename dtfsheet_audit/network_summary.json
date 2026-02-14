@@ -1,0 +1,580 @@
+﻿{
+    "total_lines":  274,
+    "unique_endpoints":  59,
+    "top_hosts":  [
+                      {
+                          "host":  "dtfsheet.com",
+                          "count":  108
+                      },
+                      {
+                          "host":  "analytics.google.com",
+                          "count":  26
+                      },
+                      {
+                          "host":  "analytics.tiktok.com",
+                          "count":  12
+                      },
+                      {
+                          "host":  "tr.snapchat.com",
+                          "count":  12
+                      },
+                      {
+                          "host":  "ct.pinterest.com",
+                          "count":  12
+                      },
+                      {
+                          "host":  "www.google.com",
+                          "count":  12
+                      },
+                      {
+                          "host":  "t.co",
+                          "count":  9
+                      },
+                      {
+                          "host":  "analytics.twitter.com",
+                          "count":  9
+                      },
+                      {
+                          "host":  "api.config-security.com",
+                          "count":  9
+                      },
+                      {
+                          "host":  "cdn.shopify.com",
+                          "count":  7
+                      },
+                      {
+                          "host":  "www.googleadservices.com",
+                          "count":  6
+                      },
+                      {
+                          "host":  "data.replo.app",
+                          "count":  6
+                      },
+                      {
+                          "host":  "reorder-master.hulkapps.com",
+                          "count":  6
+                      },
+                      {
+                          "host":  "api-cdn.yotpo.com",
+                          "count":  4
+                      },
+                      {
+                          "host":  "www.merchant-center-analytics.goog",
+                          "count":  4
+                      },
+                      {
+                          "host":  "ip-check-perf.radar.cloudflare.com",
+                          "count":  3
+                      },
+                      {
+                          "host":  "apps.synctrack.io",
+                          "count":  3
+                      },
+                      {
+                          "host":  "grw.reputon.com",
+                          "count":  3
+                      },
+                      {
+                          "host":  "conf.config-security.com",
+                          "count":  3
+                      },
+                      {
+                          "host":  "static-forms.klaviyo.com",
+                          "count":  3
+                      },
+                      {
+                          "host":  "static-api.instant.so",
+                          "count":  3
+                      },
+                      {
+                          "host":  "essential-apps-analytics.herokuapp.com",
+                          "count":  3
+                      },
+                      {
+                          "host":  "fast.a.klaviyo.com",
+                          "count":  3
+                      },
+                      {
+                          "host":  "cdnwidget.judge.me",
+                          "count":  3
+                      },
+                      {
+                          "host":  "a.klaviyo.com",
+                          "count":  3
+                      }
+                  ],
+    "top_endpoints":  [
+                          {
+                              "method":  "POST",
+                              "host":  "analytics.google.com",
+                              "path":  "/g/collect",
+                              "count":  26,
+                              "statuses":  "204,FAILED",
+                              "queryKeys":  "_ee,_et,_eu,_gaz,_p,_s,_tu,are,cid,dl,dma,dp,dt,ec_mode,ecid,edid,en,ep.ecomm_pagetype,ep.ecomm_prodid,epn.ecomm_totalvalue,epn.percent_scrolled,frm,gcd,gcs,gdid,gtm,npa,pr1,pscdl,sct,seg,sid,sr,tag_exp,tfd,tid,uaa,uab,uafvl,uam,uamb,uap,uapv,uaw,ul,v"
+                          },
+                          {
+                              "method":  "GET",
+                              "host":  "dtfsheet.com",
+                              "path":  "/cart.js",
+                              "count":  15,
+                              "statuses":  "200",
+                              "queryKeys":  "r,timestamp"
+                          },
+                          {
+                              "method":  "POST",
+                              "host":  "www.google.com",
+                              "path":  "/ccm/collect",
+                              "count":  12,
+                              "statuses":  "200",
+                              "queryKeys":  "apvc,apve,apvf,auid,dl,dma,dt,en,ep.ads_data_redaction,frm,gcd,gdid,gtm,navt,npa,rnd,scrsrc,tag_exp,tfd,tft,tid,tids"
+                          },
+                          {
+                              "method":  "POST",
+                              "host":  "analytics.tiktok.com",
+                              "path":  "/api/v2/shopify_pixel",
+                              "count":  12,
+                              "statuses":  "200",
+                              "queryKeys":  ""
+                          },
+                          {
+                              "method":  "GET",
+                              "host":  "t.co",
+                              "path":  "/1/i/adsct",
+                              "count":  9,
+                              "statuses":  "200",
+                              "queryKeys":  "bci,eci,event,event_id,integration,p_id,p_user_id,pl_id,tw_document_href,tw_iframe_status,txn_id,type,version"
+                          },
+                          {
+                              "method":  "GET",
+                              "host":  "analytics.twitter.com",
+                              "path":  "/1/i/adsct",
+                              "count":  9,
+                              "statuses":  "200",
+                              "queryKeys":  "bci,eci,event,event_id,integration,p_id,p_user_id,pl_id,tw_document_href,tw_iframe_status,txn_id,type,version"
+                          },
+                          {
+                              "method":  "GET",
+                              "host":  "dtfsheet.com",
+                              "path":  "/products/custom-image-dtfsheet-transfer",
+                              "count":  7,
+                              "statuses":  "200",
+                              "queryKeys":  "section_id,variant"
+                          },
+                          {
+                              "method":  "GET",
+                              "host":  "dtfsheet.com",
+                              "path":  "/products/dtfsheet%E2%84%A2-custom-gang-sheet-order-builder",
+                              "count":  7,
+                              "statuses":  "200",
+                              "queryKeys":  "section_id,variant"
+                          },
+                          {
+                              "method":  "GET",
+                              "host":  "cdn.shopify.com",
+                              "path":  "/s/javascripts/currencies.js",
+                              "count":  7,
+                              "statuses":  "200",
+                              "queryKeys":  ""
+                          },
+                          {
+                              "method":  "GET",
+                              "host":  "dtfsheet.com",
+                              "path":  "/products/custom-sweatshirt-printed-by-dtfsheet",
+                              "count":  6,
+                              "statuses":  "200",
+                              "queryKeys":  "section_id,variant"
+                          },
+                          {
+                              "method":  "GET",
+                              "host":  "dtfsheet.com",
+                              "path":  "/products/custom-hoodie-printed-by-dtfsheet",
+                              "count":  6,
+                              "statuses":  "200",
+                              "queryKeys":  "section_id,variant"
+                          },
+                          {
+                              "method":  "GET",
+                              "host":  "ct.pinterest.com",
+                              "path":  "/v3/",
+                              "count":  6,
+                              "statuses":  "200",
+                              "queryKeys":  "ad,cb,ed,event,ov,pd,tid"
+                          },
+                          {
+                              "method":  "GET",
+                              "host":  "dtfsheet.com",
+                              "path":  "/products/custom-t-shirt-printed-by-dtfsheet",
+                              "count":  6,
+                              "statuses":  "200",
+                              "queryKeys":  "section_id,variant"
+                          },
+                          {
+                              "method":  "GET",
+                              "host":  "dtfsheet.com",
+                              "path":  "/products/dtfsheet-custom-gang-sheet-order",
+                              "count":  6,
+                              "statuses":  "200",
+                              "queryKeys":  "section_id,variant"
+                          },
+                          {
+                              "method":  "POST",
+                              "host":  "data.replo.app",
+                              "path":  "/api/v1/fire",
+                              "count":  6,
+                              "statuses":  "200",
+                              "queryKeys":  ""
+                          },
+                          {
+                              "method":  "POST",
+                              "host":  "tr.snapchat.com",
+                              "path":  "/scs/shopify",
+                              "count":  6,
+                              "statuses":  "200",
+                              "queryKeys":  ""
+                          },
+                          {
+                              "method":  "POST",
+                              "host":  "api.config-security.com",
+                              "path":  "/event",
+                              "count":  6,
+                              "statuses":  "200",
+                              "queryKeys":  ""
+                          },
+                          {
+                              "method":  "POST",
+                              "host":  "dtfsheet.com",
+                              "path":  "/.well-known/shopify/monorail/unstable/produce_batch",
+                              "count":  6,
+                              "statuses":  "FAILED",
+                              "queryKeys":  ""
+                          },
+                          {
+                              "method":  "POST",
+                              "host":  "dtfsheet.com",
+                              "path":  "/.well-known/shopify/monorail/v1/produce",
+                              "count":  6,
+                              "statuses":  "FAILED",
+                              "queryKeys":  ""
+                          },
+                          {
+                              "method":  "GET",
+                              "host":  "www.googleadservices.com",
+                              "path":  "/pagead/conversion/11202718850/",
+                              "count":  6,
+                              "statuses":  "200",
+                              "queryKeys":  "_tu,async,auid,bg,capi,category,cv,data,did,dma,ec_mode,edid,em,en,fmt,frm,fst,gcd,gcl_ctr,gcs,gdid,gtm,gtm_ee,guid,hn,label,npa,pscdl,random,rdp,tag_exp,tiba,u_h,u_w,uaa,uab,uafvl,uam,uamb,uap,uapv,uaw,url"
+                          },
+                          {
+                              "method":  "GET",
+                              "host":  "reorder-master.hulkapps.com",
+                              "path":  "/api/get-banner-settings",
+                              "count":  6,
+                              "statuses":  "200",
+                              "queryKeys":  "domain"
+                          },
+                          {
+                              "method":  "POST",
+                              "host":  "dtfsheet.com",
+                              "path":  "/api/collect",
+                              "count":  6,
+                              "statuses":  "200",
+                              "queryKeys":  ""
+                          },
+                          {
+                              "method":  "POST",
+                              "host":  "www.merchant-center-analytics.goog",
+                              "path":  "/mc/collect",
+                              "count":  4,
+                              "statuses":  "204",
+                              "queryKeys":  "_eu,_p,_s,_tu,are,cid,dl,dma,dt,frm,gcd,gcs,gdid,gtm,npa,pscdl,sct,seg,sid,sr,tag_exp,tfd,tid,uaa,uab,uafvl,uam,uamb,uap,uapv,uaw,ul,v"
+                          },
+                          {
+                              "method":  "GET",
+                              "host":  "dtfsheet.com",
+                              "path":  "/products/uv-dtf-easy",
+                              "count":  4,
+                              "statuses":  "200",
+                              "queryKeys":  "section_id,variant"
+                          },
+                          {
+                              "method":  "GET",
+                              "host":  "fast.a.klaviyo.com",
+                              "path":  "/custom-fonts/api/v1/company-fonts/onsite",
+                              "count":  3,
+                              "statuses":  "200",
+                              "queryKeys":  "company_id"
+                          },
+                          {
+                              "method":  "GET",
+                              "host":  "static-api.instant.so",
+                              "path":  "/public/site/dtfsheet.myshopify.com",
+                              "count":  3,
+                              "statuses":  "200",
+                              "queryKeys":  ""
+                          },
+                          {
+                              "method":  "GET",
+                              "host":  "dtfsheet.com",
+                              "path":  "/products/gildan-softstyle%C2%AE-t-shirt-64000-antique-sapphire",
+                              "count":  3,
+                              "statuses":  "200",
+                              "queryKeys":  "section_id,variant"
+                          },
+                          {
+                              "method":  "GET",
+                              "host":  "a.klaviyo.com",
+                              "path":  "/forms/api/v3/geo-ip",
+                              "count":  3,
+                              "statuses":  "200",
+                              "queryKeys":  ""
+                          },
+                          {
+                              "method":  "GET",
+                              "host":  "dtfsheet.com",
+                              "path":  "/cart.json",
+                              "count":  3,
+                              "statuses":  "200",
+                              "queryKeys":  ""
+                          },
+                          {
+                              "method":  "POST",
+                              "host":  "tr.snapchat.com",
+                              "path":  "/p",
+                              "count":  3,
+                              "statuses":  "200",
+                              "queryKeys":  ""
+                          },
+                          {
+                              "method":  "GET",
+                              "host":  "static-forms.klaviyo.com",
+                              "path":  "/forms/api/v7/VmfH8w/full-forms",
+                              "count":  3,
+                              "statuses":  "200",
+                              "queryKeys":  ""
+                          },
+                          {
+                              "method":  "POST",
+                              "host":  "ct.pinterest.com",
+                              "path":  "/v3/",
+                              "count":  3,
+                              "statuses":  "200",
+                              "queryKeys":  ""
+                          },
+                          {
+                              "method":  "GET",
+                              "host":  "tr.snapchat.com",
+                              "path":  "/config/com/ad82bd0a-8271-481c-873c-c8a688a3550e.json",
+                              "count":  3,
+                              "statuses":  "200",
+                              "queryKeys":  "v"
+                          },
+                          {
+                              "method":  "GET",
+                              "host":  "dtfsheet.com",
+                              "path":  "/products/gildan-softstyle%C2%AE-t-shirt-64000-antique-heliconia",
+                              "count":  3,
+                              "statuses":  "200",
+                              "queryKeys":  "section_id,variant"
+                          },
+                          {
+                              "method":  "HEAD",
+                              "host":  "cdnwidget.judge.me",
+                              "path":  "/installed.js",
+                              "count":  3,
+                              "statuses":  "200",
+                              "queryKeys":  ""
+                          },
+                          {
+                              "method":  "GET",
+                              "host":  "grw.reputon.com",
+                              "path":  "/app/storefront/widget",
+                              "count":  3,
+                              "statuses":  "200",
+                              "queryKeys":  "shop"
+                          },
+                          {
+                              "method":  "GET",
+                              "host":  "ct.pinterest.com",
+                              "path":  "/user/",
+                              "count":  3,
+                              "statuses":  "200",
+                              "queryKeys":  "ad,cb,ed,pd,tid"
+                          },
+                          {
+                              "method":  "GET",
+                              "host":  "apps.synctrack.io",
+                              "path":  "/admin-tracking-paypal/api/location/ip-location",
+                              "count":  3,
+                              "statuses":  "200",
+                              "queryKeys":  "ip"
+                          },
+                          {
+                              "method":  "GET",
+                              "host":  "conf.config-security.com",
+                              "path":  "/model",
+                              "count":  3,
+                              "statuses":  "200",
+                              "queryKeys":  ""
+                          },
+                          {
+                              "method":  "GET",
+                              "host":  "api.config-security.com",
+                              "path":  "/first",
+                              "count":  3,
+                              "statuses":  "200",
+                              "queryKeys":  "host,plat"
+                          },
+                          {
+                              "method":  "GET",
+                              "host":  "ip-check-perf.radar.cloudflare.com",
+                              "path":  "/api/info",
+                              "count":  3,
+                              "statuses":  "200",
+                              "queryKeys":  ""
+                          },
+                          {
+                              "method":  "POST",
+                              "host":  "essential-apps-analytics.herokuapp.com",
+                              "path":  "/post_event",
+                              "count":  3,
+                              "statuses":  "201",
+                              "queryKeys":  ""
+                          },
+                          {
+                              "method":  "GET",
+                              "host":  "dtfsheet.com",
+                              "path":  "/products/uv-dtf-transfers-gang-sheets",
+                              "count":  3,
+                              "statuses":  "200",
+                              "queryKeys":  "section_id,variant"
+                          },
+                          {
+                              "method":  "GET",
+                              "host":  "dtfsheet.com",
+                              "path":  "/products/gildan-softstyle%C2%AE-t-shirt-64000-antique-cherry-red",
+                              "count":  3,
+                              "statuses":  "200",
+                              "queryKeys":  "section_id,variant"
+                          },
+                          {
+                              "method":  "GET",
+                              "host":  "dtfsheet.com",
+                              "path":  "/products/uv-dtf-transfers-gang-sheets-auto-builder",
+                              "count":  3,
+                              "statuses":  "200",
+                              "queryKeys":  "section_id,variant"
+                          },
+                          {
+                              "method":  "GET",
+                              "host":  "dtfsheet.com",
+                              "path":  "/products/dtf-protective-sheet-for-heat-press",
+                              "count":  3,
+                              "statuses":  "200",
+                              "queryKeys":  "section_id,variant"
+                          },
+                          {
+                              "method":  "GET",
+                              "host":  "dtfsheet.com",
+                              "path":  "/products/dtf-thermal-heat-tape",
+                              "count":  3,
+                              "statuses":  "200",
+                              "queryKeys":  "section_id,variant"
+                          },
+                          {
+                              "method":  "GET",
+                              "host":  "dtfsheet.com",
+                              "path":  "/products/dtf-alignment-set-6pcs",
+                              "count":  3,
+                              "statuses":  "200",
+                              "queryKeys":  "section_id,variant"
+                          },
+                          {
+                              "method":  "GET",
+                              "host":  "www.google.mn",
+                              "path":  "/ads/ga-audiences",
+                              "count":  2,
+                              "statuses":  "FAILED",
+                              "queryKeys":  "_r,aip,cid,dma,frm,gcd,gcs,gtm,npa,slf_rd,t,tag_exp,tid,v,z"
+                          },
+                          {
+                              "method":  "GET",
+                              "host":  "api-cdn.yotpo.com",
+                              "path":  "/v3/storefront/store/A1Zu3mAlKWqIbmjAKVH6Zds6xUIzJx07HtdoFFwM/product/8543774572830/reviews",
+                              "count":  1,
+                              "statuses":  "200",
+                              "queryKeys":  "page,perPage,sort"
+                          },
+                          {
+                              "method":  "GET",
+                              "host":  "dtfsheet.com",
+                              "path":  "/products/dtfsheet%E2%84%A2-custom-gang-sheet-order-builder.json",
+                              "count":  1,
+                              "statuses":  "200",
+                              "queryKeys":  ""
+                          },
+                          {
+                              "method":  "GET",
+                              "host":  "dtfsheet.com",
+                              "path":  "/products/uv-dtf-easy.js",
+                              "count":  1,
+                              "statuses":  "200",
+                              "queryKeys":  ""
+                          },
+                          {
+                              "method":  "GET",
+                              "host":  "dtfsheet.com",
+                              "path":  "/products/uv-dtf-easy.json",
+                              "count":  1,
+                              "statuses":  "200",
+                              "queryKeys":  ""
+                          },
+                          {
+                              "method":  "GET",
+                              "host":  "api-cdn.yotpo.com",
+                              "path":  "/v3/storefront/store/A1Zu3mAlKWqIbmjAKVH6Zds6xUIzJx07HtdoFFwM/product/8543774572830/productFilters",
+                              "count":  1,
+                              "statuses":  "200",
+                              "queryKeys":  "lang"
+                          },
+                          {
+                              "method":  "GET",
+                              "host":  "api-cdn.yotpo.com",
+                              "path":  "/v3/storefront/store/A1Zu3mAlKWqIbmjAKVH6Zds6xUIzJx07HtdoFFwM/product/8340667695390/productFilters",
+                              "count":  1,
+                              "statuses":  "200",
+                              "queryKeys":  "lang"
+                          },
+                          {
+                              "method":  "GET",
+                              "host":  "dtfsheet.com",
+                              "path":  "/products/custom-image-dtfsheet-transfer.js",
+                              "count":  1,
+                              "statuses":  "200",
+                              "queryKeys":  ""
+                          },
+                          {
+                              "method":  "GET",
+                              "host":  "api-cdn.yotpo.com",
+                              "path":  "/v3/storefront/store/A1Zu3mAlKWqIbmjAKVH6Zds6xUIzJx07HtdoFFwM/product/8340667695390/reviews",
+                              "count":  1,
+                              "statuses":  "200",
+                              "queryKeys":  "page,perPage,sort"
+                          },
+                          {
+                              "method":  "GET",
+                              "host":  "dtfsheet.com",
+                              "path":  "/products/dtfsheet%E2%84%A2-custom-gang-sheet-order-builder.js",
+                              "count":  1,
+                              "statuses":  "200",
+                              "queryKeys":  ""
+                          },
+                          {
+                              "method":  "GET",
+                              "host":  "dtfsheet.com",
+                              "path":  "/products/custom-image-dtfsheet-transfer.json",
+                              "count":  1,
+                              "statuses":  "200",
+                              "queryKeys":  ""
+                          }
+                      ]
+}

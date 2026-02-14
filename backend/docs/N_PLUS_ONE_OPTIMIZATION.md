@@ -448,7 +448,7 @@ model Order {
 
 2. **Make API request:**
    ```bash
-   curl http://localhost:3000/api/categories
+   curl http://localhost:4000/api/categories
    ```
 
 3. **Check logs:**
@@ -553,3 +553,4 @@ test('Categories endpoint should not have N+1 problem', async () => {
 
 **Status:** ✅ Production Ready
 **All N+1 problems resolved and monitored**
+

@@ -10,6 +10,7 @@ import { orderIdParamSchema } from '../schemas/payment.schema';
 import { validateData } from '../utils/validation';
 import { NotFoundError, ServiceUnavailableError, BadRequestError, PaymentServiceError } from '../utils/errors';
 import { emailService } from '../services/email.service';
+import { ensureCustomizationAssetsOwnedByUser } from '../services/asset.service';
 
 /**
  * Mask email address for privacy in logs (GDPR compliance)
@@ -107,13 +108,116 @@ export default async function orderRoutes(fastify: FastifyInstance) {
 
       logger.info('[Order Creation] Validation passed');
 
-      const { items: rawItems, shippingAddress, total } = validation.data;
+      const {
+        items: rawItems,
+        shippingAddress,
+        total,
+        rushOrder,
+        rushFee,
+        addOnFees,
+      } = validation.data;
 
       // Normalize items to ensure price field exists
       const items = rawItems.map(item => ({
         ...item,
-        price: item.price || item.variantPrice || 0
+        price: item.price || item.variantPrice || 0,
+        customizations: item.customizations ?? [],
+        addOns: item.addOns ?? [],
       }));
+
+      const pendingCustomizations = items.flatMap((item, orderItemIndex) =>
+        item.customizations.map((customization) => ({
+          orderItemIndex,
+          printAreaId: customization.printAreaId,
+          printSizeTierId: customization.printSizeTierId,
+          assetId: customization.assetId,
+          placementConfig: customization.placementConfig ?? undefined,
+          printFee: customization.printFee
+        }))
+      );
+
+      const isCustomOrder = pendingCustomizations.length > 0;
+
+      if (isCustomOrder) {
+        const uniqueAssetIds = Array.from(
+          new Set(pendingCustomizations.map((customization) => customization.assetId))
+        );
+        await ensureCustomizationAssetsOwnedByUser(userId, uniqueAssetIds);
+
+        const uniqueVariantIds = Array.from(new Set(items.map((item) => item.id)));
+        const variants = await prisma.productVariant.findMany({
+          where: { id: { in: uniqueVariantIds } },
+          select: {
+            id: true,
+            product: {
+              select: {
+                isCustomizable: true,
+                printAreas: {
+                  select: { printAreaId: true },
+                },
+              },
+            },
+          },
+        });
+
+        if (variants.length !== uniqueVariantIds.length) {
+          throw new BadRequestError('One or more product variants are invalid');
+        }
+
+        const variantMap = new Map(variants.map((variant) => [variant.id, variant]));
+
+        for (const customization of pendingCustomizations) {
+          const item = items[customization.orderItemIndex];
+          const variant = item ? variantMap.get(item.id) : undefined;
+
+          if (!variant) {
+            throw new BadRequestError('Customization references an invalid order item');
+          }
+
+          if (!variant.product.isCustomizable) {
+            throw new BadRequestError('Customization is not allowed for this product variant');
+          }
+
+          const configuredAreaIds = new Set(
+            variant.product.printAreas.map((row) => row.printAreaId)
+          );
+
+          // Backward compatibility: enforce only when explicit areas are configured.
+          if (configuredAreaIds.size > 0 && !configuredAreaIds.has(customization.printAreaId)) {
+            throw new BadRequestError('Selected print area is not enabled for this product');
+          }
+        }
+
+        const uniquePrintAreaIds = Array.from(
+          new Set(pendingCustomizations.map((customization) => customization.printAreaId))
+        );
+        const uniquePrintSizeTierIds = Array.from(
+          new Set(pendingCustomizations.map((customization) => customization.printSizeTierId))
+        );
+
+        const [printAreaCount, printSizeTierCount] = await Promise.all([
+          prisma.printArea.count({
+            where: {
+              id: { in: uniquePrintAreaIds },
+              isActive: true
+            }
+          }),
+          prisma.printSizeTier.count({
+            where: {
+              id: { in: uniquePrintSizeTierIds },
+              isActive: true
+            }
+          })
+        ]);
+
+        if (printAreaCount !== uniquePrintAreaIds.length) {
+          throw new BadRequestError('One or more print areas are invalid');
+        }
+
+        if (printSizeTierCount !== uniquePrintSizeTierIds.length) {
+          throw new BadRequestError('One or more print size tiers are invalid');
+        }
+      }
 
       if (!isMockMode) {
         if (!callbackUrl) {
@@ -172,14 +276,31 @@ export default async function orderRoutes(fastify: FastifyInstance) {
             userId,
             total,
             status: 'PENDING',
+            isCustomOrder,
             paymentStatus: 'UNPAID',
             paymentMethod: 'QPAY',
             shippingAddress: shippingAddress ? JSON.stringify(shippingAddress) : null,
             items: items,
+            rushFee: rushOrder && rushFee > 0 ? rushFee : null,
+            addOnFees: addOnFees > 0 ? addOnFees : null,
           }
         });
 
         logger.info({ orderId: newOrder.id, userId }, '[Order Create] New order created');
+
+        if (pendingCustomizations.length > 0) {
+          await tx.orderItemCustomization.createMany({
+            data: pendingCustomizations.map((customization) => ({
+              orderId: newOrder.id,
+              orderItemIndex: customization.orderItemIndex,
+              printAreaId: customization.printAreaId,
+              printSizeTierId: customization.printSizeTierId,
+              assetId: customization.assetId,
+              placementConfig: customization.placementConfig,
+              printFee: customization.printFee
+            }))
+          });
+        }
 
         return {
           order: newOrder,
@@ -287,7 +408,10 @@ export default async function orderRoutes(fastify: FastifyInstance) {
           qrCodeUrl: qpayInvoice.qPay_shortUrl,
           qrText: qpayInvoice.qr_text, // QR text URL for sandbox testing
           qpayInvoiceExpiresAt: qpayInvoiceExpiresAt // 48-hour expiration
-        }
+        },
+        include: {
+          customizations: true
+        },
       });
 
       logger.info({ orderId: order.id, userId }, 'Order created with QPay invoice');
@@ -367,6 +491,12 @@ export default async function orderRoutes(fastify: FastifyInstance) {
         });
       }
 
+      if (error instanceof BadRequestError) {
+        return reply.code(400).send({
+          error: error.message
+        });
+      }
+
       return reply.code(500).send({
         error: 'Failed to create order',
         details: error.message
@@ -383,6 +513,15 @@ export default async function orderRoutes(fastify: FastifyInstance) {
     // No N+1 problem: items are stored as JSON in the Order model
     let orders = await prisma.order.findMany({
       where: { userId },
+      include: {
+        customizations: {
+          include: {
+            printArea: true,
+            printSizeTier: true,
+            asset: true
+          }
+        }
+      },
       orderBy: { createdAt: 'desc' }
     });
 
@@ -411,7 +550,16 @@ export default async function orderRoutes(fastify: FastifyInstance) {
       where: {
         id,
         userId // Ensure user can only see their own orders
-      }
+      },
+      include: {
+        customizations: {
+          include: {
+            printArea: true,
+            printSizeTier: true,
+            asset: true
+          }
+        }
+      },
     });
 
     if (!order) {
@@ -441,7 +589,10 @@ export default async function orderRoutes(fastify: FastifyInstance) {
 
     try {
       const order = await prisma.order.findFirst({
-        where: { id, userId }
+        where: { id, userId },
+        include: {
+          customizations: true
+        }
       });
 
       if (!order) {
@@ -491,4 +642,3 @@ export default async function orderRoutes(fastify: FastifyInstance) {
     }
   });
 }
-

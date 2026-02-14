@@ -285,15 +285,15 @@ No database migrations required - all changes in application code only.
 ### Manual Testing
 ```bash
 # Test cache MISS (first request)
-curl -I "http://localhost:3000/api/products?page=1&limit=20"
+curl -I "http://localhost:4000/api/products?page=1&limit=20"
 # X-Cache: MISS, X-DB-Time: ~1100ms
 
 # Test cache HIT (second request)
-curl -I "http://localhost:3000/api/products?page=1&limit=20"
+curl -I "http://localhost:4000/api/products?page=1&limit=20"
 # X-Cache: HIT, X-DB-Time: 0ms
 
 # Test with total count
-curl -I "http://localhost:3000/api/products?page=1&limit=20&include_total=true"
+curl -I "http://localhost:4000/api/products?page=1&limit=20&include_total=true"
 # X-Query-Count: 2 (no caching for include_total requests)
 ```
 
@@ -393,3 +393,4 @@ All optimizations are backward compatible and can be disabled via environment va
 **Optimizations by**: Claude Sonnet 4.5
 **Reviewed by**: Pending
 **Status**: ✅ Ready for production deployment
+

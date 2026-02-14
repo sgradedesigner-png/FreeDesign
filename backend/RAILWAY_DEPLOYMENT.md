@@ -239,7 +239,7 @@ Railway automatically captures logs. Here's what you'll see:
 ```
 ✅ Environment validation passed
 ✅ Sentry initialized (production)
-Server is running at http://localhost:3000
+Server is running at http://localhost:4000
 ```
 
 **What this means:**
@@ -503,3 +503,25 @@ https://sentry.io/organizations/your-org/projects/backend/
 ---
 
 **Questions?** Check Railway logs first, then review the troubleshooting section above.
+
+
+---
+
+## Phase 0 DTF Env Contract Additions
+
+Add these backend variables in Railway Variables:
+
+- CLOUDINARY_SIGNATURE_TTL_SEC=300
+- UPLOAD_MAX_MB=25
+- UPLOAD_ALLOWED_MIME=image/jpeg,image/jpg,image/png,image/webp,application/pdf
+- FF_DTF_NAV_V1=false
+- FF_CART_DB_V1=false
+- FF_UPLOAD_ASYNC_VALIDATION_V1=false
+- FF_BUILDER_MVP_V1=false
+
+Validation notes:
+- CLOUDINARY_SIGNATURE_TTL_SEC must be 30..3600 seconds.
+- UPLOAD_MAX_MB must be 1..512.
+- UPLOAD_ALLOWED_MIME must be a non-empty comma-separated list.
+
+Do not put backend secrets in Cloudflare Pages VITE_ variables.

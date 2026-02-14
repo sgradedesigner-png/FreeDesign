@@ -52,7 +52,7 @@ The admin app loads successfully without any Content Security Policy violations 
 [LOG] ✅ Environment validation passed
 [LOG] 📋 Configuration:
 [LOG]    • Environment: development
-[LOG]    • API URL: http://localhost:3000
+[LOG]    • API URL: http://localhost:4000
 [LOG]    • Supabase URL: https://miqlyriefwqmutlsxytk.supabase.co
 [LOG]    • Debug Mode: true
 ```
@@ -383,3 +383,4 @@ The admin application has been thoroughly tested for CSP violations and is **pro
 **Tested By:** Automated Browser Testing (Playwright)
 **Result:** ✅ PASS
 **Recommendation:** Approved for production deployment
+

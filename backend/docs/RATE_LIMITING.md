@@ -181,7 +181,7 @@ When rate limit is exceeded, returns **429 Too Many Requests**:
 ```bash
 # Send 6 requests rapidly (limit is 5)
 for i in {1..6}; do
-  curl -X POST http://localhost:3000/api/orders \
+  curl -X POST http://localhost:4000/api/orders \
     -H "Content-Type: application/json" \
     -H "Authorization: Bearer YOUR_TOKEN" \
     -d '{
@@ -199,7 +199,7 @@ done
 ```bash
 # Send 101 requests (limit is 100)
 for i in {1..101}; do
-  curl http://localhost:3000/health
+  curl http://localhost:4000/health
   echo "Request $i"
 done
 
@@ -302,7 +302,7 @@ grep "Rate limit exceeded" logs/app.log | wc -l
 
 **Via Response Headers:**
 ```bash
-curl -I http://localhost:3000/health
+curl -I http://localhost:4000/health
 
 # Check headers:
 # X-RateLimit-Remaining: 95
@@ -359,3 +359,4 @@ curl -I http://localhost:3000/health
 - ⏳ Redis integration ready for production
 
 **Status:** ✅ Production Ready (with Redis recommended for multi-server)
+

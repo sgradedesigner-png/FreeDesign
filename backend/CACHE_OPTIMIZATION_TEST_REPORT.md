@@ -3,7 +3,7 @@
 **Date**: 2026-02-10
 **Test Duration**: 30 seconds per scenario
 **Virtual Users**: 10 concurrent
-**Server**: localhost:3000 with PERF_DIAG=true
+**Server**: localhost:4000 with PERF_DIAG=true
 
 ---
 
@@ -238,3 +238,4 @@ k6 run scenarios/cache_cold.js
 **Report Generated**: 2026-02-10
 **Test Status**: Complete
 **All Consistency Checks**: Passed ✅
+

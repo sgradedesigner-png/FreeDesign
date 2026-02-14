@@ -6,6 +6,8 @@ import {
   Package,
   FolderTree,
   ShoppingCart,
+  Factory,
+  BadgeDollarSign,
   Settings,
   Mail,
   X,
@@ -16,6 +18,8 @@ const menuItems = [
   { path: '/products', icon: Package, labelKey: 'nav.products' },
   { path: '/categories', icon: FolderTree, labelKey: 'nav.categories' },
   { path: '/orders', icon: ShoppingCart, labelKey: 'nav.orders' },
+  { path: '/production', icon: Factory, labelKey: 'nav.production' },
+  { path: '/pricing', icon: BadgeDollarSign, labelKey: 'nav.pricing' },
   { path: '/email-test', icon: Mail, labelKey: 'nav.emailTest' },
   { path: '/settings', icon: Settings, labelKey: 'nav.settings' },
 ];

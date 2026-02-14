@@ -87,7 +87,7 @@ After investigation, we found that **indexes are NOT the bottleneck**. The slow 
 
 **Evidence:**
 ```bash
-curl -s "http://localhost:3000/api/products" | wc -c
+curl -s "http://localhost:4000/api/products" | wc -c
 # Output: 32,051 bytes (31.3 KB)
 ```
 
@@ -364,3 +364,4 @@ CREATE INDEX "product_variants_productId_sortOrder_idx" ON "product_variants"("p
 **Report Generated:** 2026-02-09 23:45
 **Next Review:** After implementing Priority 1 optimizations
 **Maintained By:** Backend Team
+

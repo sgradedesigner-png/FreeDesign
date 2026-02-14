@@ -290,7 +290,7 @@ await new Promise(resolve => setTimeout(resolve, 35000)); // > 30s timeout
 ### Check Circuit Status:
 
 ```bash
-curl http://localhost:3000/circuit-breakers
+curl http://localhost:4000/circuit-breakers
 ```
 
 ### Monitor Events:
@@ -365,7 +365,7 @@ tail -f logs/app.log | grep "circuit breaker"
 
 3. **Monitor circuit status**
    ```bash
-   curl http://localhost:3000/circuit-breakers
+   curl http://localhost:4000/circuit-breakers
    ```
 
 4. **Log circuit events**
@@ -478,3 +478,4 @@ tail -f logs/app.log | grep "circuit breaker"
 - ✅ Production ready
 
 **Status:** ✅ Production Ready
+

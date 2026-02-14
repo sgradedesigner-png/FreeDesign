@@ -1,4 +1,5 @@
 import { prisma } from '../lib/prisma';
+import type { Prisma } from '@prisma/client';
 
 /**
  * Test Helper Functions
@@ -88,6 +89,178 @@ export async function createTestProductVariant(productId: string, overrides?: {
 }
 
 /**
+ * Create a test print area
+ */
+export async function createTestPrintArea(overrides?: {
+  id?: string;
+  name?: string;
+  label?: string;
+  maxWidthCm?: number;
+  maxHeightCm?: number;
+  sortOrder?: number;
+}) {
+  return await prisma.printArea.create({
+    data: {
+      id: overrides?.id || 'test-print-area-id',
+      name: overrides?.name || 'front',
+      label: overrides?.label || 'Front',
+      labelEn: overrides?.label || 'Front',
+      maxWidthCm: overrides?.maxWidthCm || 30,
+      maxHeightCm: overrides?.maxHeightCm || 30,
+      sortOrder: overrides?.sortOrder || 1,
+      isActive: true,
+    },
+  });
+}
+
+/**
+ * Create a test print size tier
+ */
+export async function createTestPrintSizeTier(overrides?: {
+  id?: string;
+  name?: string;
+  label?: string;
+  widthCm?: number;
+  heightCm?: number;
+  sortOrder?: number;
+}) {
+  return await prisma.printSizeTier.create({
+    data: {
+      id: overrides?.id || 'test-size-tier-id',
+      name: overrides?.name || 'S',
+      label: overrides?.label || 'Small (15x15cm)',
+      widthCm: overrides?.widthCm || 15,
+      heightCm: overrides?.heightCm || 15,
+      sortOrder: overrides?.sortOrder || 1,
+      isActive: true,
+    },
+  });
+}
+
+/**
+ * Link product to print area
+ */
+export async function createTestProductPrintArea(productId: string, printAreaId: string, isDefault = false) {
+  return await prisma.productPrintArea.create({
+    data: {
+      productId,
+      printAreaId,
+      isDefault,
+    },
+  });
+}
+
+/**
+ * Create a test pricing rule
+ */
+export async function createTestPricingRule(overrides?: {
+  id?: string;
+  name?: string;
+  ruleType?: 'PRINT_FEE' | 'EXTRA_SIDE' | 'QUANTITY_DISCOUNT' | 'RUSH_FEE' | 'ADD_ON';
+  printSizeTierId?: string | null;
+  printAreaId?: string | null;
+  minQuantity?: number | null;
+  maxQuantity?: number | null;
+  price?: number;
+  discountPercent?: number | null;
+  isActive?: boolean;
+}) {
+  return await prisma.pricingRule.create({
+    data: {
+      id: overrides?.id || 'test-pricing-rule-id',
+      name: overrides?.name || 'Test pricing rule',
+      ruleType: overrides?.ruleType || 'PRINT_FEE',
+      printSizeTierId: overrides?.printSizeTierId ?? null,
+      printAreaId: overrides?.printAreaId ?? null,
+      minQuantity: overrides?.minQuantity ?? null,
+      maxQuantity: overrides?.maxQuantity ?? null,
+      price: overrides?.price ?? 1000,
+      discountPercent: overrides?.discountPercent ?? null,
+      isActive: overrides?.isActive ?? true,
+    },
+  });
+}
+
+/**
+ * Create test customization asset
+ */
+export async function createTestCustomizationAsset(userId: string, overrides?: {
+  id?: string;
+  originalUrl?: string;
+  thumbnailUrl?: string | null;
+  cloudinaryId?: string | null;
+  fileName?: string;
+  mimeType?: string;
+  fileSizeBytes?: number;
+  widthPx?: number | null;
+  heightPx?: number | null;
+  isValid?: boolean;
+}) {
+  return await prisma.customizationAsset.create({
+    data: {
+      id: overrides?.id || 'test-custom-asset-id',
+      userId,
+      originalUrl: overrides?.originalUrl || 'https://res.cloudinary.com/test/image/upload/v1/designs/test.png',
+      thumbnailUrl: overrides?.thumbnailUrl ?? 'https://res.cloudinary.com/test/image/upload/w_200,c_limit/v1/designs/test.png',
+      cloudinaryId: overrides?.cloudinaryId ?? 'designs/test',
+      fileName: overrides?.fileName || 'test.png',
+      mimeType: overrides?.mimeType || 'image/png',
+      fileSizeBytes: overrides?.fileSizeBytes || 1024,
+      widthPx: overrides?.widthPx ?? 1200,
+      heightPx: overrides?.heightPx ?? 1200,
+      dpi: null,
+      isValid: overrides?.isValid ?? true,
+    },
+  });
+}
+
+/**
+ * Create test order item customization
+ */
+export async function createTestOrderItemCustomization(overrides: {
+  orderId: string;
+  orderItemIndex: number;
+  printAreaId: string;
+  printSizeTierId: string;
+  assetId: string;
+  printFee?: number;
+  placementConfig?: Prisma.InputJsonValue;
+}) {
+  return await prisma.orderItemCustomization.create({
+    data: {
+      orderId: overrides.orderId,
+      orderItemIndex: overrides.orderItemIndex,
+      printAreaId: overrides.printAreaId,
+      printSizeTierId: overrides.printSizeTierId,
+      assetId: overrides.assetId,
+      printFee: overrides.printFee ?? 1000,
+      placementConfig: overrides.placementConfig,
+    },
+  });
+}
+
+/**
+ * Create test production status event
+ */
+export async function createTestProductionStatusEvent(overrides: {
+  orderId: string;
+  fromStatus?: 'NEW' | 'ART_CHECK' | 'READY_TO_PRINT' | 'PRINTING' | 'QC' | 'PACKED' | 'SHIPPED' | 'DONE' | null;
+  toStatus: 'NEW' | 'ART_CHECK' | 'READY_TO_PRINT' | 'PRINTING' | 'QC' | 'PACKED' | 'SHIPPED' | 'DONE';
+  changedBy?: string;
+  notes?: string | null;
+}) {
+  return await prisma.productionStatusEvent.create({
+    data: {
+      orderId: overrides.orderId,
+      fromStatus: overrides.fromStatus ?? null,
+      toStatus: overrides.toStatus,
+      changedBy: overrides.changedBy || 'test-admin',
+      notes: overrides.notes ?? null,
+    },
+  });
+}
+
+/**
  * Create a test order
  */
 export async function createTestOrder(userId: string, overrides?: {
@@ -97,6 +270,20 @@ export async function createTestOrder(userId: string, overrides?: {
   paymentStatus?: string;
   qpayInvoiceId?: string;
 }) {
+  // Ensure FK target exists even if cleanup hooks race with test-local profile creation.
+  const emailLocalPart = userId.replace(/[^a-zA-Z0-9._-]/g, '-');
+  await prisma.profile.upsert({
+    where: { id: userId },
+    update: {},
+    create: {
+      id: userId,
+      email: `${emailLocalPart}@test.local`,
+      name: 'Test User',
+      phone: '99999999',
+      role: 'CUSTOMER',
+    },
+  });
+
   return await prisma.order.create({
     data: {
       id: overrides?.id || 'test-order-id',

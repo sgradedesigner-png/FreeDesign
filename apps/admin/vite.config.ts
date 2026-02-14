@@ -11,7 +11,7 @@ export default defineConfig({
     },
   },
   server: {
-    port: 5175,
+    port: 5185,
     strictPort: true, // Fail if port is already in use
     host: true, // Listen on all addresses (0.0.0.0)
   },

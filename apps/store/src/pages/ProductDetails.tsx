@@ -120,7 +120,7 @@ function ProductDetailsSkeleton() {
     <div className="container mx-auto px-4 py-8 pt-28 animate-pulse">
       <div className="h-4 w-40 bg-muted rounded mb-8" />
       <div className="grid lg:grid-cols-2 gap-12">
-        <div className="aspect-[3/4] rounded-2xl bg-muted" />
+        <div className="aspect-[4/5] md:aspect-[4/5] lg:aspect-[3/4] rounded-2xl bg-muted" />
         <div className="space-y-4">
           <div className="h-6 w-3/4 bg-muted rounded" />
           <div className="h-4 w-full bg-muted rounded" />

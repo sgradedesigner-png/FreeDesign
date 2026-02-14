@@ -1,9 +1,9 @@
-import { logger } from '../../lib/logger';
 import type { FastifyInstance } from 'fastify';
-import { adminGuard } from '../../supabaseauth';
-import { generateProductImageUploadUrl } from '../../lib/r2-presigned';
-import { importRemoteImageToR2 } from '../../lib/remote-image-import';
 import { z } from 'zod';
+import { adminGuard } from '../../supabaseauth';
+import { logger } from '../../lib/logger';
+import { generateSignedUploadParams } from '../../lib/cloudinary';
+import { importRemoteImageToCloudinary } from '../../lib/remote-image-import';
 
 const generatePresignedSchema = z.object({
   filename: z.string().min(1),
@@ -16,40 +16,55 @@ const importImageFromUrlSchema = z.object({
   productId: z.string().min(1),
 });
 
+function sanitizeFilenameBase(filename: string): string {
+  const withoutExt = filename.replace(/\.[^.]+$/, '');
+  const sanitized = withoutExt
+    .replace(/[^a-zA-Z0-9._-]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .toLowerCase();
+
+  return sanitized || `asset-${Date.now()}`;
+}
+
 export async function adminUploadPresignedRoutes(app: FastifyInstance) {
-  // 🔐 Admin guard
   app.addHook('preHandler', adminGuard);
 
-  // 📝 Generate presigned URL for product image upload
   app.post('/presigned-url', async (request, reply) => {
     try {
       const body = generatePresignedSchema.parse(request.body);
-
-      logger.info({
-        filename: body.filename,
-        contentType: body.contentType,
-        productId: body.productId,
-      }, '[Presigned Upload] GENERATE PRESIGNED URL');
-
       const productId = body.productId || `temp-${Date.now()}`;
 
-      logger.info('[Presigned Upload] Generating presigned URL...');
+      const folder = `products/${productId}`;
+      const publicId = `${Date.now()}-${sanitizeFilenameBase(body.filename)}`;
+      const signed = generateSignedUploadParams(folder, { publicId });
 
-      const result = await generateProductImageUploadUrl(
-        productId,
-        body.filename,
-        body.contentType
+      const uploadUrl = `https://api.cloudinary.com/v1_1/${signed.cloudName}/image/upload`;
+      const publicUrl = `https://res.cloudinary.com/${signed.cloudName}/image/upload/${signed.folder}/${publicId}`;
+
+      logger.info(
+        {
+          folder: signed.folder,
+          publicId,
+          contentType: body.contentType,
+        },
+        '[Presigned Upload] Signed Cloudinary params generated'
       );
 
-      logger.info({ publicUrl: result.publicUrl }, '[Presigned Upload] Presigned URL generated successfully');
-
       return {
-        uploadUrl: result.uploadUrl,
-        publicUrl: result.publicUrl,
-        key: result.key,
+        uploadUrl,
+        publicUrl,
+        folder: signed.folder,
+        publicId,
+        timestamp: signed.timestamp,
+        signature: signed.signature,
+        apiKey: signed.apiKey,
+        cloudName: signed.cloudName,
+        // Backward-compatible field used by some older clients.
+        key: `${signed.folder}/${publicId}`,
       };
     } catch (error) {
-      logger.error({ error }, '[Presigned Upload] Failed to generate presigned URL');
+      logger.error({ error }, '[Presigned Upload] Failed to generate signed upload params');
 
       if (error instanceof z.ZodError) {
         return reply.status(400).send({
@@ -59,19 +74,16 @@ export async function adminUploadPresignedRoutes(app: FastifyInstance) {
       }
 
       return reply.status(500).send({
-        message: 'Failed to generate upload URL',
+        message: 'Failed to generate upload params',
         error: error instanceof Error ? error.message : 'Unknown error',
       });
-    } finally {
-      logger.info('[Presigned Upload] ========== REQUEST COMPLETE ==========\n');
     }
   });
 
-  // Import an external image URL and persist it in R2
   app.post('/import-from-url', async (request, reply) => {
     try {
       const body = importImageFromUrlSchema.parse(request.body);
-      const imported = await importRemoteImageToR2({
+      const imported = await importRemoteImageToCloudinary({
         imageUrl: body.imageUrl,
         productId: body.productId,
       });

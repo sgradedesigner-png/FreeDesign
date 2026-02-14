@@ -1,4 +1,23 @@
 import { z } from 'zod';
+import { placementConfigSchema } from './customization.schema';
+
+export const orderItemCustomizationSchema = z.object({
+  printAreaId: z.string().uuid('Invalid printAreaId'),
+  printSizeTierId: z.string().uuid('Invalid printSizeTierId'),
+  assetId: z.string().uuid('Invalid assetId'),
+  printFee: z.number()
+    .min(0, 'printFee cannot be negative')
+    .finite('printFee must be finite'),
+  placementConfig: placementConfigSchema.optional(),
+});
+
+export const orderItemAddOnSchema = z.object({
+  id: z.string().uuid('Invalid add-on rule id'),
+  name: z.string().min(1, 'Add-on name is required'),
+  fee: z.number()
+    .min(0, 'Add-on fee cannot be negative')
+    .finite('Add-on fee must be finite'),
+});
 
 /**
  * Order Item Validation Schema
@@ -22,12 +41,28 @@ export const createOrderItemSchema = z.object({
   // Optional fields from frontend for order snapshot
   productName: z.string().optional(),
   variantName: z.string().optional(),
-  imagePath: z.string().optional()
+  imagePath: z.string().optional(),
+  addOns: z.array(orderItemAddOnSchema)
+    .max(20, 'Too many add-ons for one item')
+    .optional(),
+  customizations: z.array(orderItemCustomizationSchema)
+    .max(10, 'Too many customizations for one item')
+    .optional()
 }).refine(
   (data) => data.price !== undefined || data.variantPrice !== undefined,
   {
     message: 'Either price or variantPrice must be provided',
     path: ['price']
+  }
+).refine(
+  (data) => {
+    const customizations = data.customizations ?? [];
+    const areaIds = customizations.map((item) => item.printAreaId);
+    return new Set(areaIds).size === areaIds.length;
+  },
+  {
+    message: 'Duplicate printAreaId is not allowed within the same order item',
+    path: ['customizations']
   }
 );
 
@@ -69,6 +104,17 @@ export const createOrderSchema = z.object({
     .min(1, 'At least one item required')
     .max(50, 'Too many items (max 50)'),
   shippingAddress: shippingAddressSchema,
+  rushOrder: z.boolean().optional().default(false),
+  rushFee: z.number()
+    .min(0, 'rushFee cannot be negative')
+    .finite('rushFee must be finite')
+    .optional()
+    .default(0),
+  addOnFees: z.number()
+    .min(0, 'addOnFees cannot be negative')
+    .finite('addOnFees must be finite')
+    .optional()
+    .default(0),
   total: z.number()
     .positive('Total must be positive')
     .finite('Total must be finite')

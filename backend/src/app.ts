@@ -26,11 +26,14 @@ import { adminPrefillRoutes } from './routes/admin/prefill';
 import { adminStatsRoutes } from './routes/admin/stats';
 import { adminUploadRoutes } from './routes/admin/upload';
 import { adminUploadPresignedRoutes } from './routes/admin/upload-presigned';
+import adminPricingRoutes from './routes/admin/pricing';
+import adminProductionRoutes from './routes/admin/production';
 import { publicProductRoutes } from './routes/products';
 import { adminGuard } from './supabaseauth';
 import orderRoutes from './routes/orders';
 import profileRoutes from './routes/profile';
 import paymentRoutes from './routes/payment';
+import customizationRoutes from './routes/customization';
 import adminOrderRoutes from './routes/admin/orders';
 import testEmailRoutes from './routes/test-email';
 import adminCronRoutes from './routes/admin/cron';
@@ -65,7 +68,7 @@ app.register(swagger, {
     },
     servers: [
       {
-        url: 'http://localhost:3000',
+        url: 'http://localhost:4000',
         description: 'Хөгжүүлэлтийн сервер (Development)',
       },
       {
@@ -115,6 +118,8 @@ const defaultAllowedOrigins = [
   'http://localhost:5174', // Store/Admin (next Vite port)
   'http://localhost:5175', // Store/Admin (next Vite port)
   'http://localhost:5176', // Store/Admin (next Vite port)
+  'http://localhost:5184', // Store (custom local port)
+  'http://localhost:5185', // Admin (custom local port)
   'http://localhost:3001', // Admin Panel (main port)
 ];
 
@@ -538,6 +543,7 @@ app.register(publicProductRoutes, { prefix: '/api/products' });
 app.register(orderRoutes);
 app.register(profileRoutes);
 app.register(paymentRoutes);
+app.register(customizationRoutes);
 
 // 6) Admin routes
 app.register(adminCategoryRoutes, { prefix: '/admin/categories' });
@@ -548,6 +554,8 @@ app.register(adminUploadRoutes, { prefix: '/admin/upload' });
 app.register(adminUploadPresignedRoutes, { prefix: '/admin/upload' });
 app.register(adminOrderRoutes);
 app.register(adminCronRoutes);
+app.register(adminProductionRoutes);
+app.register(adminPricingRoutes);
 app.register(testEmailRoutes);
 
 // 7) Error Handlers
@@ -582,7 +590,7 @@ app.setNotFoundHandler(notFoundHandler);
 // 8) Start Server
 const start = async () => {
   try {
-    const port = Number(process.env.PORT) || 3000;
+    const port = Number(process.env.PORT) || 4000;
     await app.listen({ port, host: '0.0.0.0' });
     app.log.info(`Server is running at http://localhost:${port}`);
 
@@ -610,3 +618,5 @@ process.on('SIGINT', async () => {
 });
 
 start();
+
+

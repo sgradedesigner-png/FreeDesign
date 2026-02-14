@@ -47,6 +47,25 @@ type ProductVariant = {
   galleryPreviewUrls?: string[];
 };
 
+type ProductFamilyValue =
+  | 'BY_SIZE'
+  | 'GANG_UPLOAD'
+  | 'GANG_BUILDER'
+  | 'BLANKS'
+  | 'UV_BY_SIZE'
+  | 'UV_GANG_UPLOAD'
+  | 'UV_GANG_BUILDER';
+
+const PRODUCT_FAMILY_OPTIONS: Array<{ value: ProductFamilyValue; label: string }> = [
+  { value: 'BY_SIZE', label: 'DTF by Size' },
+  { value: 'GANG_UPLOAD', label: 'DTF Gang Sheet Upload' },
+  { value: 'GANG_BUILDER', label: 'DTF Gang Sheet Builder' },
+  { value: 'BLANKS', label: 'Blanks' },
+  { value: 'UV_BY_SIZE', label: 'UV DTF by Size' },
+  { value: 'UV_GANG_UPLOAD', label: 'UV Gang Sheet Upload' },
+  { value: 'UV_GANG_BUILDER', label: 'UV Gang Sheet Builder' },
+];
+
 const productSchema = z.object({
   title: z.string().min(1, 'Title is required'),
   slug: z.string().min(1, 'Slug is required').regex(/^[a-z0-9-]+$/, 'Slug must be lowercase with hyphens'),
@@ -93,6 +112,7 @@ export default function ProductFormPage() {
   const [productDetails, setProductDetails] = useState<string[]>([]);
   const [subtitle, setSubtitle] = useState('');
   const [isPublished, setIsPublished] = useState(false);
+  const [productFamily, setProductFamily] = useState<ProductFamilyValue>('BLANKS');
   const [isSavingPublishStatus, setIsSavingPublishStatus] = useState(false); // UI state (triggers re-render)
   const isSavingPublishStatusRef = useRef(false); // Guard flag (no re-render)
   const [prefillCategoryHint, setPrefillCategoryHint] = useState('');
@@ -281,6 +301,8 @@ export default function ProductFormPage() {
       setBenefits(data.benefits || []);
       setProductDetails(data.productDetails || []);
       setSubtitle(data.subtitle || '');
+      const familyValue = (data.product_family ?? data.productFamily ?? 'BLANKS') as ProductFamilyValue;
+      setProductFamily(familyValue);
 
       const publishedValue = Boolean(data.is_published ?? data.isPublished ?? false);
       logger.debug('📥 fetchProduct setting isPublished to:', publishedValue, { is_published: data.is_published, isPublished: data.isPublished, isSavingPublishStatus: isSavingPublishStatusRef.current });
@@ -373,6 +395,7 @@ export default function ProductFormPage() {
         title: data.title,
         slug: data.slug,
         is_published: isPublished,
+        product_family: productFamily,
         description: data.description || null,
         basePrice: parseFloat(data.basePrice || '0'),
         categoryId: data.categoryId,
@@ -707,6 +730,22 @@ export default function ProductFormPage() {
                     {errors.categoryId && (
                       <p className="text-sm text-destructive">{errors.categoryId.message}</p>
                     )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="product-family">Product Family *</Label>
+                    <Select value={productFamily} onValueChange={(value) => setProductFamily(value as ProductFamilyValue)}>
+                      <SelectTrigger id="product-family">
+                        <SelectValue placeholder="Select product family" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {PRODUCT_FAMILY_OPTIONS.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div className="space-y-2">
@@ -1264,3 +1303,4 @@ export default function ProductFormPage() {
     </form>
   );
 }
+

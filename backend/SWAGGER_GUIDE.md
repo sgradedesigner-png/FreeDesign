@@ -8,7 +8,7 @@ Backend API-н Swagger/OpenAPI documentation-ийн гарын авлага.
 
 API documentation нь `/docs` endpoint дээр байрлана:
 
-- **Development:** http://localhost:3000/docs
+- **Development:** http://localhost:4000/docs
 - **Production:** https://your-app.railway.app/docs
 
 ---
@@ -35,7 +35,7 @@ app.register(swagger, {
     },
     servers: [
       {
-        url: 'http://localhost:3000',
+        url: 'http://localhost:4000',
         description: 'Хөгжүүлэлтийн сервер (Development)',
       },
       {
@@ -710,7 +710,8 @@ Development дээр Swagger validation errors-ыг logs дээр харна
 
 **Swagger UI хандах:**
 ```
-http://localhost:3000/docs
+http://localhost:4000/docs
 ```
 
 Одоо API documentation бэлэн! 🚀
+

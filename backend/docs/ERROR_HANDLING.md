@@ -366,7 +366,7 @@ request.log.error({
 ### Test 404 Not Found
 
 ```bash
-curl http://localhost:3000/nonexistent
+curl http://localhost:4000/nonexistent
 ```
 
 **Expected:**
@@ -381,7 +381,7 @@ curl http://localhost:3000/nonexistent
 ### Test Validation Error
 
 ```bash
-curl -X POST http://localhost:3000/api/orders \
+curl -X POST http://localhost:4000/api/orders \
   -H "Authorization: Bearer TOKEN" \
   -H "Content-Type: application/json" \
   -d '{}'
@@ -392,7 +392,7 @@ curl -X POST http://localhost:3000/api/orders \
 ### Test Not Found Error
 
 ```bash
-curl http://localhost:3000/api/orders/00000000-0000-0000-0000-000000000000 \
+curl http://localhost:4000/api/orders/00000000-0000-0000-0000-000000000000 \
   -H "Authorization: Bearer TOKEN"
 ```
 
@@ -464,3 +464,4 @@ grep "NotFoundError" logs/app.log
 - ✅ Best practices documented
 
 **Status:** ✅ Production Ready
+

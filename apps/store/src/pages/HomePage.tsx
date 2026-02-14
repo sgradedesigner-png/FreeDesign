@@ -8,7 +8,7 @@ import { ArrowRight, Package, Shield, Truck, CreditCard } from 'lucide-react';
 import { mapProductFromBackend, type Product } from '../data/products';
 import type { BackendProduct } from '../data/types';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
 
 type Category = {
   id: string;
@@ -344,3 +344,4 @@ export default function HomePage() {
     </div>
   );
 }
+
