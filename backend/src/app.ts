@@ -30,6 +30,8 @@ import adminPricingRoutes from './routes/admin/pricing';
 import adminProductionRoutes from './routes/admin/production';
 import adminCollectionsRoutes from './routes/admin/collections';
 import { adminUploadsRoutes } from './routes/admin/uploads'; // P2-07: Upload moderation
+import { adminPrintAreaRoutes } from './routes/admin/print-areas'; // Product wizard
+import { adminSizeTierRoutes } from './routes/admin/size-tiers'; // Product wizard
 import { publicProductRoutes } from './routes/products';
 import collectionsRoutes from './routes/collections';
 import pricingPublicRoutes from './routes/pricing-public';
@@ -574,6 +576,8 @@ app.register(adminCronRoutes);
 app.register(adminProductionRoutes);
 app.register(adminPricingRoutes);
 app.register(adminUploadsRoutes, { prefix: '/api/admin/uploads' }); // P2-07: Upload moderation queue
+app.register(adminPrintAreaRoutes, { prefix: '/api/admin/print-areas' }); // Product wizard
+app.register(adminSizeTierRoutes, { prefix: '/api/admin/size-tiers' }); // Product wizard
 app.register(testEmailRoutes);
 
 // 7) Error Handlers

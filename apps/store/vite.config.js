@@ -20,6 +20,8 @@ export default defineConfig({
     }),
   ].filter(Boolean),
   resolve: {
+    // Prioritise .ts/.tsx so stale compiled .js files are never picked up
+    extensions: ['.mts', '.ts', '.tsx', '.mjs', '.js', '.jsx', '.json'],
     alias: {
       '@': path.resolve(__dirname, './src'),
     },

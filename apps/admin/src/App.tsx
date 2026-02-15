@@ -4,6 +4,7 @@ import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import ProductsPage from './pages/ProductsPage';
 import ProductFormPage from './pages/ProductFormPage';
+import ProductWizardPage from './pages/ProductWizardPage';
 import CategoriesPage from './pages/CategoriesPage';
 import CollectionsPage from './pages/CollectionsPage';
 import OrdersPage from './pages/OrdersPage';
@@ -15,6 +16,7 @@ import UploadModerationPage from './pages/UploadModerationPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AdminLayout } from './components/layout/AdminLayout';
 import { useAuth } from './auth/AuthContext';
+
 
 // ✅ Conditional redirect for 404 based on auth status
 function NotFoundRedirect() {
@@ -37,7 +39,12 @@ export default function App() {
       >
         <Route path="/" element={<DashboardPage />} />
         <Route path="/products" element={<ProductsPage />} />
-        <Route path="/products/new" element={<ProductFormPage />} />
+        {/* Wizard routes */}
+        <Route path="/product-wizard" element={<ProductWizardPage />} />
+        <Route path="/product-wizard/:id" element={<ProductWizardPage />} />
+        <Route path="/products/new-legacy" element={<ProductFormPage />} />
+        <Route path="/products/new" element={<ProductWizardPage />} />
+        {/* Catch-all parameterized route */}
         <Route path="/products/:id" element={<ProductFormPage />} />
         <Route path="/categories" element={<CategoriesPage />} />
         <Route path="/collections" element={<CollectionsPage />} />

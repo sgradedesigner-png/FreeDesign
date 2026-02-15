@@ -153,6 +153,16 @@ export async function adminProductRoutes(app: FastifyInstance) {
       benefits: z.array(z.string()).optional().default([]),
       productDetails: z.array(z.string()).optional().default([]),
       variants: z.array(variantSchema).min(1, 'At least one variant is required'),
+      // Product wizard fields
+      printAreas: z.array(z.string().uuid()).optional().default([]),
+      printAreaDefaults: z.record(z.string(), z.boolean()).optional(),
+      uploadConstraints: z.object({
+        maxFileSizeMB: z.number(),
+        minDPI: z.number().optional(),
+        minWidth: z.number(),
+        minHeight: z.number(),
+        allowedFormats: z.array(z.string()),
+      }).optional(),
     });
 
     const body = schema.parse(request.body);
@@ -177,6 +187,12 @@ export async function adminProductRoutes(app: FastifyInstance) {
     const productId = randomUUID();
     const normalizedVariants = await normalizeVariantMediaForCloudinary(body.variants, productId);
 
+    // Build metadata including upload constraints
+    const metadata: Prisma.JsonObject = {};
+    if (body.uploadConstraints) {
+      metadata.uploadConstraints = body.uploadConstraints;
+    }
+
     const product = await prisma.product.create({
       data: {
         id: productId,
@@ -197,6 +213,7 @@ export async function adminProductRoutes(app: FastifyInstance) {
         features: body.features,
         benefits: body.benefits,
         productDetails: body.productDetails,
+        metadata: metadata,
         variants: {
           create: normalizedVariants.map((v, index) => ({
             name: v.name,
@@ -217,6 +234,17 @@ export async function adminProductRoutes(app: FastifyInstance) {
         category: true,
       },
     });
+
+    // Create print area links if provided
+    if (body.printAreas && body.printAreas.length > 0) {
+      await prisma.productPrintArea.createMany({
+        data: body.printAreas.map((areaId) => ({
+          productId: product.id,
+          printAreaId: areaId,
+          isDefault: body.printAreaDefaults?.[areaId] ?? false,
+        })),
+      });
+    }
 
     productsCache.clear();
     return product;

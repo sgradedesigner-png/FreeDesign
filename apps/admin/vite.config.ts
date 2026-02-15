@@ -6,6 +6,8 @@ import path from 'path'
 export default defineConfig({
   plugins: [react()],
   resolve: {
+    // Prioritise .ts/.tsx so stale compiled .js files are never picked up
+    extensions: ['.mts', '.ts', '.tsx', '.mjs', '.js', '.jsx', '.json'],
     alias: {
       '@': path.resolve(__dirname, './src'),
     },

@@ -1,0 +1,196 @@
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useProductWizard, WizardFormData } from '@/hooks/useProductWizard';
+import { WizardStepIndicator } from './WizardStepIndicator';
+import { WizardNavigation } from './WizardNavigation';
+import { ProductPreview } from './shared/ProductPreview';
+import { ValidationSummary } from './shared/ValidationSummary';
+import { AutoSaveIndicator } from './shared/AutoSaveIndicator';
+import { api } from '@/lib/api';
+import { toast } from 'sonner';
+
+// Import step components
+import { Step1_ProductFamily } from './steps/Step1_ProductFamily';
+import { Step2_BasicInfo } from './steps/Step2_BasicInfo';
+import { Step3_UploadConfig } from './steps/Step3_UploadConfig';
+import { Step4_PrintConfig } from './steps/Step4_PrintConfig';
+import { Step5_Variants } from './steps/Step5_Variants';
+import { Step6_Review } from './steps/Step6_Review';
+
+type WizardContainerProps = {
+  productId?: string;
+};
+
+export function WizardContainer({ productId }: WizardContainerProps) {
+  const navigate = useNavigate();
+  const {
+    form,
+    currentStep,
+    completedSteps,
+    visibleSteps,
+    currentStepLabel,
+    goToStep,
+    nextStep,
+    prevStep,
+    clearDraft,
+    isSaving,
+  } = useProductWizard(productId);
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Render the appropriate step component
+  const renderStep = () => {
+    const actualStepNumber = visibleSteps[currentStep - 1];
+
+    switch (actualStepNumber) {
+      case 1:
+        return <Step1_ProductFamily form={form} />;
+      case 2:
+        return <Step2_BasicInfo form={form} />;
+      case 3:
+        return <Step3_UploadConfig form={form} />;
+      case 4:
+        return <Step4_PrintConfig form={form} />;
+      case 5:
+        return <Step5_Variants form={form} />;
+      case 6:
+        return <Step6_Review form={form} onSave={handleSave} isSubmitting={isSubmitting} />;
+      default:
+        return <div>Unknown step</div>;
+    }
+  };
+
+  // Handle product save
+  const handleSave = async () => {
+    setIsSubmitting(true);
+
+    try {
+      const values = form.getValues();
+
+      // Upload variant images first if needed
+      const variantsWithImages = await uploadVariantImages(values.variants);
+
+      // Prepare product data
+      const productData = {
+        title: values.title,
+        slug: values.slug,
+        category_id: values.categoryId,
+        description: values.description || '',
+        subtitle: values.subtitle || '',
+        base_price: values.basePrice,
+        rating: values.rating ? parseFloat(values.rating) : 0,
+        reviews: values.reviews ? parseInt(values.reviews, 10) : 0,
+        features: values.features,
+        benefits: values.benefits,
+        product_details: values.productDetails,
+        is_published: values.isPublished,
+        product_family: values.productFamily,
+        variants: variantsWithImages,
+        printAreas: values.printAreas,
+        printAreaDefaults: values.printAreaDefaults,
+        uploadConstraints: values.uploadConstraints,
+      };
+
+      if (productId) {
+        // Update existing product
+        await api.put(`/admin/products/${productId}`, productData);
+        toast.success('Product updated successfully');
+      } else {
+        // Create new product
+        await api.post('/admin/products', productData);
+        toast.success('Product created successfully');
+      }
+
+      // Clear draft and navigate
+      clearDraft();
+      navigate('/products');
+    } catch (error: any) {
+      console.error('Failed to save product:', error);
+      toast.error(error.response?.data?.message || 'Failed to save product');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Upload variant images
+  const uploadVariantImages = async (variants: any[]) => {
+    return Promise.all(
+      variants.map(async (variant) => {
+        let imagePath = variant.imagePath;
+        let galleryPaths = variant.galleryPaths || [];
+
+        // Upload main image if pending
+        if (variant.pendingImage) {
+          const formData = new FormData();
+          formData.append('image', variant.pendingImage);
+          const { data } = await api.post('/admin/products/upload-image', formData);
+          imagePath = data.path;
+        }
+
+        // Upload gallery images if pending
+        if (variant.pendingGalleryImages && variant.pendingGalleryImages.length > 0) {
+          const uploadedGallery = await Promise.all(
+            variant.pendingGalleryImages.map(async (file: File) => {
+              const formData = new FormData();
+              formData.append('image', file);
+              const { data } = await api.post('/admin/products/upload-image', formData);
+              return data.path;
+            })
+          );
+          galleryPaths = [...galleryPaths, ...uploadedGallery];
+        }
+
+        return {
+          ...variant,
+          imagePath,
+          galleryPaths,
+          price: parseFloat(variant.price),
+          originalPrice: variant.originalPrice ? parseFloat(variant.originalPrice) : undefined,
+          stock: parseInt(variant.stock, 10),
+          pendingImage: undefined,
+          pendingGalleryImages: undefined,
+          previewUrl: undefined,
+          galleryPreviewUrls: undefined,
+        };
+      })
+    );
+  };
+
+  return (
+    <div className="container mx-auto py-8 max-w-7xl">
+      <WizardStepIndicator
+        currentStep={currentStep}
+        totalSteps={visibleSteps.length}
+        completedSteps={completedSteps}
+        visibleSteps={visibleSteps}
+        onStepClick={goToStep}
+      />
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+        <div className="lg:col-span-2">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-xl font-semibold">{currentStepLabel}</h2>
+            <AutoSaveIndicator isSaving={isSaving} />
+          </div>
+
+          {renderStep()}
+        </div>
+
+        <div className="space-y-4">
+          <ProductPreview form={form} />
+          <ValidationSummary errors={form.formState.errors} />
+        </div>
+      </div>
+
+      <WizardNavigation
+        currentStep={currentStep}
+        totalSteps={visibleSteps.length}
+        onNext={nextStep}
+        onPrev={prevStep}
+        onSave={currentStep === visibleSteps.length ? handleSave : undefined}
+        isValid={form.formState.isValid}
+        isSubmitting={isSubmitting}
+      />
+    </div>
+  );
+}

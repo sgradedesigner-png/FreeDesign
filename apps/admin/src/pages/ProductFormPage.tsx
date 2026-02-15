@@ -81,6 +81,17 @@ type ProductFormData = z.infer<typeof productSchema>;
 export default function ProductFormPage() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
+
+  // Redirect to wizard page if accessing wizard routes
+  if (id === 'new-wizard' || id === 'product-wizard') {
+    navigate('/product-wizard', { replace: true });
+    return null;
+  }
+  if (window.location.pathname.includes('edit-wizard')) {
+    navigate(`/product-wizard/${id}`, { replace: true });
+    return null;
+  }
+
   const isEditMode = !!id;
   const [searchParams] = useSearchParams();
   const prefill = searchParams.get('prefill');
@@ -140,8 +151,15 @@ export default function ProductFormPage() {
   const watchedValues = watch();
 
   useEffect(() => {
+    // Skip if this is a wizard route
+    if (id === 'new-wizard' || window.location.pathname.includes('edit-wizard')) {
+      return;
+    }
+
     fetchCategories();
-    if (isEditMode && id) {
+    // Only fetch if id is a valid UUID (not a route segment like "new-wizard")
+    const isUUID = id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    if (isEditMode && isUUID) {
       fetchProduct(id);
     }
   }, [id]);
