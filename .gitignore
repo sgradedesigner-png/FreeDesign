@@ -42,3 +42,11 @@ yarn-error.log*
 .cache/
 .parcel-cache/
 .turbo/
+
+# Codex local state (should never be committed)
+/.codex-home/
+
+# Local temp files (may contain secrets)
+/tmp.js
+/update_env.ps1
+/utf8
