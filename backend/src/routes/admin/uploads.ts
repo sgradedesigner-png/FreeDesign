@@ -1,7 +1,7 @@
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { prisma } from '../../lib/prisma';
-import { adminGuard } from '../../middleware/adminGuard';
+import { adminGuard } from '../../supabaseauth';
 import { NotFoundError, ValidationError } from '../../utils/errors';
 
 /**
@@ -149,7 +149,9 @@ export const adminUploadsRoutes: FastifyPluginAsync = async (fastify) => {
               select: {
                 id: true,
                 orderId: true,
-                productSnapshot: true,
+                productId: true,
+                productName: true,
+                variantName: true,
               },
             },
           },
