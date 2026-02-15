@@ -1,5 +1,5 @@
-import type { FastifyInstance } from 'fastify';
-import { logger } from '../lib/logger';
+﻿import type { FastifyInstance } from 'fastify';
+import { logger, hashIdentifier } from '../lib/logger';
 import { prisma } from '../lib/prisma';
 import { userGuard } from '../middleware/userGuard';
 import { mockupPreviewSchema, priceQuoteSchema } from '../schemas/customization.schema';
@@ -203,7 +203,7 @@ export default async function customizationRoutes(app: FastifyInstance) {
         },
       });
     } catch (error) {
-      logger.error({ error, userId }, 'Failed to upload customization asset');
+      logger.error({ error, requestId: request.id, userIdHash: hashIdentifier(userId) ?? undefined }, 'Failed to upload customization asset');
 
       if (error instanceof AppError) {
         return reply.code(error.statusCode).send({ error: error.message });
@@ -230,6 +230,19 @@ export default async function customizationRoutes(app: FastifyInstance) {
         return;
       }
 
+
+      const userId = (request as any).user.id;
+      const userIdHash = hashIdentifier(userId) ?? undefined;
+      logger.info({
+        event: 'quote_requested',
+        requestId: request.id,
+        userIdHash,
+        variantId: validation.data.variantId,
+        quantity: validation.data.quantity,
+        customizationCount: validation.data.customizations.length,
+        addOnCount: (validation.data.addOnIds ?? []).length,
+        rushOrder: Boolean(validation.data.rushOrder),
+      }, '[Customization] quote_requested');
       const breakdown = await calculatePriceQuote(validation.data);
       return reply.send({ breakdown });
     } catch (error) {
@@ -389,7 +402,7 @@ export default async function customizationRoutes(app: FastifyInstance) {
         },
       });
     } catch (error) {
-      logger.error({ error, userId }, 'Failed to build customization mockup preview');
+      logger.error({ error, requestId: request.id, userIdHash: hashIdentifier(userId) ?? undefined }, 'Failed to build customization mockup preview');
 
       if (error instanceof AppError) {
         return reply.code(error.statusCode).send({ error: error.message });
@@ -399,3 +412,4 @@ export default async function customizationRoutes(app: FastifyInstance) {
     }
   });
 }
+

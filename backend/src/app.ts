@@ -1,4 +1,4 @@
-import fastify from 'fastify';
+﻿import fastify from 'fastify';
 import cors from '@fastify/cors';
 import multipart from '@fastify/multipart';
 import rateLimit from '@fastify/rate-limit';
@@ -28,18 +28,23 @@ import { adminUploadRoutes } from './routes/admin/upload';
 import { adminUploadPresignedRoutes } from './routes/admin/upload-presigned';
 import adminPricingRoutes from './routes/admin/pricing';
 import adminProductionRoutes from './routes/admin/production';
+import adminCollectionsRoutes from './routes/admin/collections';
 import { publicProductRoutes } from './routes/products';
+import collectionsRoutes from './routes/collections';
+import pricingPublicRoutes from './routes/pricing-public';
 import { adminGuard } from './supabaseauth';
 import orderRoutes from './routes/orders';
 import profileRoutes from './routes/profile';
 import paymentRoutes from './routes/payment';
 import customizationRoutes from './routes/customization';
+import uploadRoutes from './routes/uploads';
+import cartRoutes from './routes/cart';
 import adminOrderRoutes from './routes/admin/orders';
 import testEmailRoutes from './routes/test-email';
 import adminCronRoutes from './routes/admin/cron';
 import { prisma } from './lib/prisma'; // Use shared singleton instance
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
-import { logRateLimit, logger, loggerConfig } from './lib/logger'; // Use shared logger instance
+import { logRateLimit, logger, loggerConfig, hashIdentifier } from './lib/logger'; // Use shared logger instance
 import { cronService } from './services/cron.service';
 
 const isDevelopment = process.env.NODE_ENV === 'development';
@@ -59,7 +64,7 @@ app.register(swagger, {
   openapi: {
     info: {
       title: 'Korean Goods E-commerce API',
-      description: 'Солонгос хувцас, гоо сайхны бүтээгдэхүүний онлайн худалдааны платформын Backend API',
+      description: 'Ð¡Ð¾Ð»Ð¾Ð½Ð³Ð¾Ñ Ñ…ÑƒÐ²Ñ†Ð°Ñ, Ð³Ð¾Ð¾ ÑÐ°Ð¹Ñ…Ð½Ñ‹ Ð±Ò¯Ñ‚ÑÑÐ³Ð´ÑÑ…Ò¯Ò¯Ð½Ð¸Ð¹ Ð¾Ð½Ð»Ð°Ð¹Ð½ Ñ…ÑƒÐ´Ð°Ð»Ð´Ð°Ð°Ð½Ñ‹ Ð¿Ð»Ð°Ñ‚Ñ„Ð¾Ñ€Ð¼Ñ‹Ð½ Backend API',
       version: '1.0.0',
       contact: {
         name: 'API Support',
@@ -69,11 +74,11 @@ app.register(swagger, {
     servers: [
       {
         url: 'http://localhost:4000',
-        description: 'Хөгжүүлэлтийн сервер (Development)',
+        description: 'Ð¥Ó©Ð³Ð¶Ò¯Ò¯Ð»ÑÐ»Ñ‚Ð¸Ð¹Ð½ ÑÐµÑ€Ð²ÐµÑ€ (Development)',
       },
       {
         url: 'https://api.koreangoods.mn',
-        description: 'Продакшн сервер (Production)',
+        description: 'ÐŸÑ€Ð¾Ð´Ð°ÐºÑˆÐ½ ÑÐµÑ€Ð²ÐµÑ€ (Production)',
       },
     ],
     components: {
@@ -87,13 +92,13 @@ app.register(swagger, {
       },
     },
     tags: [
-      { name: 'Products', description: 'Бүтээгдэхүүн' },
-      { name: 'Categories', description: 'Ангилал' },
-      { name: 'Orders', description: 'Захиалга' },
-      { name: 'Payment', description: 'Төлбөр' },
-      { name: 'Profile', description: 'Хэрэглэгчийн мэдээлэл' },
-      { name: 'Admin', description: 'Админ удирдлага' },
-      { name: 'Health', description: 'Эрүүл мэнд шалгалт' },
+      { name: 'Products', description: 'Ð‘Ò¯Ñ‚ÑÑÐ³Ð´ÑÑ…Ò¯Ò¯Ð½' },
+      { name: 'Categories', description: 'ÐÐ½Ð³Ð¸Ð»Ð°Ð»' },
+      { name: 'Orders', description: 'Ð—Ð°Ñ…Ð¸Ð°Ð»Ð³Ð°' },
+      { name: 'Payment', description: 'Ð¢Ó©Ð»Ð±Ó©Ñ€' },
+      { name: 'Profile', description: 'Ð¥ÑÑ€ÑÐ³Ð»ÑÐ³Ñ‡Ð¸Ð¹Ð½ Ð¼ÑÐ´ÑÑÐ»ÑÐ»' },
+      { name: 'Admin', description: 'ÐÐ´Ð¼Ð¸Ð½ ÑƒÐ´Ð¸Ñ€Ð´Ð»Ð°Ð³Ð°' },
+      { name: 'Health', description: 'Ð­Ñ€Ò¯Ò¯Ð» Ð¼ÑÐ½Ð´ ÑˆÐ°Ð»Ð³Ð°Ð»Ñ‚' },
     ],
   },
 });
@@ -135,8 +140,9 @@ const allowedOrigins = Array.from(
 app.register(cors, {
   origin: allowedOrigins,
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Explicitly allow all methods
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token'], // Allow CSRF token header
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'], // Explicitly allow all methods
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token', 'X-Guest-Cart-Id'], // Allow CSRF token header
+  exposedHeaders: ['X-Request-Id'],
 });
 
 // Register multipart for file uploads
@@ -176,7 +182,7 @@ app.register(rateLimit, {
 
     return {
       error: 'Rate limit exceeded',
-      message: `Хэт олон хүсэлт илгээсэн байна. ${context.after} секундын дараа дахин оролдоно уу.`,
+      message: `Ð¥ÑÑ‚ Ð¾Ð»Ð¾Ð½ Ñ…Ò¯ÑÑÐ»Ñ‚ Ð¸Ð»Ð³ÑÑÑÑÐ½ Ð±Ð°Ð¹Ð½Ð°. ${context.after} ÑÐµÐºÑƒÐ½Ð´Ñ‹Ð½ Ð´Ð°Ñ€Ð°Ð° Ð´Ð°Ñ…Ð¸Ð½ Ð¾Ñ€Ð¾Ð»Ð´Ð¾Ð½Ð¾ ÑƒÑƒ.`,
       retryAfter: context.after,
       statusCode: 429
     };
@@ -215,6 +221,9 @@ app.register(csrf, {
 // Applied to all responses via onSend hook
 app.addHook('onSend', async (request, reply) => {
   const isProduction = process.env.NODE_ENV === 'production';
+
+  // Correlation id for debugging across client/server logs.
+  reply.header('X-Request-Id', request.id);
 
   // Prevent clickjacking attacks
   reply.header('X-Frame-Options', 'DENY');
@@ -263,18 +272,18 @@ app.addHook('onSend', async (request, reply) => {
 // 2) Public routes
 app.get('/', {
   schema: {
-    description: 'API анхны хуудас - Статус шалгах',
+    description: 'API Ð°Ð½Ñ…Ð½Ñ‹ Ñ…ÑƒÑƒÐ´Ð°Ñ - Ð¡Ñ‚Ð°Ñ‚ÑƒÑ ÑˆÐ°Ð»Ð³Ð°Ñ…',
     tags: ['Health'],
     response: {
       200: {
         type: 'object',
         properties: {
-          message: { type: 'string', example: 'eCommerce API is running correctly! 🚀' }
+          message: { type: 'string', example: 'eCommerce API is running correctly! ðŸš€' }
         }
       }
     }
   }
-}, async () => ({ message: 'eCommerce API is running correctly! 🚀' }));
+}, async () => ({ message: 'eCommerce API is running correctly! ðŸš€' }));
 
 app.get('/live', {
   schema: {
@@ -316,13 +325,13 @@ app.get('/health', {
 // CSRF token endpoint - Frontend can fetch this token before making state-changing requests
 app.get('/csrf-token', {
   schema: {
-    description: 'CSRF токен авах (Суурьлуулсан cookie-д хадгална)',
+    description: 'CSRF Ñ‚Ð¾ÐºÐµÐ½ Ð°Ð²Ð°Ñ… (Ð¡ÑƒÑƒÑ€ÑŒÐ»ÑƒÑƒÐ»ÑÐ°Ð½ cookie-Ð´ Ñ…Ð°Ð´Ð³Ð°Ð»Ð½Ð°)',
     tags: ['Health'],
     response: {
       200: {
         type: 'object',
         properties: {
-          csrfToken: { type: 'string', description: 'CSRF хамгаалалтын токен' }
+          csrfToken: { type: 'string', description: 'CSRF Ñ…Ð°Ð¼Ð³Ð°Ð°Ð»Ð°Ð»Ñ‚Ñ‹Ð½ Ñ‚Ð¾ÐºÐµÐ½' }
         }
       }
     }
@@ -335,7 +344,7 @@ app.get('/csrf-token', {
 // Health check endpoint - detailed health status
 app.get('/health/details', {
   schema: {
-    description: 'Серверийн эрүүл мэндийн дэлгэрэнгүй статус',
+    description: 'Ð¡ÐµÑ€Ð²ÐµÑ€Ð¸Ð¹Ð½ ÑÑ€Ò¯Ò¯Ð» Ð¼ÑÐ½Ð´Ð¸Ð¹Ð½ Ð´ÑÐ»Ð³ÑÑ€ÑÐ½Ð³Ò¯Ð¹ ÑÑ‚Ð°Ñ‚ÑƒÑ',
     tags: ['Health'],
     response: {
       200: {
@@ -350,8 +359,8 @@ app.get('/health/details', {
               activeConnections: { type: 'number', example: 5 }
             }
           },
-          uptime: { type: 'number', description: 'Серверийн ажиллаж байгаа хугацаа (секунд)', example: 12345.67 },
-          memory: { type: 'object', description: 'Санах ойн ашиглалт' }
+          uptime: { type: 'number', description: 'Ð¡ÐµÑ€Ð²ÐµÑ€Ð¸Ð¹Ð½ Ð°Ð¶Ð¸Ð»Ð»Ð°Ð¶ Ð±Ð°Ð¹Ð³Ð°Ð° Ñ…ÑƒÐ³Ð°Ñ†Ð°Ð° (ÑÐµÐºÑƒÐ½Ð´)', example: 12345.67 },
+          memory: { type: 'object', description: 'Ð¡Ð°Ð½Ð°Ñ… Ð¾Ð¹Ð½ Ð°ÑˆÐ¸Ð³Ð»Ð°Ð»Ñ‚' }
         }
       },
       503: {
@@ -403,7 +412,7 @@ app.get('/health/details', {
 // Returns 200 only when the app is ready to serve traffic
 app.get('/ready', {
   schema: {
-    description: 'Бэлэн байдал шалгах (Kubernetes/Railway-д зориулсан)',
+    description: 'Ð‘ÑÐ»ÑÐ½ Ð±Ð°Ð¹Ð´Ð°Ð» ÑˆÐ°Ð»Ð³Ð°Ñ… (Kubernetes/Railway-Ð´ Ð·Ð¾Ñ€Ð¸ÑƒÐ»ÑÐ°Ð½)',
     tags: ['Health'],
     response: {
       200: {
@@ -436,21 +445,21 @@ app.get('/ready', {
 // Metrics endpoint - for monitoring systems
 app.get('/metrics', {
   schema: {
-    description: 'Серверийн дэлгэрэнгүй метрик мэдээлэл (хяналт, шинжилгээнд)',
+    description: 'Ð¡ÐµÑ€Ð²ÐµÑ€Ð¸Ð¹Ð½ Ð´ÑÐ»Ð³ÑÑ€ÑÐ½Ð³Ò¯Ð¹ Ð¼ÐµÑ‚Ñ€Ð¸Ðº Ð¼ÑÐ´ÑÑÐ»ÑÐ» (Ñ…ÑÐ½Ð°Ð»Ñ‚, ÑˆÐ¸Ð½Ð¶Ð¸Ð»Ð³ÑÑÐ½Ð´)',
     tags: ['Health'],
     response: {
       200: {
         type: 'object',
         properties: {
           timestamp: { type: 'string', format: 'date-time' },
-          uptime: { type: 'number', description: 'Серверийн ажиллаж байгаа хугацаа (секунд)' },
+          uptime: { type: 'number', description: 'Ð¡ÐµÑ€Ð²ÐµÑ€Ð¸Ð¹Ð½ Ð°Ð¶Ð¸Ð»Ð»Ð°Ð¶ Ð±Ð°Ð¹Ð³Ð°Ð° Ñ…ÑƒÐ³Ð°Ñ†Ð°Ð° (ÑÐµÐºÑƒÐ½Ð´)' },
           memory: {
             type: 'object',
             properties: {
-              rss: { type: 'number', description: 'RSS санах ой (bytes)' },
-              heapUsed: { type: 'number', description: 'Heap ашиглаж байгаа (bytes)' },
-              heapTotal: { type: 'number', description: 'Heap нийт (bytes)' },
-              external: { type: 'number', description: 'External санах ой (bytes)' }
+              rss: { type: 'number', description: 'RSS ÑÐ°Ð½Ð°Ñ… Ð¾Ð¹ (bytes)' },
+              heapUsed: { type: 'number', description: 'Heap Ð°ÑˆÐ¸Ð³Ð»Ð°Ð¶ Ð±Ð°Ð¹Ð³Ð°Ð° (bytes)' },
+              heapTotal: { type: 'number', description: 'Heap Ð½Ð¸Ð¹Ñ‚ (bytes)' },
+              external: { type: 'number', description: 'External ÑÐ°Ð½Ð°Ñ… Ð¾Ð¹ (bytes)' }
             }
           },
           database: {
@@ -503,16 +512,16 @@ app.get('/metrics', {
 // Circuit Breaker Status endpoint - monitor QPay circuit breakers
 app.get('/circuit-breakers', {
   schema: {
-    description: 'QPay Circuit Breaker-ийн статус хянах',
+    description: 'QPay Circuit Breaker-Ð¸Ð¹Ð½ ÑÑ‚Ð°Ñ‚ÑƒÑ Ñ…ÑÐ½Ð°Ñ…',
     tags: ['Health'],
     response: {
       200: {
         type: 'object',
         properties: {
           timestamp: { type: 'string', format: 'date-time' },
-          anyCircuitOpen: { type: 'boolean', description: 'Ямар нэг circuit нээлттэй эсэх' },
+          anyCircuitOpen: { type: 'boolean', description: 'Ð¯Ð¼Ð°Ñ€ Ð½ÑÐ³ circuit Ð½ÑÑÐ»Ñ‚Ñ‚ÑÐ¹ ÑÑÑÑ…' },
           status: { type: 'string', enum: ['healthy', 'degraded'], example: 'healthy' },
-          circuits: { type: 'object', description: 'Circuit-үүдийн дэлгэрэнгүй статус' }
+          circuits: { type: 'object', description: 'Circuit-Ò¯Ò¯Ð´Ð¸Ð¹Ð½ Ð´ÑÐ»Ð³ÑÑ€ÑÐ½Ð³Ò¯Ð¹ ÑÑ‚Ð°Ñ‚ÑƒÑ' }
         }
       }
     }
@@ -537,17 +546,22 @@ app.get('/admin/ping', { preHandler: adminGuard }, async (req) => {
 });
 
 // 4) Public API routes
+app.register(collectionsRoutes);
 app.register(publicProductRoutes, { prefix: '/api/products' });
+app.register(pricingPublicRoutes);
 
 // 5) Authenticated customer routes
 app.register(orderRoutes);
 app.register(profileRoutes);
 app.register(paymentRoutes);
 app.register(customizationRoutes);
+app.register(uploadRoutes);
+app.register(cartRoutes);
 
 // 6) Admin routes
 app.register(adminCategoryRoutes, { prefix: '/admin/categories' });
 app.register(adminProductRoutes, { prefix: '/admin/products' });
+app.register(adminCollectionsRoutes);
 app.register(adminPrefillRoutes, { prefix: '/admin/prefill' });
 app.register(adminStatsRoutes, { prefix: '/admin/stats' });
 app.register(adminUploadRoutes, { prefix: '/admin/upload' });
@@ -569,14 +583,17 @@ app.setErrorHandler((error, request, reply) => {
     error: err.message,
     stack: err.stack,
     url: request.url,
+    route: request.routeOptions?.url,
     method: request.method,
+    requestId: request.id,
+    userIdHash: hashIdentifier(((request as any).user?.id as string | undefined)) ?? undefined,
   }, 'Request error');
 
   // Send to Sentry (production monitoring)
   captureException(err, {
     url: request.url,
     method: request.method,
-    userId: (request as any).user?.id,
+    userIdHash: hashIdentifier(((request as any).user?.id as string | undefined)) ?? undefined,
     requestId: request.id,
   });
 
@@ -618,5 +635,11 @@ process.on('SIGINT', async () => {
 });
 
 start();
+
+
+
+
+
+
 
 

@@ -1,7 +1,8 @@
-import { FastifyError, FastifyReply, FastifyRequest } from 'fastify';
+﻿import { FastifyError, FastifyReply, FastifyRequest } from 'fastify';
 import { Prisma } from '@prisma/client';
 import { ZodError } from 'zod';
 import { AppError, ValidationError } from '../utils/errors';
+import { hashIdentifier } from '../lib/logger';
 
 /**
  * Comprehensive Error Handler Middleware
@@ -19,9 +20,11 @@ export async function errorHandler(
     err: error,
     method: request.method,
     url: request.url,
-    userId: (request as any).user?.id,
-    body: request.body,
-    query: request.query,
+    route: request.routeOptions?.url,
+    requestId: request.id,
+    userIdHash: hashIdentifier(((request as any).user?.id as string | undefined)) ?? undefined,
+    body: summarizeBody(request.body),
+    queryKeys: summarizeKeys(request.query),
     params: request.params
   }, 'Request error occurred');
 
@@ -41,7 +44,7 @@ export async function errorHandler(
   if (error instanceof ZodError) {
     return reply.status(400).send({
       error: 'Validation Error',
-      message: 'Оруулсан өгөгдөл буруу байна',
+      message: 'ÐžÑ€ÑƒÑƒÐ»ÑÐ°Ð½ Ó©Ð³Ó©Ð³Ð´Ó©Ð» Ð±ÑƒÑ€ÑƒÑƒ Ð±Ð°Ð¹Ð½Ð°',
       details: error.issues.map(issue => ({
         field: issue.path.join('.'),
         message: issue.message,
@@ -58,7 +61,7 @@ export async function errorHandler(
         const target = (error.meta?.target as string[]) || [];
         return reply.status(409).send({
           error: 'Conflict',
-          message: 'Давхардсан утга байна',
+          message: 'Ð”Ð°Ð²Ñ…Ð°Ñ€Ð´ÑÐ°Ð½ ÑƒÑ‚Ð³Ð° Ð±Ð°Ð¹Ð½Ð°',
           details: isDevelopment ? {
             fields: target,
             constraint: error.meta?.constraint
@@ -69,7 +72,7 @@ export async function errorHandler(
       case 'P2025': // Record not found
         return reply.status(404).send({
           error: 'Not Found',
-          message: 'Өгөгдөл олдсонгүй',
+          message: 'Ó¨Ð³Ó©Ð³Ð´Ó©Ð» Ð¾Ð»Ð´ÑÐ¾Ð½Ð³Ò¯Ð¹',
           details: isDevelopment ? error.meta : undefined,
           statusCode: 404
         });
@@ -77,7 +80,7 @@ export async function errorHandler(
       case 'P2003': // Foreign key constraint violation
         return reply.status(400).send({
           error: 'Foreign Key Constraint',
-          message: 'Холбоотой өгөгдөл олдсонгүй',
+          message: 'Ð¥Ð¾Ð»Ð±Ð¾Ð¾Ñ‚Ð¾Ð¹ Ó©Ð³Ó©Ð³Ð´Ó©Ð» Ð¾Ð»Ð´ÑÐ¾Ð½Ð³Ò¯Ð¹',
           details: isDevelopment ? {
             field: error.meta?.field_name
           } : undefined,
@@ -87,21 +90,21 @@ export async function errorHandler(
       case 'P2014': // Invalid ID
         return reply.status(400).send({
           error: 'Invalid ID',
-          message: 'Буруу ID формат',
+          message: 'Ð‘ÑƒÑ€ÑƒÑƒ ID Ñ„Ð¾Ñ€Ð¼Ð°Ñ‚',
           statusCode: 400
         });
 
       case 'P2024': // Timed out fetching from database
         return reply.status(504).send({
           error: 'Database Timeout',
-          message: 'Өгөгдлийн санд холбогдох хугацаа дууслаа. Дахин оролдоно уу.',
+          message: 'Ó¨Ð³Ó©Ð³Ð´Ð»Ð¸Ð¹Ð½ ÑÐ°Ð½Ð´ Ñ…Ð¾Ð»Ð±Ð¾Ð³Ð´Ð¾Ñ… Ñ…ÑƒÐ³Ð°Ñ†Ð°Ð° Ð´ÑƒÑƒÑÐ»Ð°Ð°. Ð”Ð°Ñ…Ð¸Ð½ Ð¾Ñ€Ð¾Ð»Ð´Ð¾Ð½Ð¾ ÑƒÑƒ.',
           statusCode: 504
         });
 
       default:
         return reply.status(500).send({
           error: 'Database Error',
-          message: 'Өгөгдлийн санд алдаа гарлаа',
+          message: 'Ó¨Ð³Ó©Ð³Ð´Ð»Ð¸Ð¹Ð½ ÑÐ°Ð½Ð´ Ð°Ð»Ð´Ð°Ð° Ð³Ð°Ñ€Ð»Ð°Ð°',
           details: isDevelopment ? {
             code: error.code,
             meta: error.meta,
@@ -116,7 +119,7 @@ export async function errorHandler(
   if (error instanceof Prisma.PrismaClientInitializationError) {
     return reply.status(503).send({
       error: 'Database Connection Error',
-      message: 'Өгөгдлийн санд холбогдож чадсангүй',
+      message: 'Ó¨Ð³Ó©Ð³Ð´Ð»Ð¸Ð¹Ð½ ÑÐ°Ð½Ð´ Ñ…Ð¾Ð»Ð±Ð¾Ð³Ð´Ð¾Ð¶ Ñ‡Ð°Ð´ÑÐ°Ð½Ð³Ò¯Ð¹',
       details: isDevelopment ? error.message : undefined,
       statusCode: 503
     });
@@ -126,7 +129,7 @@ export async function errorHandler(
   if (error instanceof Prisma.PrismaClientValidationError) {
     return reply.status(400).send({
       error: 'Validation Error',
-      message: 'Буруу өгөгдөл',
+      message: 'Ð‘ÑƒÑ€ÑƒÑƒ Ó©Ð³Ó©Ð³Ð´Ó©Ð»',
       details: isDevelopment ? error.message : undefined,
       statusCode: 400
     });
@@ -136,7 +139,7 @@ export async function errorHandler(
   if ((error as any).statusCode === 429) {
     return reply.status(429).send({
       error: 'Rate Limit Exceeded',
-      message: 'Хэт олон хүсэлт илгээсэн байна. Түр хүлээгээд дахин оролдоно уу.',
+      message: 'Ð¥ÑÑ‚ Ð¾Ð»Ð¾Ð½ Ñ…Ò¯ÑÑÐ»Ñ‚ Ð¸Ð»Ð³ÑÑÑÑÐ½ Ð±Ð°Ð¹Ð½Ð°. Ð¢Ò¯Ñ€ Ñ…Ò¯Ð»ÑÑÐ³ÑÑÐ´ Ð´Ð°Ñ…Ð¸Ð½ Ð¾Ñ€Ð¾Ð»Ð´Ð¾Ð½Ð¾ ÑƒÑƒ.',
       retryAfter: (error as any).retryAfter,
       statusCode: 429
     });
@@ -148,21 +151,21 @@ export async function errorHandler(
 
     // Map common HTTP status codes to Mongolian messages
     const messageMap: Record<number, string> = {
-      400: 'Буруу хүсэлт',
-      401: 'Нэвтрэх шаардлагатай',
-      403: 'Хандах эрхгүй байна',
-      404: 'Олдсонгүй',
-      405: 'Энэ арга хүсэлт зөвшөөрөгдөөгүй',
-      408: 'Хугацаа хэтэрсэн',
-      409: 'Зөрчилдөөн',
-      413: 'Хүсэлт хэт том байна',
-      415: 'Дэмжигдээгүй медиа төрөл',
-      422: 'Боловсруулах боломжгүй',
-      429: 'Хэт олон хүсэлт',
-      500: 'Серверийн алдаа',
-      502: 'Муу гарц',
-      503: 'Үйлчилгээ боломжгүй',
-      504: 'Гарцын хугацаа дууссан'
+      400: 'Ð‘ÑƒÑ€ÑƒÑƒ Ñ…Ò¯ÑÑÐ»Ñ‚',
+      401: 'ÐÑÐ²Ñ‚Ñ€ÑÑ… ÑˆÐ°Ð°Ñ€Ð´Ð»Ð°Ð³Ð°Ñ‚Ð°Ð¹',
+      403: 'Ð¥Ð°Ð½Ð´Ð°Ñ… ÑÑ€Ñ…Ð³Ò¯Ð¹ Ð±Ð°Ð¹Ð½Ð°',
+      404: 'ÐžÐ»Ð´ÑÐ¾Ð½Ð³Ò¯Ð¹',
+      405: 'Ð­Ð½Ñ Ð°Ñ€Ð³Ð° Ñ…Ò¯ÑÑÐ»Ñ‚ Ð·Ó©Ð²ÑˆÓ©Ó©Ñ€Ó©Ð³Ð´Ó©Ó©Ð³Ò¯Ð¹',
+      408: 'Ð¥ÑƒÐ³Ð°Ñ†Ð°Ð° Ñ…ÑÑ‚ÑÑ€ÑÑÐ½',
+      409: 'Ð—Ó©Ñ€Ñ‡Ð¸Ð»Ð´Ó©Ó©Ð½',
+      413: 'Ð¥Ò¯ÑÑÐ»Ñ‚ Ñ…ÑÑ‚ Ñ‚Ð¾Ð¼ Ð±Ð°Ð¹Ð½Ð°',
+      415: 'Ð”ÑÐ¼Ð¶Ð¸Ð³Ð´ÑÑÐ³Ò¯Ð¹ Ð¼ÐµÐ´Ð¸Ð° Ñ‚Ó©Ñ€Ó©Ð»',
+      422: 'Ð‘Ð¾Ð»Ð¾Ð²ÑÑ€ÑƒÑƒÐ»Ð°Ñ… Ð±Ð¾Ð»Ð¾Ð¼Ð¶Ð³Ò¯Ð¹',
+      429: 'Ð¥ÑÑ‚ Ð¾Ð»Ð¾Ð½ Ñ…Ò¯ÑÑÐ»Ñ‚',
+      500: 'Ð¡ÐµÑ€Ð²ÐµÑ€Ð¸Ð¹Ð½ Ð°Ð»Ð´Ð°Ð°',
+      502: 'ÐœÑƒÑƒ Ð³Ð°Ñ€Ñ†',
+      503: 'Ò®Ð¹Ð»Ñ‡Ð¸Ð»Ð³ÑÑ Ð±Ð¾Ð»Ð¾Ð¼Ð¶Ð³Ò¯Ð¹',
+      504: 'Ð“Ð°Ñ€Ñ†Ñ‹Ð½ Ñ…ÑƒÐ³Ð°Ñ†Ð°Ð° Ð´ÑƒÑƒÑÑÐ°Ð½'
     };
 
     return reply.status(statusCode).send({
@@ -184,7 +187,7 @@ export async function errorHandler(
     if (error.message.includes('QPay') || error.message.includes('qpay')) {
       return reply.status(503).send({
         error: 'Payment Service Error',
-        message: 'Төлбөрийн систем түр ашиглах боломжгүй байна. Дараа дахин оролдоно уу.',
+        message: 'Ð¢Ó©Ð»Ð±Ó©Ñ€Ð¸Ð¹Ð½ ÑÐ¸ÑÑ‚ÐµÐ¼ Ñ‚Ò¯Ñ€ Ð°ÑˆÐ¸Ð³Ð»Ð°Ñ… Ð±Ð¾Ð»Ð¾Ð¼Ð¶Ð³Ò¯Ð¹ Ð±Ð°Ð¹Ð½Ð°. Ð”Ð°Ñ€Ð°Ð° Ð´Ð°Ñ…Ð¸Ð½ Ð¾Ñ€Ð¾Ð»Ð´Ð¾Ð½Ð¾ ÑƒÑƒ.',
         details: isDevelopment ? error.message : undefined,
         statusCode: 503
       });
@@ -194,7 +197,7 @@ export async function errorHandler(
     if (error.message.toLowerCase().includes('timeout')) {
       return reply.status(408).send({
         error: 'Timeout',
-        message: 'Хугацаа хэтэрсэн. Дахин оролдоно уу.',
+        message: 'Ð¥ÑƒÐ³Ð°Ñ†Ð°Ð° Ñ…ÑÑ‚ÑÑ€ÑÑÐ½. Ð”Ð°Ñ…Ð¸Ð½ Ð¾Ñ€Ð¾Ð»Ð´Ð¾Ð½Ð¾ ÑƒÑƒ.',
         details: isDevelopment ? error.message : undefined,
         statusCode: 408
       });
@@ -205,7 +208,7 @@ export async function errorHandler(
         error.message.toLowerCase().includes('connection')) {
       return reply.status(503).send({
         error: 'Network Error',
-        message: 'Сүлжээний алдаа гарлаа. Дахин оролдоно уу.',
+        message: 'Ð¡Ò¯Ð»Ð¶ÑÑÐ½Ð¸Ð¹ Ð°Ð»Ð´Ð°Ð° Ð³Ð°Ñ€Ð»Ð°Ð°. Ð”Ð°Ñ…Ð¸Ð½ Ð¾Ñ€Ð¾Ð»Ð´Ð¾Ð½Ð¾ ÑƒÑƒ.',
         details: isDevelopment ? error.message : undefined,
         statusCode: 503
       });
@@ -214,7 +217,7 @@ export async function errorHandler(
     // Generic error
     return reply.status(500).send({
       error: 'Internal Server Error',
-      message: 'Серверт алдаа гарлаа',
+      message: 'Ð¡ÐµÑ€Ð²ÐµÑ€Ñ‚ Ð°Ð»Ð´Ð°Ð° Ð³Ð°Ñ€Ð»Ð°Ð°',
       details: isDevelopment ? {
         message: error.message,
         stack: error.stack
@@ -226,7 +229,7 @@ export async function errorHandler(
   // 9. Unknown errors (fallback)
   return reply.status(500).send({
     error: 'Unknown Error',
-    message: 'Тодорхойгүй алдаа гарлаа',
+    message: 'Ð¢Ð¾Ð´Ð¾Ñ€Ñ…Ð¾Ð¹Ð³Ò¯Ð¹ Ð°Ð»Ð´Ð°Ð° Ð³Ð°Ñ€Ð»Ð°Ð°',
     details: isDevelopment ? String(error) : undefined,
     statusCode: 500
   });
@@ -242,7 +245,21 @@ export async function notFoundHandler(
 ) {
   return reply.status(404).send({
     error: 'Not Found',
-    message: `${request.method} ${request.url} олдсонгүй`,
+    message: `${request.method} ${request.url} Ð¾Ð»Ð´ÑÐ¾Ð½Ð³Ò¯Ð¹`,
     statusCode: 404
   });
 }
+function summarizeKeys(value: unknown): string[] | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  return Object.keys(value as Record<string, unknown>).slice(0, 40);
+}
+
+function summarizeBody(body: unknown): Record<string, unknown> | null {
+  if (body == null) return null;
+  if (typeof body === 'string') return { type: 'string', length: body.length };
+  if (Array.isArray(body)) return { type: 'array', length: body.length };
+  if (typeof body === 'object') return { type: 'object', keys: summarizeKeys(body) };
+  return { type: typeof body };
+}
+
+

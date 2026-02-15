@@ -16,6 +16,8 @@ import {
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
 import AuthModal from '../auth/AuthModal';
+import { flags } from '@/lib/featureFlags';
+import MegaMenu from './MegaMenu';
 
 export default function Header() {
   const { cartCount, setIsCartOpen } = useCart();
@@ -32,6 +34,7 @@ export default function Header() {
     new: { mn: 'Шинэ бараа', en: 'New Arrivals' },
     collections: { mn: 'Цуглуулга', en: 'Collections' },
     about: { mn: 'Бидний тухай', en: 'About Us' },
+    startOrder: { mn: 'Захиалга эхлүүлэх', en: 'Start Order' },
     search: { mn: 'Бүтээгдэхүүн хайх...', en: 'Search products...' }
   };
 
@@ -39,6 +42,9 @@ export default function Header() {
   type NavItem = { label: Label; href: string; icon: IconName };
 
   const navItems: NavItem[] = [
+    ...(flags.DTF_NAV_V1
+      ? [{ label: menuLabels.startOrder, href: '/start-order', icon: 'SparklesIcon' }]
+      : []),
     { label: menuLabels.products, href: '/products', icon: 'ShoppingBagIcon' },
     { label: menuLabels.new, href: '/products?filter=new', icon: 'SparklesIcon' },
     { label: menuLabels.collections, href: '/products?filter=collections', icon: 'RectangleStackIcon' },
@@ -77,6 +83,7 @@ export default function Header() {
 
         {/* Desktop Nav */}
         <nav className="hidden lg:flex items-center gap-1">
+          {flags.DTF_NAV_V1 && <MegaMenu />}
           {navItems.map((item, idx) => (
             <Link
               key={idx}

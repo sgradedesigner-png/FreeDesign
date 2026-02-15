@@ -1,8 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+﻿import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
+import { env } from '@/lib/env';
+import { Sentry } from '@/lib/sentry';
+import { uploadCustomizationDesignSigned } from '@/lib/cloudinaryUpload';
 import { useProductQuery } from '@/data/products.queries';
 import { imageUrl } from '@/lib/imageUrl';
 import { useCart } from '@/context/CartContext';
@@ -50,6 +53,11 @@ export default function CustomizePage() {
   const { addCustomizedItem } = useCart();
 
   const { data: product, isLoading, error } = useProductQuery(productSlug);
+  useEffect(() => {
+    if (product?.productFamily) {
+      Sentry.setTag('product_family', product.productFamily);
+    }
+  }, [product?.productFamily]);
 
   const [selectedVariantId, setSelectedVariantId] = useState<string>('');
   const selectedVariant = useMemo(
@@ -342,7 +350,7 @@ export default function CustomizePage() {
     const { data: { session } } = await supabase.auth.getSession();
     if (session?.access_token) return session;
 
-    toast.error(language === 'en' ? 'Please login to continue' : 'Нэвтэрч орно уу');
+    toast.error(language === 'en' ? 'Please login to continue' : 'ÐÑÐ²Ñ‚ÑÑ€Ñ‡ Ð¾Ñ€Ð½Ð¾ ÑƒÑƒ');
     const returnTo = encodeURIComponent(window.location.pathname);
     navigate(`/login?returnTo=${returnTo}`);
     return null;
@@ -356,24 +364,34 @@ export default function CustomizePage() {
     setUploadError(null);
 
     try {
-      const formData = new FormData();
-      formData.append('file', file);
+      if (env.FF_UPLOAD_ASYNC_VALIDATION_V1) {
+        const uploaded = await uploadCustomizationDesignSigned({
+          file,
+          accessToken: session.access_token,
+          apiBase: import.meta.env.VITE_API_URL,
+        });
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/customization/upload-design`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: formData,
-      });
+        setAsset(uploaded as UploadedDesignAsset);
+      } else {
+        const formData = new FormData();
+        formData.append('file', file);
 
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data?.error || 'Failed to upload design');
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/customization/upload-design`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: formData,
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data?.error || 'Failed to upload design');
+        }
+
+        setAsset(data.asset as UploadedDesignAsset);
       }
-
-      setAsset(data.asset as UploadedDesignAsset);
-      toast.success(language === 'en' ? 'Design uploaded' : 'Дизайн амжилттай орлоо');
+      toast.success(language === 'en' ? 'Design uploaded' : 'Ð”Ð¸Ð·Ð°Ð¹Ð½ Ð°Ð¼Ð¶Ð¸Ð»Ñ‚Ñ‚Ð°Ð¹ Ð¾Ñ€Ð»Ð¾Ð¾');
     } catch (err: any) {
       setUploadError(err?.message || 'Failed to upload design');
     } finally {
@@ -412,7 +430,7 @@ export default function CustomizePage() {
       }
 
       setQuoteBreakdown(data.breakdown as CustomizationPriceBreakdown);
-      toast.success(language === 'en' ? 'Price quote updated' : 'Үнийн тооцоо шинэчлэгдлээ');
+      toast.success(language === 'en' ? 'Price quote updated' : 'Ò®Ð½Ð¸Ð¹Ð½ Ñ‚Ð¾Ð¾Ñ†Ð¾Ð¾ ÑˆÐ¸Ð½ÑÑ‡Ð»ÑÐ³Ð´Ð»ÑÑ');
     } catch (err: any) {
       setQuoteError(err?.message || 'Failed to calculate quote');
     } finally {
@@ -704,3 +722,4 @@ export default function CustomizePage() {
     </div>
   );
 }
+

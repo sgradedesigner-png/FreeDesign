@@ -1,16 +1,16 @@
-// backend/src/middleware/userGuard.ts
+﻿// backend/src/middleware/userGuard.ts
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import { createClient } from '@supabase/supabase-js';
-import { logger } from '../lib/logger';
+import { logger, hashIdentifier } from '../lib/logger';
 
-// ✅ ENV шаардлагатай
+// âœ… ENV ÑˆÐ°Ð°Ñ€Ð´Ð»Ð°Ð³Ð°Ñ‚Ð°Ð¹
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
 
 if (!SUPABASE_URL) throw new Error('SUPABASE_URL is required in backend/.env');
 if (!SUPABASE_ANON_KEY) throw new Error('SUPABASE_ANON_KEY is required in backend/.env');
 
-// ✅ Supabase client
+// âœ… Supabase client
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 /**
@@ -36,7 +36,7 @@ export async function userGuard(req: FastifyRequest, reply: FastifyReply) {
 
     logger.info({ context: 'userGuard' }, 'Verifying JWT token with Supabase...');
 
-    // ✅ Supabase ашиглаад token verify хийнэ
+    // âœ… Supabase Ð°ÑˆÐ¸Ð³Ð»Ð°Ð°Ð´ token verify Ñ…Ð¸Ð¹Ð½Ñ
     const { data, error } = await supabase.auth.getUser(token);
 
     if (error || !data.user) {
@@ -44,16 +44,16 @@ export async function userGuard(req: FastifyRequest, reply: FastifyReply) {
       return reply.status(401).send({ error: 'Invalid or expired token' });
     }
 
-    logger.info({ context: 'userGuard', userId: data.user.id, email: data.user.email }, 'JWT verified successfully');
+    logger.info({ context: 'userGuard', userIdHash: hashIdentifier(data.user.id) ?? undefined }, 'JWT verified successfully');
 
-    // ✅ Attach user info to request object
+    // âœ… Attach user info to request object
     (req as any).user = {
       id: data.user.id,
       email: data.user.email,
       email_confirmed_at: data.user.email_confirmed_at,
     };
 
-    logger.info({ context: 'userGuard', email: data.user.email }, 'User access granted');
+    logger.info({ context: 'userGuard', userIdHash: hashIdentifier(data.user.id) ?? undefined }, 'User access granted');
 
     return; // ok
   } catch (err: any) {
@@ -61,3 +61,4 @@ export async function userGuard(req: FastifyRequest, reply: FastifyReply) {
     return reply.status(500).send({ error: 'Authentication failed', details: err.message });
   }
 }
+

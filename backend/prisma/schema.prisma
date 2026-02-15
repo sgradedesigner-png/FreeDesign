@@ -38,12 +38,28 @@ enum ProductionStatus {
   DONE
 }
 
+enum ProductFamily {
+  BY_SIZE
+  GANG_UPLOAD
+  GANG_BUILDER
+  BLANKS
+  UV_BY_SIZE
+  UV_GANG_UPLOAD
+  UV_GANG_BUILDER
+}
 
 enum CartStatus {
   ACTIVE
   CHECKED_OUT
   ABANDONED
 }
+
+
+
+enum UploadIntentPurpose {
+  CUSTOMIZATION_DESIGN
+}
+
 model Profile {
   id        String   @id // = auth.users.id
   role      Role     @default(CUSTOMER)
@@ -54,57 +70,102 @@ model Profile {
   phone     String? // User phone number
   address   String? // JSON string for multiple addresses
 
-    carts  Cart[]
+  // Relations
+  orders Order[] // User's orders
+  carts  Cart[]
 
   @@index([email])
   @@map("profiles")
 }
 
+model Category {
+  id        String    @id @default(uuid())
+  name      String
+  slug      String    @unique
+  products  Product[]
+  createdAt DateTime  @default(now())
+
+  @@index([slug])
+  @@map("categories")
+}
+
+// Phase 1: Collections for merchandising and navigation
+model Collection {
+  id          String              @id @default(uuid())
+  slug        String              @unique
+  name        String
+  description String?
+  isActive    Boolean             @default(true) @map("is_active")
+  sortOrder   Int                 @default(0) @map("sort_order")
+  metadata    Json                @default(dbgenerated("'{}'::jsonb"))
+  createdAt   DateTime            @default(now()) @map("created_at")
+  updatedAt   DateTime            @default(now()) @updatedAt @map("updated_at")
+  products    CollectionProduct[]
+
+  @@index([slug])
+  @@index([isActive, sortOrder])
+  @@map("collections")
+}
+
+model CollectionProduct {
+  id           String     @id @default(uuid())
+  collectionId String     @map("collection_id")
+  productId    String     @map("product_id")
+  sortOrder    Int        @default(0) @map("sort_order")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  product      Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([collectionId, productId])
+  @@index([collectionId])
+  @@index([productId])
+  @@index([collectionId, sortOrder])
+  @@map("collection_products")
+}
 
 model Cart {
   id          String     @id @default(uuid())
-  userId      String?    @map(""user_id"")
-  guestCartId String?    @map(""guest_cart_id"")
+  userId      String?    @map("user_id")
+  guestCartId String?    @map("guest_cart_id")
   status      CartStatus @default(ACTIVE)
-  createdAt   DateTime   @default(now()) @map(""created_at"")
-  updatedAt   DateTime   @updatedAt @map(""updated_at"")
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
 
-  user  Profile?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user  Profile?  @relation(fields: [userId], references: [id], onDelete: SetNull)
   items CartItem[]
 
   @@index([userId, status])
   @@index([guestCartId, status])
-  @@map(""carts"")
+  @@map("carts")
 }
 
 model CartItem {
   id                   String   @id @default(uuid())
-  cartId               String   @map(""cart_id"")
+  cartId               String   @map("cart_id")
   cart                 Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
-  cartKey              String   @map(""cart_key"")
+  cartKey              String   @map("cart_key")
   quantity             Int      @default(1)
-  productId            String   @map(""product_id"")
-  productName          String   @map(""product_name"")
-  productSlug          String   @map(""product_slug"")
-  productCategory      String   @map(""product_category"")
-  variantId            String   @map(""variant_id"")
-  variantName          String   @map(""variant_name"")
-  variantPrice         Decimal  @map(""variant_price"")
-  variantOriginalPrice Decimal? @map(""variant_original_price"")
-  variantImage         String   @map(""variant_image"")
-  variantSku           String   @map(""variant_sku"")
+  productId            String   @map("product_id")
+  productName          String   @map("product_name")
+  productSlug          String   @map("product_slug")
+  productCategory      String   @map("product_category")
+  variantId            String   @map("variant_id")
+  variantName          String   @map("variant_name")
+  variantPrice         Decimal  @map("variant_price")
+  variantOriginalPrice Decimal? @map("variant_original_price")
+  variantImage         String   @map("variant_image")
+  variantSku           String   @map("variant_sku")
   size                 String?
-  isCustomized         Boolean  @default(false) @map(""is_customized"")
-  optionPayload        Json     @default(dbgenerated(""'{}'::jsonb"")) @map(""option_payload"")
-  createdAt            DateTime @default(now()) @map(""created_at"")
-  updatedAt            DateTime @updatedAt @map(""updated_at"")
+  isCustomized         Boolean  @default(false) @map("is_customized")
+  optionPayload        Json     @default(dbgenerated("'{}'::jsonb")) @map("option_payload")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
 
   @@unique([cartId, cartKey])
   @@index([cartId, updatedAt(sort: Desc)])
   @@index([variantId])
-  @@map(""cart_items"")
+  @@map("cart_items")
 }
-
 model Product {
   id              String             @id @default(uuid())
   title           String
@@ -124,6 +185,7 @@ model Product {
   category        Category           @relation(fields: [categoryId], references: [id])
   variants        ProductVariant[] // Product variants
   printAreas      ProductPrintArea[]
+  collections     CollectionProduct[] // Phase 1: Collection memberships
   rating          Float              @default(0)
   reviews         Int                @default(0)
   features        String[]           @default([])
@@ -147,21 +209,22 @@ model Product {
 }
 
 model ProductVariant {
-  id            String   @id @default(uuid())
+  id            String              @id @default(uuid())
   productId     String
-  product       Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  name          String // Variant name (e.g., "Black/Red", "Ocean Blue")
-  sku           String   @unique // Unique SKU for this variant
-  price         Decimal // Variant-specific price
-  originalPrice Decimal? // Original price if on sale
-  sizes         String[] @default([]) // Available sizes for this variant
-  imagePath     String // Main thumbnail image
-  galleryPaths  String[] @default([]) // Additional gallery images
-  stock         Int      @default(0) // Variant stock
-  isAvailable   Boolean  @default(true) // Availability flag
-  sortOrder     Int      @default(0) // Display order
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  product       Product             @relation(fields: [productId], references: [id], onDelete: Cascade)
+  name          String              // Variant name (e.g., "Black/Red", "Ocean Blue")
+  sku           String              @unique // Unique SKU for this variant
+  price         Decimal             // Variant-specific price (base or starting price)
+  originalPrice Decimal?            // Original price if on sale
+  sizes         String[]            @default([]) // Available sizes for this variant
+  imagePath     String              // Main thumbnail image
+  galleryPaths  String[]            @default([]) // Additional gallery images
+  stock         Int                 @default(0) // Variant stock
+  isAvailable   Boolean             @default(true) // Availability flag
+  sortOrder     Int                 @default(0) // Display order
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  priceTiers    VariantPriceTier[]  // Phase 1: Quantity-based pricing tiers
 
   // Single column indexes
   @@index([productId])
@@ -170,6 +233,23 @@ model ProductVariant {
   // Composite index for variant loading (Phase 3.3 - Performance Optimization)
   @@index([productId, sortOrder]) // NEW: Fast variant loading in correct order
   @@map("product_variants")
+}
+
+// Phase 1: Variant Price Tiers for quantity-based pricing
+model VariantPriceTier {
+  id          String         @id @default(uuid())
+  variantId   String         @map("variant_id")
+  variant     ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  minQuantity Int            @map("min_quantity") // Minimum quantity for this tier (e.g., 1, 11, 51)
+  maxQuantity Int?           @map("max_quantity") // Maximum quantity for this tier (null = unlimited)
+  unitPrice   Decimal        @map("unit_price") // Price per unit at this tier
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @default(now()) @updatedAt @map("updated_at")
+
+  @@unique([variantId, minQuantity], name: "unique_tier_range")
+  @@index([variantId])
+  @@index([variantId, minQuantity])
+  @@map("variant_price_tiers")
 }
 
 model Order {
@@ -297,6 +377,25 @@ model PricingRule {
   @@map("pricing_rules")
 }
 
+model UploadIntent {
+  id                     String              @id @default(uuid())
+  userId                 String              @map("user_id")
+  purpose                UploadIntentPurpose
+  folder                 String
+  publicId               String              @map("public_id")
+  contentType            String              @map("content_type")
+  originalFilename       String              @map("original_filename")
+  requestedFileSizeBytes Int                 @map("requested_file_size_bytes")
+  maxBytes               Int                 @map("max_bytes")
+  expiresAt              DateTime            @map("expires_at")
+  usedAt                 DateTime?           @map("used_at")
+  createdAt              DateTime            @default(now()) @map("created_at")
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([expiresAt])
+  @@map("upload_intents")
+}
+
 model CustomizationAsset {
   id             String                   @id @default(uuid())
   userId         String
@@ -371,6 +470,11 @@ model PaymentWebhookLog {
   @@index([status])
   @@map("payment_webhook_logs")
 }
+
+
+
+
+
 
 
 

@@ -1,4 +1,4 @@
-import { logger } from '../lib/logger';
+﻿import { logger, hashIdentifier } from '../lib/logger';
 // backend/src/routes/orders.ts
 import { FastifyInstance } from 'fastify';
 import { userGuard } from '../middleware/userGuard';
@@ -92,12 +92,15 @@ export default async function orderRoutes(fastify: FastifyInstance) {
     }
   }, async (request, reply) => {
     const userId = (request as any).user.id;
+    const requestId = request.id;
+    const userIdHash = hashIdentifier(userId) ?? undefined;
     const callbackUrl = process.env.QPAY_CALLBACK_URL || '';
     const isMockMode = process.env.QPAY_MOCK_MODE === 'true';
 
     try {
       // Log request body for debugging
-      logger.info({ body: request.body }, '[Order Creation] Request body');
+      // Intentionally avoid logging raw request bodies (may contain PII).
+      logger.info({ requestId, userIdHash }, '[Order Creation] Request received');
 
       // Validate request body with Zod
       const validation = validateData(createOrderSchema, request.body, reply);
@@ -250,7 +253,7 @@ export default async function orderRoutes(fastify: FastifyInstance) {
           }
         });
 
-        logger.info({ userId, foundPending: existingPending.length }, '[QPay Cleanup] Found pending orders');
+        logger.info({ userIdHash, foundPending: existingPending.length, requestId }, '[QPay Cleanup] Found pending orders');
 
         // 2. Mark old orders as CANCELLING to prevent race condition
         // This blocks other concurrent requests from seeing these orders as PENDING
@@ -267,7 +270,7 @@ export default async function orderRoutes(fastify: FastifyInstance) {
             }
           });
 
-          logger.info({ userId, count: existingPending.length }, '[QPay Cleanup] Marked as CANCELLING');
+          logger.info({ userIdHash, count: existingPending.length, requestId }, '[QPay Cleanup] Marked as CANCELLING');
         }
 
         // 3. Create new order INSIDE transaction (prevents duplicate creation)
@@ -286,7 +289,7 @@ export default async function orderRoutes(fastify: FastifyInstance) {
           }
         });
 
-        logger.info({ orderId: newOrder.id, userId }, '[Order Create] New order created');
+        logger.info({ orderId: newOrder.id, userIdHash, requestId }, '[Order Create] New order created');
 
         if (pendingCustomizations.length > 0) {
           await tx.orderItemCustomization.createMany({
@@ -384,12 +387,12 @@ export default async function orderRoutes(fastify: FastifyInstance) {
 
         // For circuit open, throw PaymentServiceError
         if (isCircuitOpen) {
-          throw new PaymentServiceError('Төлбөрийн систем түр ашиглах боломжгүй байна. Та дараа дахин оролдоно уу.');
+          throw new PaymentServiceError('Ð¢Ó©Ð»Ð±Ó©Ñ€Ð¸Ð¹Ð½ ÑÐ¸ÑÑ‚ÐµÐ¼ Ñ‚Ò¯Ñ€ Ð°ÑˆÐ¸Ð³Ð»Ð°Ñ… Ð±Ð¾Ð»Ð¾Ð¼Ð¶Ð³Ò¯Ð¹ Ð±Ð°Ð¹Ð½Ð°. Ð¢Ð° Ð´Ð°Ñ€Ð°Ð° Ð´Ð°Ñ…Ð¸Ð½ Ð¾Ñ€Ð¾Ð»Ð´Ð¾Ð½Ð¾ ÑƒÑƒ.');
         }
 
         // For timeout, throw ServiceUnavailableError
         if (isTimeout) {
-          throw new ServiceUnavailableError('Төлбөрийн систем хариу өгөх хугацаа хэтэрсэн. Та дараа дахин оролдоно уу.');
+          throw new ServiceUnavailableError('Ð¢Ó©Ð»Ð±Ó©Ñ€Ð¸Ð¹Ð½ ÑÐ¸ÑÑ‚ÐµÐ¼ Ñ…Ð°Ñ€Ð¸Ñƒ Ó©Ð³Ó©Ñ… Ñ…ÑƒÐ³Ð°Ñ†Ð°Ð° Ñ…ÑÑ‚ÑÑ€ÑÑÐ½. Ð¢Ð° Ð´Ð°Ñ€Ð°Ð° Ð´Ð°Ñ…Ð¸Ð½ Ð¾Ñ€Ð¾Ð»Ð´Ð¾Ð½Ð¾ ÑƒÑƒ.');
         }
 
         // Other errors
@@ -414,7 +417,7 @@ export default async function orderRoutes(fastify: FastifyInstance) {
         },
       });
 
-      logger.info({ orderId: order.id, userId }, 'Order created with QPay invoice');
+      logger.info({ orderId: order.id, userIdHash, requestId }, 'Order created with QPay invoice');
 
       // 7. Send order confirmation email in BACKGROUND (Phase 2)
       // This prevents blocking the response while sending email
@@ -427,12 +430,11 @@ export default async function orderRoutes(fastify: FastifyInstance) {
           });
 
           if (!profile?.email) {
-            logger.warn({ userId }, '[Email] No email found for user, skipping confirmation email');
+            logger.warn({ userIdHash, requestId }, '[Email] No email found for user, skipping confirmation email');
             return;
           }
 
-          const isProduction = process.env.NODE_ENV === 'production';
-          const logEmail = isProduction ? maskEmail(profile.email) : profile.email;
+          const logEmail = maskEmail(profile.email);
           logger.info({ email: logEmail, orderId: updatedOrder.id }, '[Email] Sending order confirmation');
 
           const emailResult = await emailService.sendOrderConfirmation(profile.email, {
@@ -462,6 +464,14 @@ export default async function orderRoutes(fastify: FastifyInstance) {
       });
 
       // 4. Return order with payment info
+      logger.info({
+        event: 'order_created',
+        requestId,
+        userIdHash,
+        orderId: updatedOrder.id,
+        total: Number(updatedOrder.total),
+        itemCount: Array.isArray(updatedOrder.items) ? updatedOrder.items.length : undefined,
+      }, '[Order] order_created');
       return reply.code(201).send({
         order: updatedOrder,
         payment: {
@@ -479,7 +489,7 @@ export default async function orderRoutes(fastify: FastifyInstance) {
       if (error.message && error.message.includes('timeout')) {
         return reply.code(408).send({
           error: 'Order creation timeout',
-          details: 'Захиалга үүсгэх хугацаа хэтэрсэн. Дахин оролдоно уу.'
+          details: 'Ð—Ð°Ñ…Ð¸Ð°Ð»Ð³Ð° Ò¯Ò¯ÑÐ³ÑÑ… Ñ…ÑƒÐ³Ð°Ñ†Ð°Ð° Ñ…ÑÑ‚ÑÑ€ÑÑÐ½. Ð”Ð°Ñ…Ð¸Ð½ Ð¾Ñ€Ð¾Ð»Ð´Ð¾Ð½Ð¾ ÑƒÑƒ.'
         });
       }
 
@@ -487,7 +497,7 @@ export default async function orderRoutes(fastify: FastifyInstance) {
       if (error.code === 'P1001' || error.code === 'P1002') {
         return reply.code(503).send({
           error: 'Database connection error',
-          details: 'Өгөгдлийн санд холбогдож чадсангүй. Түр хүлээгээд дахин оролдоно уу.'
+          details: 'Ó¨Ð³Ó©Ð³Ð´Ð»Ð¸Ð¹Ð½ ÑÐ°Ð½Ð´ Ñ…Ð¾Ð»Ð±Ð¾Ð³Ð´Ð¾Ð¶ Ñ‡Ð°Ð´ÑÐ°Ð½Ð³Ò¯Ð¹. Ð¢Ò¯Ñ€ Ñ…Ò¯Ð»ÑÑÐ³ÑÑÐ´ Ð´Ð°Ñ…Ð¸Ð½ Ð¾Ñ€Ð¾Ð»Ð´Ð¾Ð½Ð¾ ÑƒÑƒ.'
         });
       }
 
@@ -563,7 +573,7 @@ export default async function orderRoutes(fastify: FastifyInstance) {
     });
 
     if (!order) {
-      throw new NotFoundError('Захиалга олдсонгүй');
+      throw new NotFoundError('Ð—Ð°Ñ…Ð¸Ð°Ð»Ð³Ð° Ð¾Ð»Ð´ÑÐ¾Ð½Ð³Ò¯Ð¹');
     }
 
     // Check and update if expired
@@ -642,3 +652,4 @@ export default async function orderRoutes(fastify: FastifyInstance) {
     }
   });
 }
+

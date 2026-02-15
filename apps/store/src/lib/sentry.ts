@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Sentry Error Tracking Configuration
  *
  * Provides real-time error monitoring, stack traces, and user context
@@ -171,16 +171,22 @@ export function setSentryUser(user: { id: string; email?: string; username?: str
  * @param context - Additional context about the error
  */
 export function captureException(error: Error | string, context?: Record<string, any>): void {
-  if (context) {
-    Sentry.withScope((scope) => {
+  const requestId =
+    typeof (error as any)?.requestId === 'string' ? ((error as any).requestId as string) : null;
+
+  Sentry.withScope((scope) => {
+    if (context) {
       Object.entries(context).forEach(([key, value]) => {
         scope.setContext(key, value);
       });
-      Sentry.captureException(error);
-    });
-  } else {
+    }
+
+    if (requestId) {
+      scope.setContext('request', { requestId });
+    }
+
     Sentry.captureException(error);
-  }
+  });
 
   logger.error('Exception captured by Sentry:', error, context);
 }

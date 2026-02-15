@@ -358,12 +358,23 @@ export default function ProductFormPage() {
         productId,
       });
 
-      const { uploadUrl, publicUrl } = presignedRes.data;
+      const { uploadUrl, publicUrl, timestamp, signature, apiKey, folder, publicId } = presignedRes.data;
+
+      // Build FormData with file and Cloudinary signed params
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('timestamp', timestamp.toString());
+      formData.append('signature', signature);
+      formData.append('api_key', apiKey);
+      formData.append('folder', folder);
+      if (publicId) {
+        formData.append('public_id', publicId);
+      }
 
       await fetch(uploadUrl, {
-        method: 'PUT',
-        body: file,
-        headers: { 'Content-Type': file.type },
+        method: 'POST',
+        body: formData,
+        // Don't set Content-Type - browser sets it with boundary for FormData
       });
 
       return publicUrl;

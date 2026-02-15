@@ -1,8 +1,8 @@
 -- DropIndex
 DROP INDEX IF EXISTS "products_createdAt_idx";
 
--- CreateIndex
-CREATE INDEX IF NOT EXISTS "product_variants_stock_idx" ON "product_variants"("stock");
+-- CreateIndex (COMMENTED - product_variants table doesn't exist yet, will be created in later migration)
+-- CREATE INDEX IF NOT EXISTS "product_variants_stock_idx" ON "product_variants"("stock");
 
 -- CreateIndex
 CREATE INDEX IF NOT EXISTS "products_createdAt_idx" ON "products"("createdAt" DESC);

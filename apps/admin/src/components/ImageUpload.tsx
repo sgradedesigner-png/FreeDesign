@@ -42,26 +42,41 @@ export function ImageUpload({
       logger.debug('[ImageUpload] ✅ Presigned URL received');
       logger.debug('[ImageUpload] Response:', presignedResponse.data);
 
-      const { uploadUrl, publicUrl, key } = presignedResponse.data;
+      const { uploadUrl, publicUrl, timestamp, signature, apiKey, folder, publicId } = presignedResponse.data;
 
-      // Step 2: Upload file directly to R2 using presigned URL
-      logger.debug('[ImageUpload] Step 2: Uploading to R2...');
-      logger.debug('[ImageUpload] Upload URL length:', uploadUrl.length);
+      // Step 2: Upload file directly to Cloudinary using signed params
+      logger.debug('[ImageUpload] Step 2: Uploading to Cloudinary...');
+      logger.debug('[ImageUpload] Upload URL:', uploadUrl);
       logger.debug('[ImageUpload] Public URL:', publicUrl);
+      logger.debug('[ImageUpload] Folder:', folder);
+      logger.debug('[ImageUpload] Public ID:', publicId);
+
+      // Build FormData with file and signed params
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('timestamp', timestamp.toString());
+      formData.append('signature', signature);
+      formData.append('api_key', apiKey);
+      formData.append('folder', folder);
+      if (publicId) {
+        formData.append('public_id', publicId);
+      }
+
+      logger.debug('[ImageUpload] FormData prepared with signed params');
 
       const uploadResponse = await fetch(uploadUrl, {
-        method: 'PUT',
-        body: file,
-        headers: {
-          'Content-Type': file.type,
-        },
+        method: 'POST',
+        body: formData,
+        // Don't set Content-Type header - browser will set it with boundary for FormData
       });
 
       if (!uploadResponse.ok) {
-        throw new Error(`R2 upload failed: ${uploadResponse.status} ${uploadResponse.statusText}`);
+        const errorText = await uploadResponse.text();
+        logger.error('[ImageUpload] Cloudinary error response:', errorText);
+        throw new Error(`Cloudinary upload failed: ${uploadResponse.status} ${uploadResponse.statusText}`);
       }
 
-      logger.debug('[ImageUpload] ✅ Upload to R2 successful!');
+      logger.debug('[ImageUpload] ✅ Upload to Cloudinary successful!');
       logger.debug('[ImageUpload] Response status:', uploadResponse.status);
       logger.debug('[ImageUpload] Image URL:', publicUrl);
 
