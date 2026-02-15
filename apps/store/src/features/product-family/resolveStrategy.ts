@@ -3,6 +3,8 @@ import type { ProductFamily, ProductStrategy } from './types';
 import { BySizeStrategy } from './strategies/BySizeStrategy';
 import { BlanksStrategy } from './strategies/BlanksStrategy';
 import { GangUploadStrategy } from './strategies/GangUploadStrategy';
+import { UvBySizeStrategy } from './strategies/UvBySizeStrategy';
+import { UvGangUploadStrategy } from './strategies/UvGangUploadStrategy';
 
 /**
  * Strategy registry
@@ -10,10 +12,12 @@ import { GangUploadStrategy } from './strategies/GangUploadStrategy';
  */
 const STRATEGY_REGISTRY: Record<ProductFamily, ProductStrategy> = {
   by_size: BySizeStrategy,
-  gang_upload: GangUploadStrategy,  // P2-04: Gang sheet upload strategy
-  gang_builder: BlanksStrategy,     // TODO: Replace with GangBuilderStrategy in future
+  uv_by_size: UvBySizeStrategy,         // P2-05: UV by-size strategy
+  gang_upload: GangUploadStrategy,      // P2-04: DTF gang sheet upload
+  uv_gang_upload: UvGangUploadStrategy, // P2-05: UV gang sheet upload
+  gang_builder: BlanksStrategy,         // TODO: Replace with GangBuilderStrategy in future
   blanks: BlanksStrategy,
-  generic: BlanksStrategy,          // Fallback to blanks strategy for backward compatibility
+  generic: BlanksStrategy,              // Fallback to blanks strategy for backward compatibility
 };
 
 /**
@@ -48,11 +52,11 @@ function normalizeProductFamily(dbFamily: string): ProductFamily | null {
   // Map database families to strategy families
   const mapping: Record<string, ProductFamily> = {
     'by_size': 'by_size',
-    'uv_by_size': 'by_size',           // UV by-size uses same strategy
+    'uv_by_size': 'uv_by_size',        // P2-05: UV by-size has its own strategy
     'gang_upload': 'gang_upload',
-    'uv_gang_upload': 'gang_upload',   // UV gang upload uses same strategy
+    'uv_gang_upload': 'uv_gang_upload', // P2-05: UV gang upload has its own strategy
     'gang_builder': 'gang_builder',
-    'uv_gang_builder': 'gang_builder', // UV gang builder uses same strategy
+    'uv_gang_builder': 'gang_builder', // TODO: UV gang builder (future)
     'blanks': 'blanks',
   };
 

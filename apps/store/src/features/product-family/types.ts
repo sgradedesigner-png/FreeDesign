@@ -5,8 +5,10 @@ import type { Product, ProductVariant } from '../../data/products';
  * Defines the different product families supported by the system
  */
 export type ProductFamily =
-  | 'by_size'           // DTF/UV transfers sold by size (10x10, 12x12, etc)
-  | 'gang_upload'       // Gang sheet where user uploads ready file
+  | 'by_size'           // DTF transfers sold by size (fabric)
+  | 'uv_by_size'        // UV transfers sold by size (hard surfaces)
+  | 'gang_upload'       // DTF gang sheet upload (fabric)
+  | 'uv_gang_upload'    // UV gang sheet upload (hard surfaces)
   | 'gang_builder'      // Gang sheet built with online tool
   | 'blanks'            // Physical items (t-shirts, hoodies)
   | 'generic';          // Fallback for uncategorized products
