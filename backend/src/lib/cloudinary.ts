@@ -194,4 +194,89 @@ export function extractPublicId(url: string): string {
   return match?.[1] ?? url;
 }
 
+// ============================================
+// Phase 2: Upload Lifecycle Functions
+// ============================================
+
+type UploadFamily = 'gang_upload' | 'uv_gang_upload' | 'by_size' | 'uv_by_size' | 'blanks';
+
+/**
+ * Generate signed upload parameters for Phase 2 upload flows
+ * Includes family context for validation constraints
+ */
+export function generateUploadSignature(params: {
+  userId: string;
+  uploadFamily: UploadFamily;
+  fileName: string;
+  maxFileSizeBytes?: number;
+}): {
+  timestamp: number;
+  signature: string;
+  apiKey: string;
+  cloudName: string;
+  folder: string;
+  publicId: string;
+  uploadPreset?: string;
+} {
+  const { userId, uploadFamily, fileName } = params;
+  const timestamp = Math.round(Date.now() / 1000);
+  const folder = `uploads/${uploadFamily}/${userId}`;
+  const publicId = `${timestamp}-${fileName.replace(/\.[^.]+$/, '')}`;
+
+  const paramsToSign: Record<string, string | number> = {
+    timestamp,
+    folder,
+    public_id: publicId,
+  };
+
+  const signature = cloudinary.utils.api_sign_request(paramsToSign, CLOUDINARY_API_SECRET);
+
+  return {
+    timestamp,
+    signature,
+    apiKey: CLOUDINARY_API_KEY,
+    cloudName: CLOUDINARY_CLOUD_NAME,
+    folder,
+    publicId,
+  };
+}
+
+/**
+ * Retrieve upload asset metadata from Cloudinary
+ */
+export async function getUploadAssetMetadata(publicId: string): Promise<{
+  url: string;
+  width: number;
+  height: number;
+  format: string;
+  bytes: number;
+  resourceType: string;
+}> {
+  try {
+    const result = await cloudinary.api.resource(publicId, {
+      resource_type: 'image',
+    });
+
+    return {
+      url: result.secure_url,
+      width: result.width,
+      height: result.height,
+      format: result.format,
+      bytes: result.bytes,
+      resourceType: result.resource_type,
+    };
+  } catch (error) {
+    logger.error({ error, publicId }, 'Failed to retrieve upload metadata from Cloudinary');
+    throw error;
+  }
+}
+
+/**
+ * Validate upload family against supported types
+ */
+export function isValidUploadFamily(family: string): family is UploadFamily {
+  const validFamilies: UploadFamily[] = ['gang_upload', 'uv_gang_upload', 'by_size', 'uv_by_size', 'blanks'];
+  return validFamilies.includes(family as UploadFamily);
+}
+
 export default cloudinary;
