@@ -283,13 +283,37 @@ export default async function orderRoutes(fastify: FastifyInstance) {
             paymentStatus: 'UNPAID',
             paymentMethod: 'QPAY',
             shippingAddress: shippingAddress ? JSON.stringify(shippingAddress) : null,
-            items: items,
+            items: items, // DEPRECATED: Kept for backward compatibility
             rushFee: rushOrder && rushFee > 0 ? rushFee : null,
             addOnFees: addOnFees > 0 ? addOnFees : null,
           }
         });
 
         logger.info({ orderId: newOrder.id, userIdHash, requestId }, '[Order Create] New order created');
+
+        // Phase 1: Dual-write to normalized order_items table
+        if (Array.isArray(items) && items.length > 0) {
+          const orderItemsData = items.map((item: any) => ({
+            orderId: newOrder.id,
+            variantId: item.variantId,
+            quantity: item.quantity || 1,
+            unitPrice: item.price || item.variantPrice || 0,
+            selectedOptions: item.selectedOptions || item.optionPayload || null,
+            productId: item.productId || null,
+            productName: item.productName || null,
+            variantName: item.variantName || null,
+            variantSku: item.variantSku || item.sku || null,
+          }));
+
+          await tx.orderItem.createMany({
+            data: orderItemsData
+          });
+
+          logger.info(
+            { orderId: newOrder.id, itemCount: orderItemsData.length },
+            '[Order Create] Normalized order items created'
+          );
+        }
 
         if (pendingCustomizations.length > 0) {
           await tx.orderItemCustomization.createMany({
@@ -520,10 +544,29 @@ export default async function orderRoutes(fastify: FastifyInstance) {
   }, async (request, reply) => {
     const userId = (request as any).user.id;
 
-    // No N+1 problem: items are stored as JSON in the Order model
+    // Fetch orders with normalized order items (Phase 1: dual-read)
     let orders = await prisma.order.findMany({
       where: { userId },
       include: {
+        orderItems: {
+          include: {
+            variant: {
+              select: {
+                id: true,
+                name: true,
+                sku: true,
+                imagePath: true,
+                product: {
+                  select: {
+                    id: true,
+                    title: true,
+                    slug: true
+                  }
+                }
+              }
+            }
+          }
+        },
         customizations: {
           include: {
             printArea: true,
@@ -533,6 +576,30 @@ export default async function orderRoutes(fastify: FastifyInstance) {
         }
       },
       orderBy: { createdAt: 'desc' }
+    });
+
+    // Phase 1: Normalize order items - prefer orderItems over JSON items
+    orders = orders.map(order => {
+      if (order.orderItems && order.orderItems.length > 0) {
+        // Use normalized items
+        return {
+          ...order,
+          items: order.orderItems.map(item => ({
+            productId: item.productId || item.variant.product.id,
+            productName: item.productName || item.variant.product.title,
+            productSlug: item.variant.product.slug,
+            variantId: item.variantId,
+            variantName: item.variantName || item.variant.name,
+            variantSku: item.variantSku || item.variant.sku,
+            variantImage: item.variant.imagePath,
+            quantity: item.quantity,
+            price: item.unitPrice,
+            selectedOptions: item.selectedOptions
+          }))
+        };
+      }
+      // Fallback to JSON items for legacy orders
+      return order;
     });
 
     // Check and update expired orders automatically

@@ -225,6 +225,7 @@ model ProductVariant {
   createdAt     DateTime            @default(now())
   updatedAt     DateTime            @updatedAt
   priceTiers    VariantPriceTier[]  // Phase 1: Quantity-based pricing tiers
+  orderItems    OrderItem[]         // Phase 1: Normalized order items
 
   // Single column indexes
   @@index([productId])
@@ -261,7 +262,8 @@ model Order {
   isCustomOrder    Boolean          @default(false)
   rushFee          Decimal?
   addOnFees        Decimal?
-  items            Json // Order items (snapshot)
+  items            Json // Order items (snapshot) - DEPRECATED: Use orderItems relation
+  orderItems       OrderItem[] // Normalized order items (Phase 1)
   shippingAddress  String? // JSON string with shipping details
 
   // QPay Payment Fields
@@ -304,6 +306,32 @@ model Order {
   @@index([qpayInvoiceExpiresAt])
   @@index([expiredAt])
   @@map("orders")
+}
+
+// Phase 1: Normalized order items (dual-write migration from orders.items JSON)
+model OrderItem {
+  id              String   @id @default(uuid())
+  orderId         String
+  order           Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  variantId       String
+  variant         ProductVariant @relation(fields: [variantId], references: [id], onDelete: Restrict)
+  quantity        Int
+  unitPrice       Decimal // Price per unit at time of order
+  selectedOptions Json? // Size, color, finishing, etc (flexible per product family)
+
+  // Product snapshot for historical reference
+  productId       String?
+  productName     String?
+  variantName     String?
+  variantSku      String?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([orderId])
+  @@index([variantId])
+  @@index([createdAt])
+  @@map("order_items")
 }
 
 model PrintArea {
