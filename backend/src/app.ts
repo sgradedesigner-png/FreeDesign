@@ -46,6 +46,8 @@ import { prisma } from './lib/prisma'; // Use shared singleton instance
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { logRateLimit, logger, loggerConfig, hashIdentifier } from './lib/logger'; // Use shared logger instance
 import { cronService } from './services/cron.service';
+import { startUploadValidationWorker, stopUploadValidationWorker } from './workers/upload-validator.worker';
+import { env } from './lib/env';
 
 const isDevelopment = process.env.NODE_ENV === 'development';
 
@@ -613,6 +615,14 @@ const start = async () => {
 
     // Start cron jobs for email notifications (Phase 2)
     await cronService.start();
+
+    // Start upload validation worker (Phase 2)
+    startUploadValidationWorker({
+      enabled: env.WORKER_UPLOAD_VALIDATION_ENABLED,
+      pollIntervalMs: env.WORKER_UPLOAD_VALIDATION_POLL_INTERVAL_MS,
+      batchSize: env.WORKER_UPLOAD_VALIDATION_BATCH_SIZE,
+      maxConcurrency: env.WORKER_UPLOAD_VALIDATION_MAX_CONCURRENCY,
+    });
   } catch (err) {
     app.log.error(err);
     process.exit(1);
@@ -621,15 +631,17 @@ const start = async () => {
 
 // Graceful shutdown
 process.on('SIGTERM', async () => {
-  app.log.info('SIGTERM signal received: closing HTTP server and stopping cron jobs');
+  app.log.info('SIGTERM signal received: closing HTTP server, stopping cron jobs and workers');
   cronService.stop();
+  stopUploadValidationWorker();
   await app.close();
   process.exit(0);
 });
 
 process.on('SIGINT', async () => {
-  app.log.info('SIGINT signal received: closing HTTP server and stopping cron jobs');
+  app.log.info('SIGINT signal received: closing HTTP server, stopping cron jobs and workers');
   cronService.stop();
+  stopUploadValidationWorker();
   await app.close();
   process.exit(0);
 });

@@ -89,6 +89,12 @@ const envSchema = z.object({
   CRON_EXPIRATION_WARNING_ENABLED: z.string().optional().default('true'),
   CRON_EXPIRED_CHECK_ENABLED: z.string().optional().default('true'),
 
+  // Optional: Upload Validation Worker
+  WORKER_UPLOAD_VALIDATION_ENABLED: booleanFlagSchema,
+  WORKER_UPLOAD_VALIDATION_POLL_INTERVAL_MS: z.coerce.number().int().min(1000).optional().default(5000),
+  WORKER_UPLOAD_VALIDATION_BATCH_SIZE: z.coerce.number().int().min(1).max(100).optional().default(10),
+  WORKER_UPLOAD_VALIDATION_MAX_CONCURRENCY: z.coerce.number().int().min(1).max(20).optional().default(5),
+
   // Optional: Performance
   ENABLE_RESPONSE_CACHE: z.string().optional().default('true'),
   CACHE_TTL: z.string().optional().default('60000'),
