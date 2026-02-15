@@ -313,6 +313,42 @@ export default async function orderRoutes(fastify: FastifyInstance) {
             { orderId: newOrder.id, itemCount: orderItemsData.length },
             '[Order Create] Normalized order items created'
           );
+
+          // Phase 2: Link upload assets to order items
+          // Extract upload asset IDs from cart items with upload references
+          const itemsWithUploads = items
+            .map((item: any, index: number) => ({
+              index,
+              uploadAssetId: item.optionPayload?.uploadAssetId || item.selectedOptions?.uploadAssetId,
+            }))
+            .filter((item) => item.uploadAssetId);
+
+          if (itemsWithUploads.length > 0) {
+            // Fetch created order items with their IDs
+            const createdOrderItems = await tx.orderItem.findMany({
+              where: { orderId: newOrder.id },
+              orderBy: { createdAt: 'asc' }, // Preserve order
+              select: { id: true },
+            });
+
+            // Create order_item_uploads entries
+            const uploadLinksData = itemsWithUploads.map((item) => ({
+              orderItemId: createdOrderItems[item.index]?.id,
+              uploadAssetId: item.uploadAssetId,
+              sortOrder: 0, // Single upload per order item for now
+            })).filter((link) => link.orderItemId); // Filter out any missing order items
+
+            if (uploadLinksData.length > 0) {
+              await tx.orderItemUpload.createMany({
+                data: uploadLinksData,
+              });
+
+              logger.info(
+                { orderId: newOrder.id, uploadLinkCount: uploadLinksData.length },
+                '[Order Create] Upload assets linked to order items'
+              );
+            }
+          }
         }
 
         if (pendingCustomizations.length > 0) {

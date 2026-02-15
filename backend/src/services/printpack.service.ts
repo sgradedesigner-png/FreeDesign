@@ -32,6 +32,18 @@ export async function buildOrderPrintPack(orderId: string) {
           { createdAt: 'asc' },
         ],
       },
+      // Phase 2: Include order items with uploads
+      orderItems: {
+        include: {
+          uploads: {
+            include: {
+              uploadAsset: true,
+            },
+            orderBy: { sortOrder: 'asc' },
+          },
+        },
+        orderBy: { createdAt: 'asc' },
+      },
       productionEvents: {
         orderBy: { createdAt: 'asc' },
       },
@@ -76,6 +88,25 @@ export async function buildOrderPrintPack(orderId: string) {
     {}
   );
 
+  // Phase 2: Include upload assets
+  const uploadAssets = order.orderItems.flatMap((orderItem, index) =>
+    orderItem.uploads.map((upload) => ({
+      orderItemId: orderItem.id,
+      orderItemIndex: index,
+      uploadAssetId: upload.uploadAssetId,
+      fileName: upload.uploadAsset.fileName,
+      cloudinaryUrl: upload.uploadAsset.cloudinaryUrl,
+      thumbnailUrl: upload.uploadAsset.thumbnailUrl,
+      widthPx: upload.uploadAsset.widthPx,
+      heightPx: upload.uploadAsset.heightPx,
+      validationStatus: upload.uploadAsset.validationStatus,
+      moderationStatus: upload.uploadAsset.moderationStatus,
+      uploadFamily: upload.uploadAsset.uploadFamily,
+      sortOrder: upload.sortOrder,
+      createdAt: upload.createdAt,
+    }))
+  );
+
   return {
     orderId: order.id,
     productionStatus: order.productionStatus,
@@ -83,8 +114,10 @@ export async function buildOrderPrintPack(orderId: string) {
     isCustomOrder: order.isCustomOrder,
     generatedAt: new Date().toISOString(),
     totalCustomizations: printPack.length,
+    totalUploads: uploadAssets.length, // Phase 2: Upload count
     orderItemCount: itemSnapshots.length,
     printPack,
+    uploadAssets, // Phase 2: Upload assets for production
     groupedByItem,
     productionEvents: order.productionEvents,
   };
