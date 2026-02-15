@@ -689,5 +689,56 @@ export default async function uploadRoutes(app: FastifyInstance) {
       }
     }
   );
+
+  // Phase 2: GET /api/uploads/assets/:assetId - Get upload asset status
+  app.get<{ Params: { assetId: string } }>(
+    '/api/uploads/assets/:assetId',
+    { preHandler: userGuard },
+    async (request, reply) => {
+      try {
+        const userId = (request as any).user?.id as string | undefined;
+        const { assetId } = request.params;
+
+        if (!userId) {
+          return reply.status(401).send({ error: 'Unauthorized' });
+        }
+
+        // Fetch upload asset
+        const uploadAsset = await prisma.uploadAsset.findUnique({
+          where: { id: assetId },
+        });
+
+        if (!uploadAsset) {
+          return reply.status(404).send({ error: 'Upload asset not found' });
+        }
+
+        // Verify ownership
+        if (uploadAsset.ownerId !== userId) {
+          return reply.status(403).send({ error: 'Access denied' });
+        }
+
+        return reply.send({
+          id: uploadAsset.id,
+          cloudinaryUrl: uploadAsset.cloudinaryUrl,
+          thumbnailUrl: uploadAsset.thumbnailUrl,
+          fileName: uploadAsset.fileName,
+          mimeType: uploadAsset.mimeType,
+          fileSizeBytes: uploadAsset.fileSizeBytes,
+          widthPx: uploadAsset.widthPx,
+          heightPx: uploadAsset.heightPx,
+          dpi: uploadAsset.dpi,
+          validationStatus: uploadAsset.validationStatus,
+          moderationStatus: uploadAsset.moderationStatus,
+          uploadFamily: uploadAsset.uploadFamily,
+          metadata: uploadAsset.metadata,
+          createdAt: uploadAsset.createdAt,
+          updatedAt: uploadAsset.updatedAt,
+        });
+      } catch (error) {
+        logger.error({ error }, 'Failed to get upload asset');
+        return reply.status(500).send({ error: 'Failed to get upload asset' });
+      }
+    }
+  );
 }
 

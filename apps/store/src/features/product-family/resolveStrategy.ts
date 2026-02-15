@@ -2,6 +2,7 @@ import type { Product } from '../../data/products';
 import type { ProductFamily, ProductStrategy } from './types';
 import { BySizeStrategy } from './strategies/BySizeStrategy';
 import { BlanksStrategy } from './strategies/BlanksStrategy';
+import { GangUploadStrategy } from './strategies/GangUploadStrategy';
 
 /**
  * Strategy registry
@@ -9,7 +10,7 @@ import { BlanksStrategy } from './strategies/BlanksStrategy';
  */
 const STRATEGY_REGISTRY: Record<ProductFamily, ProductStrategy> = {
   by_size: BySizeStrategy,
-  gang_upload: BlanksStrategy,      // TODO: Replace with GangUploadStrategy in P1-04
+  gang_upload: GangUploadStrategy,  // P2-04: Gang sheet upload strategy
   gang_builder: BlanksStrategy,     // TODO: Replace with GangBuilderStrategy in future
   blanks: BlanksStrategy,
   generic: BlanksStrategy,          // Fallback to blanks strategy for backward compatibility
