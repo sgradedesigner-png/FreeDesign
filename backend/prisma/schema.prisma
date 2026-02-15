@@ -60,6 +60,21 @@ enum UploadIntentPurpose {
   CUSTOMIZATION_DESIGN
 }
 
+enum ValidationStatus {
+  PENDING
+  PROCESSING
+  PASSED
+  FAILED
+  DEAD_LETTER
+}
+
+enum ModerationStatus {
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+  FLAGGED
+}
+
 model Profile {
   id        String   @id // = auth.users.id
   role      Role     @default(CUSTOMER)
@@ -328,6 +343,9 @@ model OrderItem {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
+  // Relations
+  uploads         OrderItemUpload[] // Phase 2: Upload lifecycle
+
   @@index([orderId])
   @@index([variantId])
   @@index([createdAt])
@@ -497,6 +515,131 @@ model PaymentWebhookLog {
   @@index([receivedAt])
   @@index([status])
   @@map("payment_webhook_logs")
+}
+
+// ============================================
+// Phase 2: Upload Lifecycle Models
+// ============================================
+
+model UploadAsset {
+  id                 String                   @id @default(uuid())
+  ownerId            String                   @map("owner_id") // User who uploaded
+  cloudinaryPublicId String                   @map("cloudinary_public_id")
+  cloudinaryUrl      String                   @map("cloudinary_url")
+  thumbnailUrl       String?                  @map("thumbnail_url")
+  fileName           String                   @map("file_name")
+  mimeType           String                   @map("mime_type")
+  fileSizeBytes      Int                      @map("file_size_bytes")
+  widthPx            Int?                     @map("width_px")
+  heightPx           Int?                     @map("height_px")
+  dpi                Int?
+
+  // Lifecycle status
+  validationStatus   ValidationStatus         @default(PENDING) @map("validation_status")
+  moderationStatus   ModerationStatus         @default(PENDING_REVIEW) @map("moderation_status")
+
+  // Metadata
+  uploadFamily       ProductFamily?           @map("upload_family") // Context: gang_upload, uv_gang_upload, etc.
+  metadata           Json?                    // Additional upload-specific data
+
+  createdAt          DateTime                 @default(now()) @map("created_at")
+  updatedAt          DateTime                 @updatedAt @map("updated_at")
+
+  // Relations
+  cartItemUploads    CartItemUpload[]
+  orderItemUploads   OrderItemUpload[]
+  validationJobs     UploadValidationJob[]
+  moderationActions  UploadModerationAction[]
+
+  @@index([ownerId, createdAt(sort: Desc)])
+  @@index([validationStatus, createdAt(sort: Desc)])
+  @@index([moderationStatus, createdAt(sort: Desc)])
+  @@index([uploadFamily])
+  @@map("upload_assets")
+}
+
+model CartItemUpload {
+  id            String      @id @default(uuid())
+  cartId        String      @map("cart_id")
+  cartKey       String      @map("cart_key") // Composite key with cart
+  uploadAssetId String      @map("upload_asset_id")
+  uploadAsset   UploadAsset @relation(fields: [uploadAssetId], references: [id], onDelete: Restrict)
+  sortOrder     Int         @default(0) @map("sort_order") // For multiple uploads per item
+  createdAt     DateTime    @default(now()) @map("created_at")
+
+  @@unique([cartId, cartKey, uploadAssetId])
+  @@index([cartId, cartKey])
+  @@index([uploadAssetId])
+  @@map("cart_item_uploads")
+}
+
+model OrderItemUpload {
+  id            String      @id @default(uuid())
+  orderItemId   String      @map("order_item_id")
+  orderItem     OrderItem   @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  uploadAssetId String      @map("upload_asset_id")
+  uploadAsset   UploadAsset @relation(fields: [uploadAssetId], references: [id], onDelete: Restrict)
+  sortOrder     Int         @default(0) @map("sort_order")
+  createdAt     DateTime    @default(now()) @map("created_at")
+
+  @@unique([orderItemId, uploadAssetId])
+  @@index([orderItemId])
+  @@index([uploadAssetId])
+  @@map("order_item_uploads")
+}
+
+model UploadValidationJob {
+  id            String           @id @default(uuid())
+  uploadAssetId String           @map("upload_asset_id")
+  uploadAsset   UploadAsset      @relation(fields: [uploadAssetId], references: [id], onDelete: Cascade)
+  status        ValidationStatus @default(PENDING)
+  retryCount    Int              @default(0) @map("retry_count")
+  maxRetries    Int              @default(3) @map("max_retries")
+  nextRunAt     DateTime?        @map("next_run_at")
+  lastError     String?          @map("last_error") @db.Text
+  createdAt     DateTime         @default(now()) @map("created_at")
+  updatedAt     DateTime         @updatedAt @map("updated_at")
+
+  // Relations
+  events        UploadValidationEvent[]
+
+  @@index([status, nextRunAt])
+  @@index([uploadAssetId])
+  @@index([createdAt(sort: Desc)])
+  @@map("upload_validation_jobs")
+}
+
+model UploadValidationEvent {
+  id        String              @id @default(uuid())
+  jobId     String              @map("job_id")
+  job       UploadValidationJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  eventType String              @map("event_type") // 'started', 'passed', 'failed', 'retry'
+  message   String?             @db.Text
+  errorCode String?             @map("error_code") // Machine-readable error code
+  metadata  Json?               // Validation details (dimensions, DPI, etc.)
+  createdAt DateTime            @default(now()) @map("created_at")
+
+  @@index([jobId, createdAt(sort: Desc)])
+  @@index([eventType])
+  @@map("upload_validation_events")
+}
+
+model UploadModerationAction {
+  id              String           @id @default(uuid())
+  uploadAssetId   String           @map("upload_asset_id")
+  uploadAsset     UploadAsset      @relation(fields: [uploadAssetId], references: [id], onDelete: Cascade)
+  actorId         String           @map("actor_id") // Admin user ID
+  action          String           // 'approve', 'reject', 'override', 'flag'
+  reason          String?          @db.Text
+  previousStatus  ModerationStatus @map("previous_status")
+  newStatus       ModerationStatus @map("new_status")
+  metadata        Json?            // Additional action context
+  createdAt       DateTime         @default(now()) @map("created_at")
+
+  @@index([uploadAssetId, createdAt(sort: Desc)])
+  @@index([actorId])
+  @@index([action])
+  @@map("upload_moderation_actions")
 }
 
 
