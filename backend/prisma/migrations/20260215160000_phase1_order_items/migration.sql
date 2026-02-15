@@ -40,7 +40,7 @@ CREATE POLICY "Users can read own order items"
     FOR SELECT
     USING (
         "orderId" IN (
-            SELECT "id" FROM "orders" WHERE "userId" = auth.uid()
+            SELECT "id" FROM "orders" WHERE "userId" = auth.uid()::text
         )
     );
 
@@ -51,7 +51,7 @@ CREATE POLICY "Admins can read all order items"
     USING (
         EXISTS (
             SELECT 1 FROM "profiles"
-            WHERE "id" = auth.uid()
+            WHERE "id" = auth.uid()::text
             AND "role" = 'ADMIN'
         )
     );
@@ -69,7 +69,7 @@ CREATE POLICY "Admins can update order items"
     USING (
         EXISTS (
             SELECT 1 FROM "profiles"
-            WHERE "id" = auth.uid()
+            WHERE "id" = auth.uid()::text
             AND "role" = 'ADMIN'
         )
     );
@@ -81,7 +81,7 @@ CREATE POLICY "Admins can delete order items"
     USING (
         EXISTS (
             SELECT 1 FROM "profiles"
-            WHERE "id" = auth.uid()
+            WHERE "id" = auth.uid()::text
             AND "role" = 'ADMIN'
         )
     );

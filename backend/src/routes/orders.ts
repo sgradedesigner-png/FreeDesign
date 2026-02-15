@@ -593,7 +593,7 @@ export default async function orderRoutes(fastify: FastifyInstance) {
             variantSku: item.variantSku || item.variant.sku,
             variantImage: item.variant.imagePath,
             quantity: item.quantity,
-            price: item.unitPrice,
+            price: Number(item.unitPrice),
             selectedOptions: item.selectedOptions
           }))
         };
