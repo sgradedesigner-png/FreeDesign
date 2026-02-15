@@ -12,6 +12,7 @@ import ProductGallery from '../components/product/ProductGallery';
 import ProductTabs from '../components/product/ProductTabs';
 import RelatedProducts from '../components/product/RelatedProducts';
 import CustomerReviews from '../components/product/CustomerReviews';
+import { TrustBadges, ShippingPromiseBar } from '../components/conversion';
 
 type LocationState = { product?: Product } | null;
 
@@ -131,7 +132,16 @@ export default function ProductPage() {
             onVariantChange: handleVariantChange,
           })}
 
-          {/* Optional: Conversion blocks (trust, urgency, etc) */}
+          {/* Conversion Modules */}
+          <div className="space-y-4 pt-4 border-t border-border">
+            {/* Shipping Promise */}
+            <ShippingPromiseBar cutoffHour={15} showCountdown />
+
+            {/* Trust Badges */}
+            <TrustBadges variant="compact" />
+          </div>
+
+          {/* Optional: Strategy-specific conversion blocks */}
           {strategy.renderConversionBlocks?.({
             product,
             selectedVariant,

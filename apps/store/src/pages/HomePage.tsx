@@ -4,9 +4,10 @@ import ProductCard from '../components/product/ProductCard';
 import HomeCategoryShowcase from '../components/home/HomeCategoryShowcase';
 import HomeMobileProductRail from '../components/home/HomeMobileProductRail';
 import { useTheme } from '../context/ThemeContext';
-import { ArrowRight, Package, Shield, Truck, CreditCard } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { mapProductFromBackend, type Product } from '../data/products';
 import type { BackendProduct } from '../data/types';
+import { TrustBadges, ShippingPromiseBar } from '../components/conversion';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
 
@@ -267,57 +268,15 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 6. Trust Badges */}
-      <section className="max-w-7xl mx-auto px-6 py-20 bg-muted/20">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          <div className="text-center p-8 rounded-2xl bg-card border border-border">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-emerald-500/10 flex items-center justify-center">
-              <Truck className="text-emerald-400" size={32} />
-            </div>
-            <h3 className="font-bold text-foreground mb-2">
-              {language === 'mn' ? 'Үнэгүй хүргэлт' : 'Free Shipping'}
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              {language === 'mn' ? '50,000₮-с дээш худалдан авалтад' : 'On orders over $50'}
-            </p>
-          </div>
-
-          <div className="text-center p-8 rounded-2xl bg-card border border-border">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-cyan-500/10 flex items-center justify-center">
-              <Shield className="text-cyan-400" size={32} />
-            </div>
-            <h3 className="font-bold text-foreground mb-2">
-              {language === 'mn' ? 'Баталгаатай' : 'Secure Payment'}
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              {language === 'mn' ? '100% аюулгүй төлбөр' : '100% secure transactions'}
-            </p>
-          </div>
-
-          <div className="text-center p-8 rounded-2xl bg-card border border-border">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-purple-500/10 flex items-center justify-center">
-              <CreditCard className="text-purple-400" size={32} />
-            </div>
-            <h3 className="font-bold text-foreground mb-2">
-              {language === 'mn' ? 'Олон төрлийн төлбөр' : 'Easy Returns'}
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              {language === 'mn' ? '30 хоногийн буцаалтын баталгаа' : '30-day return guarantee'}
-            </p>
-          </div>
-
-          <div className="text-center p-8 rounded-2xl bg-card border border-border">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-pink-500/10 flex items-center justify-center">
-              <Package className="text-pink-400" size={32} />
-            </div>
-            <h3 className="font-bold text-foreground mb-2">
-              {language === 'mn' ? 'Жинхэнэ бараа' : 'Authentic Products'}
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              {language === 'mn' ? '100% жинхэнэ солонгос бараа' : '100% authentic Korean goods'}
-            </p>
-          </div>
+      {/* 6. Conversion Modules - Trust & Shipping */}
+      <section className="max-w-7xl mx-auto px-6 py-20 bg-muted/20 space-y-8">
+        {/* Shipping Promise Bar */}
+        <div className="max-w-3xl mx-auto">
+          <ShippingPromiseBar cutoffHour={15} showCountdown />
         </div>
+
+        {/* Trust Badges */}
+        <TrustBadges variant="default" />
       </section>
 
       {/* 7. Final CTA Banner */}
