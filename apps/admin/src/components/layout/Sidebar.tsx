@@ -11,6 +11,7 @@ import {
   BadgeDollarSign,
   Settings,
   Mail,
+  ShieldCheck,
   X,
 } from 'lucide-react';
 
@@ -21,6 +22,7 @@ const menuItems = [
   { path: '/collections', icon: Layers, labelKey: 'nav.collections' },
   { path: '/orders', icon: ShoppingCart, labelKey: 'nav.orders' },
   { path: '/production', icon: Factory, labelKey: 'nav.production' },
+  { path: '/moderation', icon: ShieldCheck, labelKey: 'nav.moderation' },
   { path: '/pricing', icon: BadgeDollarSign, labelKey: 'nav.pricing' },
   { path: '/email-test', icon: Mail, labelKey: 'nav.emailTest' },
   { path: '/settings', icon: Settings, labelKey: 'nav.settings' },
