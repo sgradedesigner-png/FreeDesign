@@ -62,7 +62,7 @@ export function UploadStatusChip({
   const Icon = config.icon;
 
   return (
-    <div className={`${className}`}>
+    <div className={`${className}`} data-testid={`upload-status-chip-${status}`}>
       <div
         className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border ${config.bgColor} ${config.textColor} ${config.borderColor}`}
       >
@@ -70,7 +70,7 @@ export function UploadStatusChip({
         <span className="text-sm font-medium">{config.label}</span>
       </div>
       {status === 'failed' && errorMessage && (
-        <p className="text-xs text-red-600 dark:text-red-400 mt-1 ml-1">
+        <p className="text-xs text-red-600 dark:text-red-400 mt-1 ml-1" data-testid="upload-error-message">
           {errorMessage}
         </p>
       )}

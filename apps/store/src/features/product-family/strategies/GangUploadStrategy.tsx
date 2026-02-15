@@ -297,6 +297,7 @@ function GangUploadProductInfo({ product, selectedVariant }: ProductStrategyProp
             <input
               type="file"
               id="gang-sheet-upload"
+              data-testid="gang-sheet-upload-input"
               accept="image/png,image/jpeg,image/jpg,application/pdf"
               onChange={handleFileSelect}
               disabled={isUploading}
@@ -415,6 +416,7 @@ function GangUploadProductInfo({ product, selectedVariant }: ProductStrategyProp
           onClick={handleAddToCart}
           className="w-full h-12 text-base font-semibold"
           disabled={!canAddToCart}
+          data-testid="gang-upload-add-to-cart"
         >
           <ShoppingCart size={20} className="mr-2" />
           {language === 'mn' ? 'Сагслах' : 'Add to Cart'}

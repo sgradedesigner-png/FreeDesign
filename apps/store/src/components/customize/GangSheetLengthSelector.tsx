@@ -22,7 +22,7 @@ export function GangSheetLengthSelector({
   const { language } = useTheme();
 
   return (
-    <div>
+    <div data-testid="gang-sheet-length-selector">
       <label className="block text-sm font-medium text-foreground mb-2">
         {language === 'mn' ? 'Gang Sheet урт' : 'Gang Sheet Length'}
       </label>
@@ -30,6 +30,7 @@ export function GangSheetLengthSelector({
         {LENGTH_OPTIONS.map((length) => (
           <button
             key={length}
+            data-testid={`gang-sheet-length-${length}`}
             onClick={() => onLengthChange(length)}
             disabled={disabled}
             className={`px-4 py-3 border rounded-lg text-sm font-medium transition-all ${
