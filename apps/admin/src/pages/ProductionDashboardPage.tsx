@@ -80,6 +80,22 @@ type PrintPackAsset = {
   printFee: number | string | null;
 };
 
+type UploadAsset = {
+  orderItemId: string;
+  orderItemIndex: number;
+  uploadAssetId: string;
+  fileName: string;
+  cloudinaryUrl: string;
+  thumbnailUrl: string | null;
+  widthPx: number | null;
+  heightPx: number | null;
+  validationStatus: string;
+  moderationStatus: string;
+  uploadFamily: string | null;
+  sortOrder: number;
+  createdAt: string;
+};
+
 type PrintPackResponse = {
   orderId: string;
   productionStatus: ProductionStatus;
@@ -87,8 +103,10 @@ type PrintPackResponse = {
   isCustomOrder: boolean;
   generatedAt: string;
   totalCustomizations: number;
+  totalUploads: number; // Phase 2: Upload count
   orderItemCount: number;
   printPack: PrintPackAsset[];
+  uploadAssets: UploadAsset[]; // Phase 2: Upload assets for production
   groupedByItem: Record<string, { snapshot: unknown; assets: PrintPackAsset[] }>;
   productionEvents: Array<{
     id: string;
@@ -792,7 +810,7 @@ export default function ProductionDashboardPage() {
             <div className="py-6 text-sm text-destructive">Failed to load print pack.</div>
           ) : printPackQuery.data ? (
             <div className="space-y-6">
-              <div className="grid gap-3 md:grid-cols-4">
+              <div className="grid gap-3 md:grid-cols-5">
                 <Card>
                   <CardHeader className="pb-1">
                     <CardTitle className="text-xs text-muted-foreground">Production</CardTitle>
@@ -817,6 +835,12 @@ export default function ProductionDashboardPage() {
                 </Card>
                 <Card>
                   <CardHeader className="pb-1">
+                    <CardTitle className="text-xs text-muted-foreground">Uploads</CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-2xl font-bold">{printPackQuery.data.totalUploads ?? 0}</CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-1">
                     <CardTitle className="text-xs text-muted-foreground">Generated</CardTitle>
                   </CardHeader>
                   <CardContent className="text-sm">
@@ -825,38 +849,91 @@ export default function ProductionDashboardPage() {
                 </Card>
               </div>
 
-              <div className="overflow-hidden rounded-lg border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Item</TableHead>
-                      <TableHead>Area</TableHead>
-                      <TableHead>Size</TableHead>
-                      <TableHead>Asset</TableHead>
-                      <TableHead>Fee</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {printPackQuery.data.printPack.map((row) => (
-                      <TableRow key={row.customizationId}>
-                        <TableCell>{row.orderItemIndex + 1}</TableCell>
-                        <TableCell>{row.printArea}</TableCell>
-                        <TableCell>{row.printSizeTier}</TableCell>
-                        <TableCell>
-                          <a
-                            href={row.designUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-primary underline"
-                          >
-                            Open design
-                          </a>
-                        </TableCell>
-                        <TableCell>${Number(row.printFee ?? 0).toLocaleString()}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+              <div className="space-y-4">
+                <div>
+                  <h3 className="mb-3 font-semibold">Print Customizations</h3>
+                  <div className="overflow-hidden rounded-lg border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Item</TableHead>
+                          <TableHead>Area</TableHead>
+                          <TableHead>Size</TableHead>
+                          <TableHead>Asset</TableHead>
+                          <TableHead>Fee</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {printPackQuery.data.printPack.map((row) => (
+                          <TableRow key={row.customizationId}>
+                            <TableCell>{row.orderItemIndex + 1}</TableCell>
+                            <TableCell>{row.printArea}</TableCell>
+                            <TableCell>{row.printSizeTier}</TableCell>
+                            <TableCell>
+                              <a
+                                href={row.designUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-primary underline"
+                              >
+                                Open design
+                              </a>
+                            </TableCell>
+                            <TableCell>${Number(row.printFee ?? 0).toLocaleString()}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+
+                {/* Phase 2: Upload Assets Section */}
+                {printPackQuery.data.uploadAssets && printPackQuery.data.uploadAssets.length > 0 && (
+                  <div>
+                    <h3 className="mb-3 font-semibold">Upload Assets ({printPackQuery.data.uploadAssets.length})</h3>
+                    <div className="overflow-hidden rounded-lg border">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Item</TableHead>
+                            <TableHead>File Name</TableHead>
+                            <TableHead>Family</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Asset</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {printPackQuery.data.uploadAssets.map((upload, index) => (
+                            <TableRow key={upload.uploadAssetId}>
+                              <TableCell>{upload.orderItemIndex + 1}</TableCell>
+                              <TableCell className="font-mono text-sm">{upload.fileName}</TableCell>
+                              <TableCell>
+                                <Badge variant="outline" className="text-xs">
+                                  {upload.uploadFamily || 'N/A'}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant={upload.validationStatus === 'PASSED' ? 'default' : 'secondary'}>
+                                  {upload.validationStatus}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <a
+                                  href={upload.cloudinaryUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-primary underline"
+                                >
+                                  Open file
+                                </a>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="space-y-2">

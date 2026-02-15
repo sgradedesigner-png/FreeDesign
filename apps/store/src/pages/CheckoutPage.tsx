@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
 import Icon from '@/components/ui/AppIcon'
 import { toast } from 'sonner'
 import { imageUrl } from '@/lib/imageUrl'
@@ -678,6 +679,20 @@ function CheckoutPage() {
                             Custom areas: {item.customizations.length}
                           </p>
                         ) : null}
+                        {/* Phase 2: Display upload info if present */}
+                        {(item.optionPayload?.uploadAssetId || item.selectedOptions?.uploadAssetId) && (
+                          <div className="mt-1 flex items-center gap-1.5 text-xs">
+                            <Icon name="FileImage" size={14} className="text-primary flex-shrink-0" />
+                            <span className="text-primary font-medium truncate">
+                              {item.optionPayload?.uploadFileName || item.selectedOptions?.uploadFileName || (language === 'en' ? 'File uploaded' : 'Upload хийсэн')}
+                            </span>
+                            {item.optionPayload?.gangSheetLength && (
+                              <Badge variant="secondary" className="text-xs py-0 px-1.5 h-4">
+                                {item.optionPayload.gangSheetLength}cm
+                              </Badge>
+                            )}
+                          </div>
+                        )}
                         <p className="text-xs md:text-sm font-semibold mt-1 text-primary">
                           â‚®{Number(item.variantPrice).toLocaleString()} Ã— {item.quantity}
                         </p>
@@ -1020,6 +1035,20 @@ function CheckoutPage() {
                         Add-ons: {item.addOns.length}
                       </p>
                     ) : null}
+                    {/* Phase 2: Display upload info if present */}
+                    {(item.optionPayload?.uploadAssetId || item.selectedOptions?.uploadAssetId) && (
+                      <div className="mt-1 flex items-center gap-1.5 text-xs">
+                        <Icon name="FileImage" size={14} className="text-primary flex-shrink-0" />
+                        <span className="text-primary font-medium truncate">
+                          {item.optionPayload?.uploadFileName || item.selectedOptions?.uploadFileName || (language === 'en' ? 'File uploaded' : 'Upload хийсэн')}
+                        </span>
+                        {item.optionPayload?.gangSheetLength && (
+                          <Badge variant="secondary" className="text-xs py-0 px-1.5 h-4">
+                            {item.optionPayload.gangSheetLength}cm
+                          </Badge>
+                        )}
+                      </div>
+                    )}
                     <p className="text-xs text-primary font-semibold mt-1">
                       â‚®{Number(item.variantPrice || 0).toLocaleString()} Ã— {item.quantity}
                     </p>
