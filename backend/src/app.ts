@@ -50,6 +50,8 @@ import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { logRateLimit, logger, loggerConfig, hashIdentifier } from './lib/logger'; // Use shared logger instance
 import { cronService } from './services/cron.service';
 import { startUploadValidationWorker, stopUploadValidationWorker } from './workers/upload-validator.worker';
+import { startBuilderPreviewWorker, stopBuilderPreviewWorker } from './workers/builder-preview.worker';
+import { builderRoutes } from './routes/builder';
 import { env } from './lib/env';
 
 const isDevelopment = process.env.NODE_ENV === 'development';
@@ -578,6 +580,7 @@ app.register(adminPricingRoutes);
 app.register(adminUploadsRoutes, { prefix: '/api/admin/uploads' }); // P2-07: Upload moderation queue
 app.register(adminPrintAreaRoutes, { prefix: '/api/admin/print-areas' }); // Product wizard
 app.register(adminSizeTierRoutes, { prefix: '/api/admin/size-tiers' }); // Product wizard
+app.register(builderRoutes, { prefix: '/api/builder/projects' }); // P3-02: Builder API
 app.register(testEmailRoutes);
 
 // 7) Error Handlers
@@ -629,6 +632,14 @@ const start = async () => {
       batchSize: env.WORKER_UPLOAD_VALIDATION_BATCH_SIZE,
       maxConcurrency: env.WORKER_UPLOAD_VALIDATION_MAX_CONCURRENCY,
     });
+
+    // Start builder preview worker (Phase 3 P3-02)
+    startBuilderPreviewWorker({
+      enabled:        env.WORKER_BUILDER_PREVIEW_ENABLED,
+      pollIntervalMs: env.WORKER_BUILDER_PREVIEW_POLL_INTERVAL_MS,
+      batchSize:      env.WORKER_BUILDER_PREVIEW_BATCH_SIZE,
+      maxConcurrency: env.WORKER_BUILDER_PREVIEW_MAX_CONCURRENCY,
+    });
   } catch (err) {
     app.log.error(err);
     process.exit(1);
@@ -640,6 +651,7 @@ process.on('SIGTERM', async () => {
   app.log.info('SIGTERM signal received: closing HTTP server, stopping cron jobs and workers');
   cronService.stop();
   stopUploadValidationWorker();
+  stopBuilderPreviewWorker();
   await app.close();
   process.exit(0);
 });
@@ -648,6 +660,7 @@ process.on('SIGINT', async () => {
   app.log.info('SIGINT signal received: closing HTTP server, stopping cron jobs and workers');
   cronService.stop();
   stopUploadValidationWorker();
+  stopBuilderPreviewWorker();
   await app.close();
   process.exit(0);
 });

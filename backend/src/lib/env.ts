@@ -95,6 +95,12 @@ const envSchema = z.object({
   WORKER_UPLOAD_VALIDATION_BATCH_SIZE: z.coerce.number().int().min(1).max(100).optional().default(10),
   WORKER_UPLOAD_VALIDATION_MAX_CONCURRENCY: z.coerce.number().int().min(1).max(20).optional().default(5),
 
+  // Optional: Builder Preview Worker (P3-02)
+  WORKER_BUILDER_PREVIEW_ENABLED: booleanFlagSchema,
+  WORKER_BUILDER_PREVIEW_POLL_INTERVAL_MS: z.coerce.number().int().min(1000).optional().default(10000),
+  WORKER_BUILDER_PREVIEW_BATCH_SIZE: z.coerce.number().int().min(1).max(50).optional().default(5),
+  WORKER_BUILDER_PREVIEW_MAX_CONCURRENCY: z.coerce.number().int().min(1).max(10).optional().default(2),
+
   // Optional: Performance
   ENABLE_RESPONSE_CACHE: z.string().optional().default('true'),
   CACHE_TTL: z.string().optional().default('60000'),
