@@ -65,7 +65,7 @@ const productWizardSchema = z.object({
 
   // Step 4 (conditional)
   printAreas: z.array(z.string()).default([]),
-  printAreaDefaults: z.record(z.boolean()).optional(),
+  printAreaDefaults: z.record(z.string(), z.boolean()).optional(),
   sizeTiers: z.array(z.string()).default([]),
 
   // Step 5
@@ -113,8 +113,9 @@ const DEFAULT_WIZARD_VALUES: Partial<WizardFormData> = {
 const DRAFT_STORAGE_KEY = 'product-wizard-draft';
 
 export function useProductWizard(productId?: string) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const form = useForm<WizardFormData>({
-    resolver: zodResolver(productWizardSchema),
+    resolver: zodResolver(productWizardSchema) as any,
     mode: 'onChange',
     defaultValues: DEFAULT_WIZARD_VALUES as WizardFormData,
   });
