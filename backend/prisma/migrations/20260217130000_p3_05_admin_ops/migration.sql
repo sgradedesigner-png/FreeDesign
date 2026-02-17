@@ -7,21 +7,21 @@ ALTER TABLE orders
   ADD COLUMN IF NOT EXISTS is_on_hold    BOOLEAN NOT NULL DEFAULT FALSE;
 
 CREATE INDEX IF NOT EXISTS idx_orders_sla_due_at
-  ON orders (sla_due_at, production_status)
+  ON orders (sla_due_at, "productionStatus")
   WHERE sla_due_at IS NOT NULL;
 
 CREATE INDEX IF NOT EXISTS idx_orders_is_on_hold
-  ON orders (is_on_hold, production_status)
+  ON orders (is_on_hold, "productionStatus")
   WHERE is_on_hold = TRUE;
 
 -- ── order_sla_events ─────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS order_sla_events (
   id            UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-  order_id      UUID        NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+  order_id      TEXT        NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
   sla_due_at    TIMESTAMPTZ NOT NULL,
   sla_tier      TEXT        NOT NULL DEFAULT 'STANDARD',  -- STANDARD | RUSH | CRITICAL
   notes         TEXT,
-  set_by        UUID        NOT NULL,                     -- admin user id
+  set_by        TEXT        NOT NULL,                     -- admin user id
   created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -34,10 +34,10 @@ CREATE INDEX IF NOT EXISTS idx_order_sla_events_due_at
 -- ── order_holds ──────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS order_holds (
   id           UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-  order_id     UUID        NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+  order_id     TEXT        NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
   reason       TEXT        NOT NULL,
-  held_by      UUID        NOT NULL,                     -- admin user id
-  released_by  UUID,                                     -- admin user id (null until released)
+  held_by      TEXT        NOT NULL,                     -- admin user id
+  released_by  TEXT,                                     -- admin user id (null until released)
   released_at  TIMESTAMPTZ,
   notes        TEXT,
   created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -54,13 +54,13 @@ CREATE INDEX IF NOT EXISTS idx_order_holds_active
 -- ── reprint_requests ─────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS reprint_requests (
   id            UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-  order_id      UUID        NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+  order_id      TEXT        NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
   status        TEXT        NOT NULL DEFAULT 'REQUESTED',
     -- REQUESTED | APPROVED | IN_QUEUE | PRINTING | DONE | REJECTED | CANCELLED
   reason        TEXT        NOT NULL,
   notes         TEXT,
-  requested_by  UUID        NOT NULL,                   -- admin user id
-  approved_by   UUID,                                   -- admin user id
+  requested_by  TEXT        NOT NULL,                   -- admin user id
+  approved_by   TEXT,                                   -- admin user id
   created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

@@ -8,7 +8,7 @@ CREATE TYPE "BuilderProjectStatus" AS ENUM ('DRAFT', 'READY', 'ARCHIVED');
 CREATE TABLE "gang_sheet_projects" (
     "id"               UUID         NOT NULL DEFAULT gen_random_uuid(),
     "owner_id"         TEXT         NOT NULL,
-    "product_id"       UUID         NOT NULL,
+    "product_id"       TEXT         NOT NULL,
     "title"            TEXT         NOT NULL DEFAULT 'Untitled Project',
     "status"           "BuilderProjectStatus" NOT NULL DEFAULT 'DRAFT',
     "canvas_width_cm"  DOUBLE PRECISION NOT NULL,
