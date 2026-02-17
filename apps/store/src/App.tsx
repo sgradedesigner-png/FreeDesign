@@ -27,13 +27,16 @@ import OrderDetailPage from './pages/OrderDetailPage';
 import ProfilePage from './pages/ProfilePage';
 import ScrollToTop from './components/layout/ScrollToTop';
 import { flags } from './lib/featureFlags';
+import GangSheetBuilderPage from './pages/GangSheetBuilderPage';
 
 // Layout компонент: Хуудас бүрийн байршлыг зохицуулна
 function Layout() {
   const location = useLocation();
 
-  // Хэрэв бид '/customize' хуудас дээр байгаа бол тусгай горим (Full Screen)
-  const isConfigurator = location.pathname.startsWith('/customize');
+  // Хэрэв бид '/customize' эсвэл '/builder' хуудас дээр байгаа бол тусгай горим (Full Screen)
+  const isConfigurator =
+    location.pathname.startsWith('/customize') ||
+    location.pathname.startsWith('/builder');
 
   return (
     <div className={`min-h-screen bg-background text-foreground font-sans transition-colors duration-300 ${isConfigurator ? 'overflow-hidden' : ''}`}>
@@ -69,6 +72,10 @@ function Layout() {
               <Route path="/collections/:slug" element={<CollectionPage />} />
               <Route path="/pages/:slug" element={<InfoPage />} />
             </>
+          ) : null}
+
+          {flags.BUILDER_MVP_V1 ? (
+            <Route path="/builder/:productSlug" element={<GangSheetBuilderPage />} />
           ) : null}
 
           <Route path="/products" element={<Catalog />} />
