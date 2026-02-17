@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Star, Heart, Share2, ShoppingCart, Upload, FileImage } from 'lucide-react';
 import type { ProductStrategy, ProductStrategyProps } from '../types';
 import { useCart } from '../../../context/CartContext';
 import { useWishlist } from '../../../context/WishlistContext';
 import { useTheme } from '../../../context/ThemeContext';
+import { supabase } from '@/lib/supabase';
 import { Button } from '../../../components/ui/button';
 import {
   GangSheetLengthSelector,
@@ -65,11 +66,14 @@ function GangUploadProductInfo({ product, selectedVariant }: ProductStrategyProp
 
     try {
       // Step 1: Request signed upload params
+      const { data: { session } } = await supabase.auth.getSession();
+      const authHeader = session ? { Authorization: `Bearer ${session.access_token}` } : {};
+
       const signResponse = await fetch('/api/uploads/sign-v2', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('supabase.auth.token')}`,
+          ...authHeader,
         },
         body: JSON.stringify({
           filename: file.name,
@@ -115,7 +119,7 @@ function GangUploadProductInfo({ product, selectedVariant }: ProductStrategyProp
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('supabase.auth.token')}`,
+          ...authHeader,
         },
         body: JSON.stringify({
           intentId: publicId, // Using publicId as intentId for now
@@ -158,10 +162,12 @@ function GangUploadProductInfo({ product, selectedVariant }: ProductStrategyProp
       attempts++;
 
       try {
+        const { data: { session: pollSession } } = await supabase.auth.getSession();
+        const pollAuthHeader = pollSession
+          ? { Authorization: `Bearer ${pollSession.access_token}` }
+          : {};
         const response = await fetch(`/api/uploads/assets/${assetId}`, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('supabase.auth.token')}`,
-          },
+          headers: pollAuthHeader,
         });
 
         if (!response.ok) {
