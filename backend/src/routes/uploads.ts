@@ -81,6 +81,9 @@ const signSchema = z.object({
 const completeSchema = z.object({
   intentId: z.string().uuid(),
   cloudinaryPublicId: z.string().optional(), // Phase 2: for new upload flow
+  uploadFamily: z
+    .enum(['gang_upload', 'uv_gang_upload', 'by_size', 'uv_by_size', 'blanks'])
+    .optional(), // Phase 2: carry family context from sign to complete
 });
 
 function sanitizeFilename(filename: string): string {
@@ -612,7 +615,9 @@ export default async function uploadRoutes(app: FastifyInstance) {
               dpi: null, // Will be determined by validation worker
               validationStatus: 'PENDING',
               moderationStatus: 'PENDING_REVIEW',
-              // uploadFamily will be set when linking to cart/order // Will be set when linking to cart/order
+              uploadFamily: body.uploadFamily
+                ? (body.uploadFamily.toUpperCase() as any)
+                : null,
               metadata: {
                 format: metadata.format,
                 resourceType: metadata.resourceType,

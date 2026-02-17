@@ -126,6 +126,7 @@ function GangUploadProductInfo({ product, selectedVariant }: ProductStrategyProp
         body: JSON.stringify({
           intentId,
           cloudinaryPublicId: cloudinaryData.public_id,
+          uploadFamily: 'gang_upload',
         }),
       });
 
