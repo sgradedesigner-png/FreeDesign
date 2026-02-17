@@ -326,9 +326,8 @@ function GangUploadProductInfo({ product, selectedVariant }: ProductStrategyProp
                 {language === 'mn' ? 'Нэвтрэх' : 'Sign In'}
               </Button>
             </div>
-          ) : (
-          {isUploading ? (
-            /* Loading state */
+          ) : isUploading ? (
+            /* Uploading — loading animation */
             <div className="border-2 border-primary/40 border-dashed rounded-lg p-6 text-center bg-primary/5">
               <Loader2
                 size={40}
@@ -342,33 +341,32 @@ function GangUploadProductInfo({ product, selectedVariant }: ProductStrategyProp
                   ? 'Хуудсыг хаахгүй байна уу'
                   : 'Please do not close this page'}
               </p>
-              {/* Animated progress bar */}
+              {/* Indeterminate progress bar */}
               <div className="w-full h-1.5 bg-border rounded-full overflow-hidden">
                 <div className="h-full bg-primary rounded-full animate-upload-progress" />
               </div>
             </div>
           ) : (
-          <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
-            <input
-              type="file"
-              id="gang-sheet-upload"
-              data-testid="gang-sheet-upload-input"
-              accept="image/png,image/jpeg,image/jpg,application/pdf"
-              onChange={handleFileSelect}
-              disabled={isUploading}
-              className="hidden"
-            />
-            <label htmlFor="gang-sheet-upload" className="cursor-pointer">
-              <Upload size={48} className="mx-auto text-muted-foreground mb-3" />
-              <p className="text-sm font-medium text-foreground mb-1">
-                {language === 'mn' ? 'Файл upload хийх' : 'Click to upload or drag and drop'}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                PNG, JPEG, PDF (max 50MB) • Min 1200px wide • Min 150 DPI
-              </p>
-            </label>
-          </div>
-          )}
+            /* Idle — file picker */
+            <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
+              <input
+                type="file"
+                id="gang-sheet-upload"
+                data-testid="gang-sheet-upload-input"
+                accept="image/png,image/jpeg,image/jpg,application/pdf"
+                onChange={handleFileSelect}
+                className="hidden"
+              />
+              <label htmlFor="gang-sheet-upload" className="cursor-pointer">
+                <Upload size={48} className="mx-auto text-muted-foreground mb-3" />
+                <p className="text-sm font-medium text-foreground mb-1">
+                  {language === 'mn' ? 'Файл upload хийх' : 'Click to upload or drag and drop'}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  PNG, JPEG, PDF (max 50MB) • Min 1200px wide • Min 150 DPI
+                </p>
+              </label>
+            </div>
           )
         ) : (
           <div className="border border-border rounded-lg p-4">
