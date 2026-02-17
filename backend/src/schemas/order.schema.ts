@@ -47,7 +47,9 @@ export const createOrderItemSchema = z.object({
     .optional(),
   customizations: z.array(orderItemCustomizationSchema)
     .max(10, 'Too many customizations for one item')
-    .optional()
+    .optional(),
+  // P3-04: Builder project reference (only for GANG_BUILDER items)
+  builderProjectId: z.string().uuid('Invalid builderProjectId').optional(),
 }).refine(
   (data) => data.price !== undefined || data.variantPrice !== undefined,
   {

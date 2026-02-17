@@ -168,30 +168,34 @@ model Cart {
 }
 
 model CartItem {
-  id                   String   @id @default(uuid())
-  cartId               String   @map("cart_id")
-  cart                 Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
-  cartKey              String   @map("cart_key")
-  quantity             Int      @default(1)
-  productId            String   @map("product_id")
-  productName          String   @map("product_name")
-  productSlug          String   @map("product_slug")
-  productCategory      String   @map("product_category")
-  variantId            String   @map("variant_id")
-  variantName          String   @map("variant_name")
-  variantPrice         Decimal  @map("variant_price")
-  variantOriginalPrice Decimal? @map("variant_original_price")
-  variantImage         String   @map("variant_image")
-  variantSku           String   @map("variant_sku")
+  id                   String            @id @default(uuid())
+  cartId               String            @map("cart_id")
+  cart                 Cart              @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  cartKey              String            @map("cart_key")
+  quantity             Int               @default(1)
+  productId            String            @map("product_id")
+  productName          String            @map("product_name")
+  productSlug          String            @map("product_slug")
+  productCategory      String            @map("product_category")
+  variantId            String            @map("variant_id")
+  variantName          String            @map("variant_name")
+  variantPrice         Decimal           @map("variant_price")
+  variantOriginalPrice Decimal?          @map("variant_original_price")
+  variantImage         String            @map("variant_image")
+  variantSku           String            @map("variant_sku")
   size                 String?
-  isCustomized         Boolean  @default(false) @map("is_customized")
-  optionPayload        Json     @default(dbgenerated("'{}'::jsonb")) @map("option_payload")
-  createdAt            DateTime @default(now()) @map("created_at")
-  updatedAt            DateTime @updatedAt @map("updated_at")
+  isCustomized         Boolean           @default(false) @map("is_customized")
+  optionPayload        Json              @default(dbgenerated("'{}'::jsonb")) @map("option_payload")
+  // P3-04: Builder project reference (nullable — only set for GANG_BUILDER items)
+  builderProjectId     String?           @map("builder_project_id")
+  builderProject       GangSheetProject? @relation(fields: [builderProjectId], references: [id], onDelete: SetNull)
+  createdAt            DateTime          @default(now()) @map("created_at")
+  updatedAt            DateTime          @updatedAt @map("updated_at")
 
   @@unique([cartId, cartKey])
   @@index([cartId, updatedAt(sort: Desc)])
   @@index([variantId])
+  @@index([builderProjectId])
   @@map("cart_items")
 }
 model Product {
@@ -340,11 +344,11 @@ model Order {
 
 // Phase 1: Normalized order items (dual-write migration from orders.items JSON)
 model OrderItem {
-  id              String   @id @default(uuid())
+  id              String                    @id @default(uuid())
   orderId         String
-  order           Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  order           Order                     @relation(fields: [orderId], references: [id], onDelete: Cascade)
   variantId       String
-  variant         ProductVariant @relation(fields: [variantId], references: [id], onDelete: Restrict)
+  variant         ProductVariant            @relation(fields: [variantId], references: [id], onDelete: Restrict)
   quantity        Int
   unitPrice       Decimal // Price per unit at time of order
   selectedOptions Json? // Size, color, finishing, etc (flexible per product family)
@@ -355,6 +359,10 @@ model OrderItem {
   variantName     String?
   variantSku      String?
 
+  // P3-04: Immutable builder version reference (frozen at checkout time)
+  builderProjectVersionId String?                   @map("builder_project_version_id")
+  builderProjectVersion   GangSheetProjectVersion?  @relation(fields: [builderProjectVersionId], references: [id], onDelete: SetNull)
+
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -364,6 +372,7 @@ model OrderItem {
   @@index([orderId])
   @@index([variantId])
   @@index([createdAt])
+  @@index([builderProjectVersionId])
   @@map("order_items")
 }
 
@@ -659,6 +668,7 @@ model GangSheetProject {
   items       GangSheetProjectItem[]
   versions    GangSheetProjectVersion[]
   previewJobs BuilderPreviewJob[]
+  cartItems   CartItem[]               // P3-04: cart items referencing this project
 
   @@index([ownerId, updatedAt(sort: Desc)])
   @@index([status, updatedAt(sort: Desc)])
@@ -696,6 +706,8 @@ model GangSheetProjectVersion {
   itemsSnapshot Json             @map("items_snapshot") // Full item array snapshot for rollback
   metadata      Json             @default(dbgenerated("'{}'::jsonb"))
   createdAt     DateTime         @default(now()) @map("created_at")
+
+  orderItems    OrderItem[]    // P3-04: order items frozen to this version
 
   @@unique([projectId, versionNumber])
   @@index([projectId, versionNumber(sort: Desc)])

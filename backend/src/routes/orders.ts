@@ -11,6 +11,7 @@ import { validateData } from '../utils/validation';
 import { NotFoundError, ServiceUnavailableError, BadRequestError, PaymentServiceError } from '../utils/errors';
 import { emailService } from '../services/email.service';
 import { ensureCustomizationAssetsOwnedByUser } from '../services/asset.service';
+import { saveVersion, getProject } from '../services/builder.service';
 
 /**
  * Mask email address for privacy in logs (GDPR compliance)
@@ -236,6 +237,30 @@ export default async function orderRoutes(fastify: FastifyInstance) {
         }
       }
 
+      // P3-04: Freeze builder project versions before entering transaction
+      // Calls saveVersion for each unique builderProjectId; maps projectId → versionId
+      const builderVersionMap = new Map<string, string>();
+      const builderProjectIds = Array.from(
+        new Set(items.flatMap((item: any) => item.builderProjectId ? [item.builderProjectId] : []))
+      );
+      if (builderProjectIds.length > 0) {
+        await Promise.all(
+          builderProjectIds.map(async (projectId: string) => {
+            // Validate ownership
+            const project = await getProject(projectId, userId);
+            if (!project) {
+              throw new BadRequestError(`Builder project ${projectId} not found or does not belong to you`);
+            }
+            // Save immutable version snapshot
+            const version = await saveVersion(projectId, userId);
+            if (version) {
+              builderVersionMap.set(projectId, version.id);
+            }
+          })
+        );
+        logger.info({ orderId: 'pending', count: builderProjectIds.length }, '[Order Create] Builder versions frozen');
+      }
+
       // Use transaction to prevent race condition when user double-clicks checkout
       const { order, oldPendingOrders } = await prisma.$transaction(async (tx) => {
         // 1. Find existing pending orders INSIDE transaction
@@ -303,6 +328,10 @@ export default async function orderRoutes(fastify: FastifyInstance) {
             productName: item.productName || null,
             variantName: item.variantName || null,
             variantSku: item.variantSku || item.sku || null,
+            // P3-04: Attach frozen version snapshot id (null for non-builder items)
+            builderProjectVersionId: item.builderProjectId
+              ? (builderVersionMap.get(item.builderProjectId) ?? null)
+              : null,
           }));
 
           await tx.orderItem.createMany({

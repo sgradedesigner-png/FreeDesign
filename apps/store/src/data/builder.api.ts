@@ -107,6 +107,21 @@ export async function requestPreviewRender(projectId: string): Promise<{ jobId: 
   return res.json();
 }
 
+/**
+ * Lock a builder project (mark as READY + save immutable version snapshot).
+ * Call this just before adding to cart. Returns the frozen versionId.
+ */
+export async function lockBuilderProject(
+  projectId: string,
+): Promise<{ project: BuilderProject; versionId: string }> {
+  const res = await fetch(`${API}/api/builder/projects/${projectId}/lock`, {
+    method: 'POST',
+    headers: await authHeaders(),
+  });
+  if (!res.ok) throw new Error(`lockProject failed: ${res.status}`);
+  return res.json();
+}
+
 export async function getPreviewStatus(projectId: string): Promise<PreviewJob | null> {
   const res = await fetch(`${API}/api/builder/projects/${projectId}/preview`, {
     headers: await authHeaders(),

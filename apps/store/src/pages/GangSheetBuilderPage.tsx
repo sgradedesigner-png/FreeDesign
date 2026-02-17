@@ -22,12 +22,14 @@ import {
   createBuilderProject,
   listBuilderProjects,
   updateBuilderProject,
+  lockBuilderProject,
   requestPreviewRender,
   getPreviewStatus,
   type BuilderProject,
   type CanvasItem,
   type PreviewJob,
 } from '@/data/builder.api';
+import { useCart } from '@/context/CartContext';
 import { BuilderCanvas }     from '@/components/builder/BuilderCanvas';
 import { BuilderToolbar }    from '@/components/builder/BuilderToolbar';
 import { BuilderAssetPanel } from '@/components/builder/BuilderAssetPanel';
@@ -48,6 +50,7 @@ function normaliseZIndexes(items: CanvasItem[]): CanvasItem[] {
 export default function GangSheetBuilderPage() {
   const { productSlug } = useParams<{ productSlug: string }>();
   const navigate        = useNavigate();
+  const { addBuilderItem, setIsCartOpen } = useCart();
 
   // Auth
   const [userId, setUserId]       = useState<string | null>(null);
@@ -55,6 +58,10 @@ export default function GangSheetBuilderPage() {
 
   // Product / project
   const [productId, setProductId]   = useState<string | null>(null);
+  const [productMeta, setProductMeta] = useState<{
+    name: string; slug: string; category: string;
+    variant: { id: string; name: string; price: number; originalPrice?: number | null; imagePath: string; sku: string };
+  } | null>(null);
   const [project, setProject]       = useState<BuilderProject | null>(null);
   const [loading, setLoading]       = useState(true);
   const [resumeCandidate, setResumeCandidate] = useState<BuilderProject | null>(null);
@@ -111,6 +118,24 @@ export default function GangSheetBuilderPage() {
         }
 
         setProductId(prod.id);
+
+        // Store product meta + first available variant for cart payload
+        const firstVariant = prod.variants?.[0];
+        if (firstVariant) {
+          setProductMeta({
+            name: prod.title ?? prod.name ?? productSlug ?? '',
+            slug: prod.slug,
+            category: prod.category?.name ?? prod.productFamily ?? 'gang-sheet',
+            variant: {
+              id: firstVariant.id,
+              name: firstVariant.name,
+              price: Number(firstVariant.price),
+              originalPrice: firstVariant.originalPrice != null ? Number(firstVariant.originalPrice) : null,
+              imagePath: firstVariant.imagePath ?? firstVariant.image_path ?? '',
+              sku: firstVariant.sku,
+            },
+          });
+        }
 
         // Check for existing DRAFT project on this product
         const projects = await listBuilderProjects();
@@ -294,21 +319,45 @@ export default function GangSheetBuilderPage() {
     }
   }, [project]);
 
-  // ── Add to cart (stub — P3-04 will complete) ───────────────────────────────
+  // ── Add to cart (P3-04) ─────────────────────────────────────────────────────
   const handleAddToCart = useCallback(async () => {
-    if (!project || items.length === 0) return;
+    if (!project || items.length === 0 || !productMeta) return;
     setAddingToCart(true);
     try {
-      // Save current state first
-      await updateBuilderProject(project.id, { items, status: 'READY' });
+      // 1. Flush any pending autosave
+      if (autosaveTimer.current) {
+        clearTimeout(autosaveTimer.current);
+        autosaveTimer.current = null;
+      }
+      await updateBuilderProject(project.id, { items });
       setLastSavedAt(new Date());
-      toast.success('Project saved — add-to-cart handoff coming in P3-04');
+      isDirty.current = false;
+
+      // 2. Lock project: mark READY + freeze immutable version snapshot
+      await lockBuilderProject(project.id);
+
+      // 3. Add builder item to cart
+      addBuilderItem({
+        product: {
+          id: project.productId,
+          name: productMeta.name,
+          slug: productMeta.slug,
+          category: productMeta.category,
+        },
+        variant: productMeta.variant,
+        builderProjectId: project.id,
+        unitPrice: productMeta.variant.price,
+      });
+
+      // 4. Open cart and navigate
+      setIsCartOpen(true);
+      navigate('/cart');
     } catch {
-      toast.error('Failed to save project');
+      toast.error('Failed to add to cart');
     } finally {
       setAddingToCart(false);
     }
-  }, [project, items]);
+  }, [project, items, productMeta, addBuilderItem, setIsCartOpen, navigate]);
 
   // ── Render ──────────────────────────────────────────────────────────────────
   if (!authChecked || loading) {

@@ -23,6 +23,7 @@ import {
   getProject,
   listProjects,
   updateProject,
+  saveVersion,
   createProjectSchema,
   updateProjectSchema,
 } from '../services/builder.service';
@@ -137,6 +138,31 @@ export async function builderRoutes(app: FastifyInstance) {
     if (!project) return reply.status(404).send({ message: 'Project not found' });
 
     return { project };
+  });
+
+  // ── POST /api/builder/projects/:id/lock ────────────────────────────────
+  // Marks project READY, saves an immutable version snapshot, returns versionId.
+  // Called by frontend just before adding builder item to cart.
+  app.post('/:id/lock', async (request, reply) => {
+    const ownerId = await getUserId(request, reply);
+    if (!ownerId) return;
+
+    const { id } = z.object({ id: z.string().uuid() }).parse(request.params);
+
+    try {
+      // Mark project as READY (idempotent if already READY)
+      const project = await updateProject(id, ownerId, { status: 'READY' });
+      if (!project) return reply.status(404).send({ message: 'Project not found' });
+
+      // Save explicit version snapshot (captures current state at lock time)
+      const version = await saveVersion(id, ownerId);
+      if (!version) return reply.status(404).send({ message: 'Project not found' });
+
+      return reply.status(200).send({ project, versionId: version.id });
+    } catch (err: any) {
+      logger.error({ error: err.message }, '[Builder] lockProject failed');
+      return reply.status(500).send({ message: 'Failed to lock project' });
+    }
   });
 
   // ── POST /api/builder/projects/:id/render-preview ──────────────────────

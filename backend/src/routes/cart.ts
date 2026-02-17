@@ -4,6 +4,7 @@ import { Prisma } from '@prisma/client';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma';
 import { logger, hashIdentifier } from '../lib/logger';
+import { getProject } from '../services/builder.service';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
@@ -34,6 +35,8 @@ const cartItemPayloadSchema = z.object({
   size: z.string().nullable().optional(),
   isCustomized: z.boolean().optional(),
   optionPayload: z.record(z.string(), z.unknown()).optional(),
+  // P3-04: Builder project reference (only for GANG_BUILDER cart items)
+  builderProjectId: z.string().uuid().optional(),
 });
 
 const quantityPayloadSchema = z.object({
@@ -55,6 +58,7 @@ const cartInclude = {
 type CartWithItems = Prisma.CartGetPayload<{ include: typeof cartInclude }>;
 
 type CartItemPayload = z.infer<typeof cartItemPayloadSchema>;
+
 
 const normalizeGuestCartId = (value: unknown): string | null => {
   if (Array.isArray(value)) {
@@ -160,6 +164,7 @@ const serializeCart = (cart: CartWithItems | null) => {
         rushOrder: typeof optionPayload.rushOrder === 'boolean' ? optionPayload.rushOrder : undefined,
         rushFee: typeof optionPayload.rushFee === 'number' ? optionPayload.rushFee : undefined,
         addOnFees: typeof optionPayload.addOnFees === 'number' ? optionPayload.addOnFees : undefined,
+        builderProjectId: item.builderProjectId ?? null,
         createdAt: item.createdAt,
         updatedAt: item.updatedAt,
       };
@@ -194,6 +199,7 @@ const upsertCartItem = async (cartId: string, payload: CartItemPayload) => {
       size: payload.size ?? null,
       isCustomized: payload.isCustomized ?? false,
       optionPayload: toInputJson(payload.optionPayload),
+      builderProjectId: payload.builderProjectId ?? null,
       updatedAt: now,
     },
     update: {
@@ -209,6 +215,7 @@ const upsertCartItem = async (cartId: string, payload: CartItemPayload) => {
       size: payload.size ?? null,
       isCustomized: payload.isCustomized ?? false,
       optionPayload: toInputJson(payload.optionPayload),
+      builderProjectId: payload.builderProjectId ?? null,
       updatedAt: now,
     },
   });
@@ -291,6 +298,17 @@ export default async function cartRoutes(fastify: FastifyInstance) {
             message: issue.message,
           })),
         });
+      }
+
+      // P3-04: Validate builder project ownership before attaching to cart
+      if (parsed.data.builderProjectId) {
+        if (!identity.userId) {
+          return reply.status(401).send({ error: 'Authentication required to add builder items to cart' });
+        }
+        const project = await getProject(parsed.data.builderProjectId, identity.userId);
+        if (!project) {
+          return reply.status(403).send({ error: 'Builder project not found or does not belong to you' });
+        }
       }
 
       const cart = await getOrCreateActiveCart(identity);

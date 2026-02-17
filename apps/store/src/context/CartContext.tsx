@@ -58,6 +58,8 @@ export type CartItem = {
   rushFee?: number;
   addOnFees?: number;
   optionPayload?: Record<string, unknown>;
+  // P3-04: Gang-sheet builder project reference
+  builderProjectId?: string | null;
 };
 
 type CartContextValue = {
@@ -73,6 +75,13 @@ type CartContextValue = {
     rushOrder?: boolean;
     rushFee?: number;
     addOnFees?: number;
+  }) => void;
+  // P3-04: Add a builder gang-sheet project to cart
+  addBuilderItem: (params: {
+    product: { id: string; name: string; slug: string; category: string };
+    variant: { id: string; name: string; price: number; originalPrice?: number | null; imagePath: string; sku: string };
+    builderProjectId: string;
+    unitPrice: number;
   }) => void;
   increaseQty: (cartKey: string) => void;
   decreaseQty: (cartKey: string) => void;
@@ -148,6 +157,8 @@ const toCartApiPayload = (item: CartItem) => ({
   size: item.size,
   isCustomized: Boolean(item.isCustomized),
   optionPayload: buildOptionPayload(item),
+  // P3-04: include builder project reference when present
+  ...(item.builderProjectId ? { builderProjectId: item.builderProjectId } : {}),
 });
 
 const mapRemoteItem = (raw: any): CartItem => {
@@ -191,6 +202,7 @@ const mapRemoteItem = (raw: any): CartItem => {
           ? Number(optionPayload.addOnFees)
           : undefined,
     optionPayload,
+    builderProjectId: typeof raw?.builderProjectId === 'string' ? raw.builderProjectId : null,
   };
 };
 
@@ -515,6 +527,47 @@ export function CartProvider({ children }: { children: ReactNode }) {
     toast.success(`${product.name} customized item added to cart`);
   };
 
+  // P3-04: Add a gang-sheet builder project to cart
+  const addBuilderItem = (params: {
+    product: { id: string; name: string; slug: string; category: string };
+    variant: { id: string; name: string; price: number; originalPrice?: number | null; imagePath: string; sku: string };
+    builderProjectId: string;
+    unitPrice: number;
+  }) => {
+    const { product, variant, builderProjectId, unitPrice } = params;
+    const cartKey = `${product.id}__${variant.id}__builder__${builderProjectId}`;
+    const safeUnitPrice = Math.max(0, Number.isFinite(unitPrice) ? unitPrice : 0);
+
+    const newItem: CartItem = {
+      cartKey,
+      quantity: 1,
+      productId: product.id,
+      productName: product.name,
+      productSlug: product.slug,
+      productCategory: product.category,
+      variantId: variant.id,
+      variantName: variant.name,
+      variantPrice: safeUnitPrice,
+      variantOriginalPrice: variant.originalPrice != null ? Number(variant.originalPrice) : null,
+      variantImage: variant.imagePath,
+      variantSku: variant.sku,
+      size: null,
+      isCustomized: true,
+      builderProjectId,
+      optionPayload: { builderProjectId },
+    };
+
+    setCart((prev) => [...prev, newItem]);
+
+    if (dbCartEnabled) {
+      void upsertRemoteItem(newItem).catch((error) => {
+        logger.error('Failed to sync addBuilderItem with backend cart:', error);
+      });
+    }
+
+    toast.success(`${product.name} gang sheet added to cart`);
+  };
+
   const increaseQty = (cartKey: string) => {
     let updatedItem: CartItem | null = null;
 
@@ -606,6 +659,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         cart,
         addItem,
         addCustomizedItem,
+        addBuilderItem,
         increaseQty,
         decreaseQty,
         removeItem,
