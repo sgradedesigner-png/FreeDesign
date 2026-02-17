@@ -1,0 +1,58 @@
+{
+  "general": {
+    "previewFeatures": true
+  },
+  "mcpServers": {
+    "supabase": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@supabase/mcp-server-supabase"
+      ],
+      "env": {
+        "SUPABASE_URL": "YOUR_SUPABASE_URL",
+        "SUPABASE_SERVICE_ROLE_KEY": "YOUR_SERVICE_ROLE_KEY"
+      }
+    },
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-playwright"
+      ]
+    },
+    "cloudflare": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@cloudflare/mcp-server-cloudflare"
+      ],
+      "env": {
+        "CLOUDFLARE_API_TOKEN": "YOUR_API_TOKEN",
+        "CLOUDFLARE_ACCOUNT_ID": "YOUR_ACCOUNT_ID"
+      }
+    },
+    "cloudinary": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@cloudinary/mcp-server"
+      ],
+      "env": {
+        "CLOUDINARY_CLOUD_NAME": "YOUR_CLOUD_NAME",
+        "CLOUDINARY_API_KEY": "YOUR_API_KEY",
+        "CLOUDINARY_API_SECRET": "YOUR_API_SECRET"
+      }
+    },
+    "sentry": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@sentry/mcp-server"
+      ],
+      "env": {
+        "SENTRY_AUTH_TOKEN": "YOUR_SENTRY_AUTH_TOKEN"
+      }
+    }
+  }
+}
