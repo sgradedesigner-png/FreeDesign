@@ -21,12 +21,29 @@ export function ValidationSummary({ errors }: ValidationSummaryProps) {
       .trim();
   };
 
-  const getErrorMessage = (error: any): string => {
-    if (typeof error === 'string') return error;
-    if (error?.message) return error.message;
-    if (Array.isArray(error)) return 'Multiple errors';
-    return 'Invalid value';
+  // Recursively collect all leaf error messages with their field paths
+  const collectErrors = (error: any, prefix = ''): { path: string; message: string }[] => {
+    if (!error) return [];
+    if (typeof error === 'string') return [{ path: prefix, message: error }];
+    if (error?.message && typeof error.message === 'string') {
+      return [{ path: prefix, message: error.message }];
+    }
+    if (Array.isArray(error)) {
+      return error.flatMap((item, idx) =>
+        collectErrors(item, prefix ? `${prefix}[${idx + 1}]` : `[${idx + 1}]`)
+      );
+    }
+    if (typeof error === 'object') {
+      return Object.entries(error).flatMap(([key, val]) =>
+        collectErrors(val, prefix ? `${prefix} › ${formatFieldName(key)}` : formatFieldName(key))
+      );
+    }
+    return [{ path: prefix, message: 'Invalid value' }];
   };
+
+  const allErrors = errorEntries.flatMap(([field, error]) =>
+    collectErrors(error, formatFieldName(field))
+  );
 
   return (
     <Card className="border-destructive">
@@ -39,10 +56,10 @@ export function ValidationSummary({ errors }: ValidationSummaryProps) {
       </CardHeader>
       <CardContent>
         <div className="space-y-2">
-          {errorEntries.map(([field, error]) => (
-            <Alert key={field} variant="destructive" data-error="true">
+          {allErrors.map(({ path, message }, i) => (
+            <Alert key={i} variant="destructive" data-error="true">
               <AlertDescription>
-                <strong>{formatFieldName(field)}:</strong> {getErrorMessage(error)}
+                <strong>{path}:</strong> {message}
               </AlertDescription>
             </Alert>
           ))}

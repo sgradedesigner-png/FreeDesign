@@ -43,7 +43,7 @@ export function Step2_BasicInfo({ form }: Step2_BasicInfoProps) {
     // Load categories
     api
       .get('/admin/categories')
-      .then(({ data }) => setCategories(data.categories || []))
+      .then(({ data }) => setCategories(Array.isArray(data) ? data : (data.categories || [])))
       .catch((error) => console.error('Failed to load categories:', error));
   }, []);
 

@@ -75,24 +75,26 @@ export function Step5_Variants({ form }: Step5_VariantsProps) {
 
   const handleImageSelect = (variantIndex: number, file: File) => {
     const previewUrl = URL.createObjectURL(file);
-    const variant = variants[variantIndex];
-    updateVariant(variantIndex, 'pendingImage', file);
-    updateVariant(variantIndex, 'previewUrl', previewUrl);
+    const newVariants = [...variants];
+    newVariants[variantIndex] = {
+      ...newVariants[variantIndex],
+      pendingImage: file,
+      previewUrl,
+    };
+    form.setValue('variants', newVariants, { shouldValidate: true });
   };
 
   const handleGalleryImagesSelect = (variantIndex: number, files: FileList) => {
-    const variant = variants[variantIndex];
     const newFiles = Array.from(files);
     const newPreviewUrls = newFiles.map((file) => URL.createObjectURL(file));
-
-    updateVariant(variantIndex, 'pendingGalleryImages', [
-      ...(variant.pendingGalleryImages || []),
-      ...newFiles,
-    ]);
-    updateVariant(variantIndex, 'galleryPreviewUrls', [
-      ...(variant.galleryPreviewUrls || []),
-      ...newPreviewUrls,
-    ]);
+    const variant = variants[variantIndex];
+    const newVariants = [...variants];
+    newVariants[variantIndex] = {
+      ...newVariants[variantIndex],
+      pendingGalleryImages: [...(variant.pendingGalleryImages || []), ...newFiles],
+      galleryPreviewUrls: [...(variant.galleryPreviewUrls || []), ...newPreviewUrls],
+    };
+    form.setValue('variants', newVariants, { shouldValidate: true });
   };
 
   const removeGalleryImage = (variantIndex: number, imageIndex: number) => {
@@ -103,10 +105,13 @@ export function Step5_Variants({ form }: Step5_VariantsProps) {
 
   const removePendingGalleryImage = (variantIndex: number, imageIndex: number) => {
     const variant = variants[variantIndex];
-    const newPendingImages = (variant.pendingGalleryImages || []).filter((_, i) => i !== imageIndex);
-    const newPreviewUrls = (variant.galleryPreviewUrls || []).filter((_, i) => i !== imageIndex);
-    updateVariant(variantIndex, 'pendingGalleryImages', newPendingImages);
-    updateVariant(variantIndex, 'galleryPreviewUrls', newPreviewUrls);
+    const newVariants = [...variants];
+    newVariants[variantIndex] = {
+      ...newVariants[variantIndex],
+      pendingGalleryImages: (variant.pendingGalleryImages || []).filter((_, i) => i !== imageIndex),
+      galleryPreviewUrls: (variant.galleryPreviewUrls || []).filter((_, i) => i !== imageIndex),
+    };
+    form.setValue('variants', newVariants, { shouldValidate: true });
   };
 
   return (
@@ -146,7 +151,13 @@ export function Step5_Variants({ form }: Step5_VariantsProps) {
                     value={variant.name}
                     onChange={(e) => updateVariant(index, 'name', e.target.value)}
                     placeholder="e.g., Black/White, Ocean Blue"
+                    className={(form.formState.errors.variants as any)?.[index]?.name ? 'border-destructive' : ''}
                   />
+                  {(form.formState.errors.variants as any)?.[index]?.name && (
+                    <p className="text-sm text-destructive">
+                      {(form.formState.errors.variants as any)[index].name.message}
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -155,7 +166,13 @@ export function Step5_Variants({ form }: Step5_VariantsProps) {
                     value={variant.sku}
                     onChange={(e) => updateVariant(index, 'sku', e.target.value)}
                     placeholder="PROD-001"
+                    className={(form.formState.errors.variants as any)?.[index]?.sku ? 'border-destructive' : ''}
                   />
+                  {(form.formState.errors.variants as any)?.[index]?.sku && (
+                    <p className="text-sm text-destructive">
+                      {(form.formState.errors.variants as any)[index].sku.message}
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -176,7 +193,13 @@ export function Step5_Variants({ form }: Step5_VariantsProps) {
                     value={variant.price}
                     onChange={(e) => updateVariant(index, 'price', e.target.value)}
                     placeholder="0.00"
+                    className={(form.formState.errors.variants as any)?.[index]?.price ? 'border-destructive' : ''}
                   />
+                  {(form.formState.errors.variants as any)?.[index]?.price && (
+                    <p className="text-sm text-destructive">
+                      {(form.formState.errors.variants as any)[index].price.message}
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-2">

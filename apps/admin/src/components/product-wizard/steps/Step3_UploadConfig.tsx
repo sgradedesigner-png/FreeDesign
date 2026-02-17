@@ -167,7 +167,7 @@ function ConstraintPreview({ constraints }: { constraints?: UploadConstraints })
         <p>
           • At least {constraints.minWidth}×{constraints.minHeight} pixels
         </p>
-        <p>• {constraints.allowedFormats.join(', ')} format</p>
+        <p>• {(constraints.allowedFormats ?? []).join(', ')} format</p>
       </div>
     </div>
   );

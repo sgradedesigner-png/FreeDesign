@@ -74,15 +74,15 @@ export function WizardContainer({ productId }: WizardContainerProps) {
       const productData = {
         title: values.title,
         slug: values.slug,
-        category_id: values.categoryId,
+        categoryId: values.categoryId,
         description: values.description || '',
         subtitle: values.subtitle || '',
-        base_price: values.basePrice,
+        basePrice: values.basePrice,
         rating: values.rating ? parseFloat(values.rating) : 0,
         reviews: values.reviews ? parseInt(values.reviews, 10) : 0,
         features: values.features,
         benefits: values.benefits,
-        product_details: values.productDetails,
+        productDetails: values.productDetails,
         is_published: values.isPublished,
         product_family: values.productFamily,
         variants: variantsWithImages,
@@ -122,9 +122,11 @@ export function WizardContainer({ productId }: WizardContainerProps) {
         // Upload main image if pending
         if (variant.pendingImage) {
           const formData = new FormData();
-          formData.append('image', variant.pendingImage);
-          const { data } = await api.post('/admin/products/upload-image', formData);
-          imagePath = data.path;
+          formData.append('file', variant.pendingImage);
+          const { data } = await api.post('/admin/upload/product-image', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+          });
+          imagePath = data.url;
         }
 
         // Upload gallery images if pending
@@ -132,9 +134,11 @@ export function WizardContainer({ productId }: WizardContainerProps) {
           const uploadedGallery = await Promise.all(
             variant.pendingGalleryImages.map(async (file: File) => {
               const formData = new FormData();
-              formData.append('image', file);
-              const { data } = await api.post('/admin/products/upload-image', formData);
-              return data.path;
+              formData.append('file', file);
+              const { data } = await api.post('/admin/upload/product-image', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+              });
+              return data.url;
             })
           );
           galleryPaths = [...galleryPaths, ...uploadedGallery];
