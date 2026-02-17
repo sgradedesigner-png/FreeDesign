@@ -84,34 +84,31 @@ function GangUploadProductInfo({ product, selectedVariant }: ProductStrategyProp
           filename: file.name,
           contentType: file.type,
           fileSizeBytes: file.size,
-          uploadFamily: 'GANG_UPLOAD',
+          uploadFamily: 'gang_upload',
         }),
       });
 
       if (!signResponse.ok) {
         const error = await signResponse.json();
-        throw new Error(error.message || 'Failed to get upload signature');
+        throw new Error(error.error || error.message || 'Failed to get upload signature');
       }
 
-      const { signature, timestamp, apiKey, cloudName, folder, publicId } =
-        await signResponse.json();
+      const signData = await signResponse.json();
+      const { intentId, uploadUrl, fields } = signData;
 
       // Step 2: Upload to Cloudinary
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('signature', signature);
-      formData.append('timestamp', timestamp.toString());
-      formData.append('api_key', apiKey);
-      formData.append('folder', folder);
-      formData.append('public_id', publicId);
+      formData.append('signature', fields.signature);
+      formData.append('timestamp', fields.timestamp.toString());
+      formData.append('api_key', fields.apiKey);
+      formData.append('folder', fields.folder);
+      formData.append('public_id', fields.publicId);
 
-      const cloudinaryResponse = await fetch(
-        `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
-        {
-          method: 'POST',
-          body: formData,
-        }
-      );
+      const cloudinaryResponse = await fetch(uploadUrl, {
+        method: 'POST',
+        body: formData,
+      });
 
       if (!cloudinaryResponse.ok) {
         throw new Error('Failed to upload to Cloudinary');
@@ -127,14 +124,14 @@ function GangUploadProductInfo({ product, selectedVariant }: ProductStrategyProp
           ...authHeader,
         },
         body: JSON.stringify({
-          intentId: publicId, // Using publicId as intentId for now
+          intentId,
           cloudinaryPublicId: cloudinaryData.public_id,
         }),
       });
 
       if (!completeResponse.ok) {
         const error = await completeResponse.json();
-        throw new Error(error.message || 'Failed to complete upload');
+        throw new Error(error.error || error.message || 'Failed to complete upload');
       }
 
       const { uploadAsset: asset } = await completeResponse.json();
