@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Star, Heart, Share2, ShoppingCart, Upload, FileImage, LogIn } from 'lucide-react';
+import { Star, Heart, Share2, ShoppingCart, Upload, FileImage, LogIn, Loader2 } from 'lucide-react';
 import type { ProductStrategy, ProductStrategyProps } from '../types';
 import { useCart } from '../../../context/CartContext';
 import { useWishlist } from '../../../context/WishlistContext';
@@ -327,6 +327,27 @@ function GangUploadProductInfo({ product, selectedVariant }: ProductStrategyProp
               </Button>
             </div>
           ) : (
+          {isUploading ? (
+            /* Loading state */
+            <div className="border-2 border-primary/40 border-dashed rounded-lg p-6 text-center bg-primary/5">
+              <Loader2
+                size={40}
+                className="mx-auto text-primary mb-3 animate-spin"
+              />
+              <p className="text-sm font-semibold text-foreground mb-1">
+                {language === 'mn' ? 'Файл upload хийж байна...' : 'Uploading your file...'}
+              </p>
+              <p className="text-xs text-muted-foreground mb-4">
+                {language === 'mn'
+                  ? 'Хуудсыг хаахгүй байна уу'
+                  : 'Please do not close this page'}
+              </p>
+              {/* Animated progress bar */}
+              <div className="w-full h-1.5 bg-border rounded-full overflow-hidden">
+                <div className="h-full bg-primary rounded-full animate-upload-progress" />
+              </div>
+            </div>
+          ) : (
           <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
             <input
               type="file"
@@ -337,25 +358,17 @@ function GangUploadProductInfo({ product, selectedVariant }: ProductStrategyProp
               disabled={isUploading}
               className="hidden"
             />
-            <label
-              htmlFor="gang-sheet-upload"
-              className={`cursor-pointer ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
-            >
+            <label htmlFor="gang-sheet-upload" className="cursor-pointer">
               <Upload size={48} className="mx-auto text-muted-foreground mb-3" />
               <p className="text-sm font-medium text-foreground mb-1">
-                {isUploading
-                  ? language === 'mn'
-                    ? 'Upload хийж байна...'
-                    : 'Uploading...'
-                  : language === 'mn'
-                  ? 'Файл upload хийх'
-                  : 'Click to upload or drag and drop'}
+                {language === 'mn' ? 'Файл upload хийх' : 'Click to upload or drag and drop'}
               </p>
               <p className="text-xs text-muted-foreground">
                 PNG, JPEG, PDF (max 50MB) • Min 1200px wide • Min 150 DPI
               </p>
             </label>
           </div>
+          )}
           )
         ) : (
           <div className="border border-border rounded-lg p-4">

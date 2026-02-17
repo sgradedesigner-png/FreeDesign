@@ -64,7 +64,17 @@ module.exports = {
   			lg: 'var(--radius)',
   			md: 'calc(var(--radius) - 2px)',
   			sm: 'calc(var(--radius) - 4px)'
-  		}
+  		},
+  		keyframes: {
+  			'upload-progress': {
+  				'0%':   { width: '0%',   marginLeft: '0%' },
+  				'50%':  { width: '60%',  marginLeft: '20%' },
+  				'100%': { width: '0%',   marginLeft: '100%' },
+  			},
+  		},
+  		animation: {
+  			'upload-progress': 'upload-progress 1.8s ease-in-out infinite',
+  		},
   	}
   },
   plugins: [require("tailwindcss-animate")],
