@@ -75,6 +75,12 @@ enum ModerationStatus {
   FLAGGED
 }
 
+enum BuilderProjectStatus {
+  DRAFT
+  READY
+  ARCHIVED
+}
+
 model Profile {
   id        String   @id // = auth.users.id
   role      Role     @default(CUSTOMER)
@@ -201,6 +207,7 @@ model Product {
   variants        ProductVariant[] // Product variants
   printAreas      ProductPrintArea[]
   collections     CollectionProduct[] // Phase 1: Collection memberships
+  builderProjects GangSheetProject[]  // Phase 3: Builder projects
   rating          Float              @default(0)
   reviews         Int                @default(0)
   features        String[]           @default([])
@@ -623,6 +630,68 @@ model UploadValidationEvent {
   @@index([jobId, createdAt(sort: Desc)])
   @@index([eventType])
   @@map("upload_validation_events")
+}
+
+// ============================================
+// Phase 3: Gang Sheet Builder Models
+// ============================================
+
+model GangSheetProject {
+  id             String               @id @default(uuid())
+  ownerId        String               @map("owner_id")
+  productId      String               @map("product_id")
+  product        Product              @relation(fields: [productId], references: [id], onDelete: Restrict)
+  title          String               @default("Untitled Project")
+  status         BuilderProjectStatus @default(DRAFT)
+  canvasWidthCm  Float                @map("canvas_width_cm")
+  canvasHeightCm Float                @map("canvas_height_cm")
+  metadata       Json                 @default(dbgenerated("'{}'::jsonb"))
+  createdAt      DateTime             @default(now()) @map("created_at")
+  updatedAt      DateTime             @updatedAt @map("updated_at")
+
+  items    GangSheetProjectItem[]
+  versions GangSheetProjectVersion[]
+
+  @@index([ownerId, updatedAt(sort: Desc)])
+  @@index([status, updatedAt(sort: Desc)])
+  @@index([productId])
+  @@map("gang_sheet_projects")
+}
+
+model GangSheetProjectItem {
+  id        String           @id @default(uuid())
+  projectId String           @map("project_id")
+  project   GangSheetProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  assetUrl  String           @map("asset_url")    // Cloudinary URL of the placed image
+  xCm       Float            @map("x_cm")         // X position on canvas (cm)
+  yCm       Float            @map("y_cm")         // Y position on canvas (cm)
+  widthCm   Float            @map("width_cm")     // Width on canvas (cm)
+  heightCm  Float            @map("height_cm")    // Height on canvas (cm)
+  rotation  Float            @default(0)          // Rotation in degrees
+  zIndex    Int              @map("z_index")      // Stacking order (deterministic ordering)
+  flipH     Boolean          @default(false) @map("flip_h")
+  flipV     Boolean          @default(false) @map("flip_v")
+  metadata  Json             @default(dbgenerated("'{}'::jsonb"))
+  createdAt DateTime         @default(now()) @map("created_at")
+  updatedAt DateTime         @updatedAt @map("updated_at")
+
+  @@index([projectId, zIndex])
+  @@index([projectId])
+  @@map("gang_sheet_project_items")
+}
+
+model GangSheetProjectVersion {
+  id            String           @id @default(uuid())
+  projectId     String           @map("project_id")
+  project       GangSheetProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  versionNumber Int              @map("version_number")
+  itemsSnapshot Json             @map("items_snapshot") // Full item array snapshot for rollback
+  metadata      Json             @default(dbgenerated("'{}'::jsonb"))
+  createdAt     DateTime         @default(now()) @map("created_at")
+
+  @@unique([projectId, versionNumber])
+  @@index([projectId, versionNumber(sort: Desc)])
+  @@map("gang_sheet_project_versions")
 }
 
 model UploadModerationAction {
