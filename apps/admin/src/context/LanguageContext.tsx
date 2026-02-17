@@ -23,6 +23,7 @@ const translations: Record<Language, Record<string, string>> = {
     'nav.moderation': 'Upload Moderation',
     'nav.pricing': 'Pricing Rules',
     'nav.emailTest': 'Email Test',
+    'nav.reprints': 'Reprint Queue',
     'nav.settings': 'Settings',
     'nav.logout': 'Logout',
 
@@ -88,6 +89,7 @@ const translations: Record<Language, Record<string, string>> = {
     'nav.moderation': 'Upload хянах',
     'nav.pricing': 'Үнийн дүрэм',
     'nav.emailTest': 'Email тест',
+    'nav.reprints': 'Дахин хэвлэх дараалал',
     'nav.settings': 'Тохиргоо',
     'nav.logout': 'Гарах',
 

@@ -88,6 +88,23 @@ enum BuilderPreviewJobStatus {
   FAILED
 }
 
+// P3-05: Admin Ops enums
+enum SlaTier {
+  STANDARD
+  RUSH
+  CRITICAL
+}
+
+enum ReprintStatus {
+  REQUESTED
+  APPROVED
+  IN_QUEUE
+  PRINTING
+  DONE
+  REJECTED
+  CANCELLED
+}
+
 model Profile {
   id        String   @id // = auth.users.id
   role      Role     @default(CUSTOMER)
@@ -322,6 +339,10 @@ model Order {
   expiredEmailSent             Boolean   @default(false) // Order expired email sent
   expiredEmailSentAt           DateTime? // When expired email was sent
 
+  // P3-05: Admin Ops — SLA and hold
+  slaDueAt  DateTime? @map("sla_due_at")  // SLA deadline (nullable = no SLA set)
+  isOnHold  Boolean   @default(false) @map("is_on_hold")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -329,6 +350,9 @@ model Order {
   user             Profile                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   customizations   OrderItemCustomization[]
   productionEvents ProductionStatusEvent[]
+  slaEvents        OrderSlaEvent[]          // P3-05
+  holds            OrderHold[]              // P3-05
+  reprintRequests  ReprintRequest[]         // P3-05
 
   @@index([userId])
   @@index([status])
@@ -339,6 +363,7 @@ model Order {
   @@index([paymentStatus])
   @@index([qpayInvoiceExpiresAt])
   @@index([expiredAt])
+  @@index([slaDueAt, productionStatus])
   @@map("orders")
 }
 
@@ -767,6 +792,56 @@ model UploadModerationAction {
   @@index([actorId])
   @@index([action])
   @@map("upload_moderation_actions")
+}
+
+// ── P3-05: Admin Ops models ──────────────────────────────────────────────────
+
+model OrderSlaEvent {
+  id        String   @id @default(uuid())
+  orderId   String   @map("order_id")
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  slaDueAt  DateTime @map("sla_due_at")
+  slaTier   SlaTier  @default(STANDARD) @map("sla_tier")
+  notes     String?
+  setBy     String   @map("set_by")   // admin user id
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([orderId, createdAt(sort: Desc)])
+  @@index([slaDueAt, slaTier])
+  @@map("order_sla_events")
+}
+
+model OrderHold {
+  id          String    @id @default(uuid())
+  orderId     String    @map("order_id")
+  order       Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  reason      String
+  heldBy      String    @map("held_by")     // admin user id
+  releasedBy  String?   @map("released_by") // admin user id
+  releasedAt  DateTime? @map("released_at")
+  notes       String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@index([orderId, createdAt(sort: Desc)])
+  @@map("order_holds")
+}
+
+model ReprintRequest {
+  id          String        @id @default(uuid())
+  orderId     String        @map("order_id")
+  order       Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  status      ReprintStatus @default(REQUESTED)
+  reason      String
+  notes       String?
+  requestedBy String        @map("requested_by") // admin user id
+  approvedBy  String?       @map("approved_by")  // admin user id
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+
+  @@index([orderId, createdAt(sort: Desc)])
+  @@index([status, createdAt(sort: Desc)])
+  @@map("reprint_requests")
 }
 
 

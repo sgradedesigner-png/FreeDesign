@@ -29,7 +29,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { RefreshCw, FileDown, Loader2 } from 'lucide-react';
+import { RefreshCw, FileDown, Loader2, Clock, Lock, Unlock } from 'lucide-react';
 import { toast } from 'sonner';
 
 const productionStatuses = [
@@ -53,6 +53,8 @@ type ProductionOrder = {
   productionStatus: ProductionStatus;
   isCustomOrder: boolean;
   createdAt: string;
+  slaDueAt: string | null;
+  isOnHold: boolean;
   customizations: Array<{ id: string }>;
 };
 
@@ -163,6 +165,16 @@ const statusLabels: Record<ProductionStatus, string> = {
   DONE: 'Done',
 };
 
+function getSlaAging(slaDueAt: string | null): { label: string; className: string } | null {
+  if (!slaDueAt) return null;
+  const diffMs = new Date(slaDueAt).getTime() - Date.now();
+  const diffH = diffMs / (1000 * 60 * 60);
+  if (diffH < 0) return { label: 'OVERDUE', className: 'text-red-600 font-bold' };
+  if (diffH < 24) return { label: `Due in ${Math.round(diffH)}h`, className: 'text-amber-600 font-semibold' };
+  const diffD = Math.floor(diffH / 24);
+  return { label: `Due in ${diffD}d`, className: 'text-green-600' };
+}
+
 function getStatusBadge(status: ProductionStatus) {
   const classMap: Record<ProductionStatus, string> = {
     NEW: 'bg-slate-100 text-slate-700',
@@ -212,6 +224,22 @@ export default function ProductionDashboardPage() {
   });
 
   const [printPackOrderId, setPrintPackOrderId] = useState<string | null>(null);
+
+  const [holdDialog, setHoldDialog] = useState<{
+    open: boolean;
+    order: ProductionOrder | null;
+    action: 'hold' | 'release';
+    reason: string;
+    notes: string;
+  }>({ open: false, order: null, action: 'hold', reason: '', notes: '' });
+
+  const [slaDialog, setSlaDialog] = useState<{
+    open: boolean;
+    order: ProductionOrder | null;
+    slaDueAt: string;
+    slaTier: 'STANDARD' | 'RUSH' | 'CRITICAL';
+    notes: string;
+  }>({ open: false, order: null, slaDueAt: '', slaTier: 'STANDARD', notes: '' });
 
   const { data, isLoading, isFetching } = useQuery<ProductionOrdersResponse>({
     queryKey: ['production-orders', selectedStatus, customOrderOnly, page],
@@ -280,6 +308,62 @@ export default function ProductionDashboardPage() {
     },
     onError: (error: any) => {
       toast.error(error?.response?.data?.error || 'Failed to update selected orders');
+    },
+  });
+
+  const holdMutation = useMutation({
+    mutationFn: async (payload: { orderId: string; reason: string; notes?: string }) => {
+      await api.post(`/admin/orders/${payload.orderId}/hold`, {
+        reason: payload.reason,
+        notes: payload.notes,
+      });
+    },
+    onSuccess: () => {
+      toast.success('Order placed on hold');
+      queryClient.invalidateQueries({ queryKey: ['production-orders'] });
+      setHoldDialog({ open: false, order: null, action: 'hold', reason: '', notes: '' });
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.error || 'Failed to place order on hold');
+    },
+  });
+
+  const releaseMutation = useMutation({
+    mutationFn: async (payload: { orderId: string; notes?: string }) => {
+      await api.delete(`/admin/orders/${payload.orderId}/hold`, {
+        data: { notes: payload.notes },
+      });
+    },
+    onSuccess: () => {
+      toast.success('Order hold released');
+      queryClient.invalidateQueries({ queryKey: ['production-orders'] });
+      setHoldDialog({ open: false, order: null, action: 'hold', reason: '', notes: '' });
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.error || 'Failed to release hold');
+    },
+  });
+
+  const slaMutation = useMutation({
+    mutationFn: async (payload: {
+      orderId: string;
+      slaDueAt: string;
+      slaTier: string;
+      notes?: string;
+    }) => {
+      await api.put(`/admin/orders/${payload.orderId}/sla`, {
+        slaDueAt: payload.slaDueAt,
+        slaTier: payload.slaTier,
+        notes: payload.notes,
+      });
+    },
+    onSuccess: () => {
+      toast.success('SLA updated');
+      queryClient.invalidateQueries({ queryKey: ['production-orders'] });
+      setSlaDialog({ open: false, order: null, slaDueAt: '', slaTier: 'STANDARD', notes: '' });
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.error || 'Failed to set SLA');
     },
   });
 
@@ -490,19 +574,20 @@ export default function ProductionDashboardPage() {
                 <TableHead>Payment</TableHead>
                 <TableHead>Customizations</TableHead>
                 <TableHead>Total</TableHead>
+                <TableHead>SLA / Hold</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="py-10 text-center text-muted-foreground">
+                  <TableCell colSpan={9} className="py-10 text-center text-muted-foreground">
                     Loading production orders...
                   </TableCell>
                 </TableRow>
               ) : orders.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="py-10 text-center text-muted-foreground">
+                  <TableCell colSpan={9} className="py-10 text-center text-muted-foreground">
                     No orders found for current filters
                   </TableCell>
                 </TableRow>
@@ -542,6 +627,26 @@ export default function ProductionDashboardPage() {
                     </TableCell>
                     <TableCell>{order.customizations.length}</TableCell>
                     <TableCell className="font-semibold">${Number(order.total).toLocaleString()}</TableCell>
+                    <TableCell>
+                      {(() => {
+                        const aging = getSlaAging(order.slaDueAt);
+                        return (
+                          <div className="flex flex-col gap-1">
+                            {aging && (
+                              <span className={`text-xs ${aging.className}`}>{aging.label}</span>
+                            )}
+                            {order.isOnHold && (
+                              <span className="px-1.5 py-0.5 rounded text-xs bg-red-100 text-red-700 font-medium w-fit">
+                                ON HOLD
+                              </span>
+                            )}
+                            {!aging && !order.isOnHold && (
+                              <span className="text-xs text-muted-foreground">—</span>
+                            )}
+                          </div>
+                        );
+                      })()}
+                    </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
                         <Button
@@ -565,6 +670,42 @@ export default function ProductionDashboardPage() {
                         >
                           <FileDown className="mr-1 h-4 w-4" />
                           Print Pack
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            if (order.isOnHold) {
+                              setHoldDialog({ open: true, order, action: 'release', reason: '', notes: '' });
+                            } else {
+                              setHoldDialog({ open: true, order, action: 'hold', reason: '', notes: '' });
+                            }
+                          }}
+                        >
+                          {order.isOnHold ? (
+                            <Unlock className="mr-1 h-4 w-4" />
+                          ) : (
+                            <Lock className="mr-1 h-4 w-4" />
+                          )}
+                          {order.isOnHold ? 'Release' : 'Hold'}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() =>
+                            setSlaDialog({
+                              open: true,
+                              order,
+                              slaDueAt: order.slaDueAt
+                                ? new Date(order.slaDueAt).toISOString().slice(0, 16)
+                                : '',
+                              slaTier: 'STANDARD',
+                              notes: '',
+                            })
+                          }
+                        >
+                          <Clock className="mr-1 h-4 w-4" />
+                          SLA
                         </Button>
                       </div>
                     </TableCell>
@@ -962,6 +1103,197 @@ export default function ProductionDashboardPage() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setPrintPackOrderId(null)}>
               Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* ── Hold / Release Dialog ──────────────────────────────────────────── */}
+      <Dialog
+        open={holdDialog.open}
+        onOpenChange={(open) => {
+          if (!open) setHoldDialog({ open: false, order: null, action: 'hold', reason: '', notes: '' });
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {holdDialog.action === 'hold' ? 'Place Order on Hold' : 'Release Order Hold'}
+            </DialogTitle>
+            <DialogDescription>
+              {holdDialog.order
+                ? `Order #${holdDialog.order.id.slice(0, 8).toUpperCase()}`
+                : ''}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {holdDialog.action === 'hold' && (
+              <div>
+                <p className="mb-2 text-sm text-muted-foreground">Reason *</p>
+                <Input
+                  value={holdDialog.reason}
+                  onChange={(e) =>
+                    setHoldDialog((prev) => ({ ...prev, reason: e.target.value }))
+                  }
+                  placeholder="Why is this order being held?"
+                />
+              </div>
+            )}
+            <div>
+              <p className="mb-2 text-sm text-muted-foreground">Notes (optional)</p>
+              <Input
+                value={holdDialog.notes}
+                onChange={(e) =>
+                  setHoldDialog((prev) => ({ ...prev, notes: e.target.value }))
+                }
+                placeholder="Additional context"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() =>
+                setHoldDialog({ open: false, order: null, action: 'hold', reason: '', notes: '' })
+              }
+            >
+              Cancel
+            </Button>
+            <Button
+              disabled={
+                holdDialog.action === 'hold'
+                  ? !holdDialog.reason.trim() || holdMutation.isPending
+                  : releaseMutation.isPending
+              }
+              onClick={() => {
+                if (!holdDialog.order) return;
+                if (holdDialog.action === 'hold') {
+                  holdMutation.mutate({
+                    orderId: holdDialog.order.id,
+                    reason: holdDialog.reason.trim(),
+                    notes: holdDialog.notes.trim() || undefined,
+                  });
+                } else {
+                  releaseMutation.mutate({
+                    orderId: holdDialog.order.id,
+                    notes: holdDialog.notes.trim() || undefined,
+                  });
+                }
+              }}
+            >
+              {holdMutation.isPending || releaseMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Processing...
+                </>
+              ) : holdDialog.action === 'hold' ? (
+                'Place on Hold'
+              ) : (
+                'Release Hold'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── SLA Assignment Dialog ──────────────────────────────────────────── */}
+      <Dialog
+        open={slaDialog.open}
+        onOpenChange={(open) => {
+          if (!open)
+            setSlaDialog({ open: false, order: null, slaDueAt: '', slaTier: 'STANDARD', notes: '' });
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Set SLA Due Date</DialogTitle>
+            <DialogDescription>
+              {slaDialog.order
+                ? `Order #${slaDialog.order.id.slice(0, 8).toUpperCase()}`
+                : ''}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div>
+              <p className="mb-2 text-sm text-muted-foreground">SLA Due Date *</p>
+              <Input
+                type="datetime-local"
+                value={slaDialog.slaDueAt}
+                onChange={(e) =>
+                  setSlaDialog((prev) => ({ ...prev, slaDueAt: e.target.value }))
+                }
+              />
+            </div>
+            <div>
+              <p className="mb-2 text-sm text-muted-foreground">SLA Tier</p>
+              <Select
+                value={slaDialog.slaTier}
+                onValueChange={(v) =>
+                  setSlaDialog((prev) => ({
+                    ...prev,
+                    slaTier: v as 'STANDARD' | 'RUSH' | 'CRITICAL',
+                  }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="STANDARD">Standard</SelectItem>
+                  <SelectItem value="RUSH">Rush</SelectItem>
+                  <SelectItem value="CRITICAL">Critical</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <p className="mb-2 text-sm text-muted-foreground">Notes (optional)</p>
+              <Input
+                value={slaDialog.notes}
+                onChange={(e) =>
+                  setSlaDialog((prev) => ({ ...prev, notes: e.target.value }))
+                }
+                placeholder="SLA context"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() =>
+                setSlaDialog({
+                  open: false,
+                  order: null,
+                  slaDueAt: '',
+                  slaTier: 'STANDARD',
+                  notes: '',
+                })
+              }
+            >
+              Cancel
+            </Button>
+            <Button
+              disabled={!slaDialog.slaDueAt || slaMutation.isPending}
+              onClick={() => {
+                if (!slaDialog.order || !slaDialog.slaDueAt) return;
+                slaMutation.mutate({
+                  orderId: slaDialog.order.id,
+                  slaDueAt: new Date(slaDialog.slaDueAt).toISOString(),
+                  slaTier: slaDialog.slaTier,
+                  notes: slaDialog.notes.trim() || undefined,
+                });
+              }}
+            >
+              {slaMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                'Save SLA'
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
