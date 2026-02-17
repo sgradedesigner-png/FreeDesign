@@ -1,9 +1,11 @@
 import { useState } from 'react';
-import { Star, Heart, Share2, ShoppingCart, Upload, FileImage } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Star, Heart, Share2, ShoppingCart, Upload, FileImage, LogIn } from 'lucide-react';
 import type { ProductStrategy, ProductStrategyProps } from '../types';
 import { useCart } from '../../../context/CartContext';
 import { useWishlist } from '../../../context/WishlistContext';
 import { useTheme } from '../../../context/ThemeContext';
+import { useAuth } from '../../../context/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { Button } from '../../../components/ui/button';
 import {
@@ -31,6 +33,9 @@ function GangUploadProductInfo({ product, selectedVariant }: ProductStrategyProp
   const { language } = useTheme();
   const { addItem } = useCart();
   const { addToWishlist, isInWishlist } = useWishlist();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
 
   // State
   const [quantity, setQuantity] = useState(1);
@@ -299,6 +304,31 @@ function GangUploadProductInfo({ product, selectedVariant }: ProductStrategyProp
         </label>
 
         {!uploadAsset ? (
+          !user ? (
+            /* Not logged in — show login prompt */
+            <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
+              <LogIn size={40} className="mx-auto text-muted-foreground mb-3" />
+              <p className="text-sm font-medium text-foreground mb-1">
+                {language === 'mn'
+                  ? 'Файл upload хийхийн өмнө нэвтрэх шаардлагатай'
+                  : 'Sign in required to upload files'}
+              </p>
+              <p className="text-xs text-muted-foreground mb-4">
+                {language === 'mn'
+                  ? 'Таны файл таны акканттай холбогдон хадгалагдана'
+                  : 'Your file will be saved and linked to your account'}
+              </p>
+              <Button
+                size="sm"
+                onClick={() =>
+                  navigate(`/login?returnTo=${encodeURIComponent(location.pathname)}`)
+                }
+              >
+                <LogIn size={16} className="mr-2" />
+                {language === 'mn' ? 'Нэвтрэх' : 'Sign In'}
+              </Button>
+            </div>
+          ) : (
           <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
             <input
               type="file"
@@ -328,6 +358,7 @@ function GangUploadProductInfo({ product, selectedVariant }: ProductStrategyProp
               </p>
             </label>
           </div>
+          )
         ) : (
           <div className="border border-border rounded-lg p-4">
             <div className="flex items-start gap-3">
