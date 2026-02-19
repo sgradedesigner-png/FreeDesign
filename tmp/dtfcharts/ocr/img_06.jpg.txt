@@ -1,0 +1,21 @@
+0.98	Hockey Jersey Placement Guide
+0.99	NHL
+0.98	These are some suggested sizes and placements for your hockey jersey designs. You
+0.89	HNO
+0.98	should always verify with your local league for specific measurements and placements.
+0.98	Front Number Design Size
+0.92	·Adult 4"
+0.89	· Youth 3"
+0.98	Shoulder/Sleeve Design Size
+0.91	· Adult 4"
+0.99	TEAM
+1.00	LOGO
+0.95	·Youth 3"
+0.94	Capt. "C" / Asst. Capt. "A"
+0.92	·Adult 4"
+0.93	·Youth 3"
+0.99	Back Name Design Size
+0.96	·Adult3"
+0.96	Youth 2"
+1.00	Back Number Design Size
+0.93	·Adult / Youth 10"

@@ -32,7 +32,7 @@ export default function AutoMockupPreview({
         <img
           src={imageSrc}
           alt="Auto generated mockup preview"
-          className="h-[360px] w-full object-cover"
+          className="aspect-[4/3] w-full bg-background object-contain"
         />
 
         {loading ? (

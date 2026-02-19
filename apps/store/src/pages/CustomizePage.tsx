@@ -7,7 +7,10 @@ import {
   Loader2,
   Minus,
   Plus,
+  Redo2,
   ShoppingCart,
+  Trash2,
+  Undo2,
   Zap,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -24,8 +27,22 @@ import DesignUploader, { type UploadedDesignAsset } from '@/components/customize
 import PlacementSelector, { type PrintAreaOption } from '@/components/customize/PlacementSelector';
 import SizeTierSelector, { type PrintSizeTierOption } from '@/components/customize/SizeTierSelector';
 import PriceBreakdown, { type CustomizationPriceBreakdown } from '@/components/customize/PriceBreakdown';
-import CanvasEditor, { type CanvasPlacementConfig } from '@/components/customize/CanvasEditor';
 import AutoMockupPreview from '@/components/customize/AutoMockupPreview';
+import KonvaCustomizeCanvas from '@/components/customize/KonvaCustomizeCanvas';
+import KonvaDesignImage from '@/components/customize/KonvaDesignImage';
+import DesignSizeIndicator from '@/components/customize/DesignSizeIndicator';
+import ViewSwitcherTabs from '@/components/customize/ViewSwitcherTabs';
+import PlacementPresetBar from '@/components/customize/PlacementPresetBar';
+import { resolveProductType, galleryPathsToViewMap } from '@/lib/garmentBoundsLoader';
+import { usePlacementEngine } from '@/hooks/usePlacementEngine';
+import { useHistory } from '@/hooks/useHistory';
+import { useKonvaImage } from '@/hooks/useKonvaImage';
+import type { ViewName } from '@/types/garment';
+import type { PlacementStandard } from '@/types/garment';
+import type { KonvaImageAttrs, KonvaRect } from '@/types/customization';
+
+// Legacy Fabric placement config — kept for Phase 2→3 migration
+type CanvasPlacementConfig = { offsetX: number; offsetY: number; rotation: number; scale: number };
 import AddOnSelector, { type AddOnOption } from '@/components/customize/AddOnSelector';
 
 type CustomizationOptionsResponse = {
@@ -51,6 +68,7 @@ const DEFAULT_CANVAS_PLACEMENT: CanvasPlacementConfig = {
   rotation: 0,
   scale: 1,
 };
+const CANVAS_ASPECT_RATIO = 4 / 3;
 
 // ── Step definitions ─────────────────────────────────────────────────────────
 const STEPS = [
@@ -104,10 +122,301 @@ export default function CustomizePage() {
   const [quantity, setQuantity] = useState(1);
   const [rushOrder, setRushOrder] = useState(false);
 
-  // ── Upload ─────────────────────────────────────────────────────────────────
+  // ── Konva canvas — product type + view ────────────────────────────────────
+  const productType = useMemo(
+    () => resolveProductType(product?.productSubfamily ?? (product as any)?.title ?? product?.name ?? ''),
+    [product?.productSubfamily, product?.name]
+  );
+  const [activeView, setActiveView] = useState<ViewName>('front');
+
+  // Map view → Cloudinary URL from variant gallery
+  const viewImages = useMemo(() => {
+    if (!selectedVariant) return {};
+    return galleryPathsToViewMap(
+      productType,
+      selectedVariant.imagePath ?? '',
+      selectedVariant.galleryPaths ?? []
+    );
+  }, [productType, selectedVariant]);
+
+  // ── Responsive canvas width ─────────────────────────────────────────────────
+  const [canvasContainerEl, setCanvasContainerEl] = useState<HTMLDivElement | null>(null);
+  const canvasContainerRef = useCallback((node: HTMLDivElement | null) => {
+    setCanvasContainerEl(node);
+  }, []);
+  const [canvasWidth, setCanvasWidth] = useState(560);
+
+  // Single effect for canvas width measurement
+  useEffect(() => {
+    if (!canvasContainerEl) return;
+
+    const measure = (rect: DOMRectReadOnly | DOMRect) => {
+      const nextWidth = Math.floor(
+        Math.min(rect.width, rect.height > 0 ? rect.height * CANVAS_ASPECT_RATIO : rect.width)
+      );
+      if (nextWidth > 0) {
+        setCanvasWidth((prev) => (prev === nextWidth ? prev : nextWidth));
+      }
+    };
+
+    // Immediate measurement
+    measure(canvasContainerEl.getBoundingClientRect());
+
+    // Watch for resize changes
+    const ro = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        measure(entry.contentRect);
+      }
+    });
+    ro.observe(canvasContainerEl);
+    return () => ro.disconnect();
+  }, [canvasContainerEl]);
+
+  // ── Placement engine ────────────────────────────────────────────────────────
+  const placementEngine = usePlacementEngine(productType, activeView, 'Adult', canvasWidth);
+
+  // Active preset selection + ghost rect
+  const [activePlacementKey, setActivePlacementKey] = useState<string | null>(null);
+  const [hoverPlacement, setHoverPlacement] = useState<PlacementStandard | null>(null);
+  const [editableGhostRect, setEditableGhostRect] = useState<KonvaRect | null>(null);
+  const lastAutoPlacementViewRef = useRef<ViewName | null>(null);
+
+  // Ghost rect: prefer hover preview, fall back to active preset
+  // Hidden once a design is placed on canvas (user can see the real design)
+  const derivedGhostRect = useMemo((): KonvaRect | null => {
+    const source = hoverPlacement
+      ?? (activePlacementKey
+          ? placementEngine.placements.find(p => p.placementKey === activePlacementKey) ?? null
+          : null);
+    if (!source) return null;
+    return placementEngine.presetToCanvasRect(source);
+  }, [hoverPlacement, activePlacementKey, placementEngine]);
+
+  useEffect(() => {
+    setEditableGhostRect(null);
+  }, [activePlacementKey, hoverPlacement?.placementKey, activeView]);
+
+  const ghostRect = useMemo(() => editableGhostRect ?? derivedGhostRect, [editableGhostRect, derivedGhostRect]);
+
+  // ── Upload asset ───────────────────────────────────────────────────────────
+  // Declared here (before design image hook) so the design loader can reference it
   const [asset, setAsset] = useState<UploadedDesignAsset | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+
+  // ── Design image (Konva) ────────────────────────────────────────────────────
+  // Load uploaded design URL as HTMLImageElement for Konva
+  const [designImage, designImageStatus] = useKonvaImage(asset?.originalUrl ?? null);
+
+  // Natural canvas dimensions of the design node — derived from the preset rect
+  // (or a default safe-area-fitted size if no preset is active)
+  const naturalDesignSize = useMemo((): { width: number; height: number } | null => {
+    if (!designImage) return null;
+
+    // Prefer active placement preset dimensions
+    const presetKey = activePlacementKey;
+    if (presetKey) {
+      const placement = placementEngine.placements.find((p) => p.placementKey === presetKey);
+      if (placement) {
+        const rect = placementEngine.presetToCanvasRect(placement);
+        // Fit the uploaded image aspect ratio inside the preset rect
+        const imgAR = designImage.naturalWidth / Math.max(1, designImage.naturalHeight);
+        const rectAR = rect.width / Math.max(1, rect.height);
+        if (imgAR > rectAR) {
+          // Image wider than preset slot — fit by width
+          return { width: rect.width, height: rect.width / imgAR };
+        } else {
+          // Image taller — fit by height
+          return { width: rect.height * imgAR, height: rect.height };
+        }
+      }
+    }
+
+    // No preset: fit inside the safe area
+    const sa = placementEngine.safeAreaRect;
+    const maxW = sa ? sa.width * 0.7 : canvasWidth * 0.5;
+    const maxH = sa ? sa.height * 0.7 : canvasWidth * 0.5;
+    const imgAR = designImage.naturalWidth / Math.max(1, designImage.naturalHeight);
+    const fitByW = { width: maxW, height: maxW / imgAR };
+    const fitByH = { width: maxH * imgAR, height: maxH };
+    return fitByW.height <= maxH ? fitByW : fitByH;
+  }, [designImage, activePlacementKey, placementEngine, canvasWidth]);
+
+  // ── Design attrs undo/redo history ──────────────────────────────────────────
+  const {
+    state: designAttrs,
+    push: pushDesignAttrs,
+    undo: undoDesign,
+    redo: redoDesign,
+    reset: resetDesign,
+    canUndo: canUndoDesign,
+    canRedo: canRedoDesign,
+  } = useHistory<KonvaImageAttrs | null>(null);
+
+  // Whether design is selected (shows Transformer handles)
+  const [designSelected, setDesignSelected] = useState(false);
+
+  // Whether design is outside safe area (turns border red)
+  const [isOutsideSafeArea, setIsOutsideSafeArea] = useState(false);
+  const lastAppliedPresetRef = useRef<string | null>(null);
+  const hasManualDesignAdjustmentsRef = useRef(false);
+
+  // Auto-select first preset on view switch when a design is uploaded.
+  // This ensures Front/Back/Left Sleeve/Right Sleeve tabs immediately place
+  // the design using that view's first preplacement button.
+  useEffect(() => {
+    if (!designImage) return;
+    if (lastAutoPlacementViewRef.current === activeView) return;
+    const firstPlacement = placementEngine.placements[0];
+    if (!firstPlacement) return;
+    lastAutoPlacementViewRef.current = activeView;
+    setActivePlacementKey(firstPlacement.placementKey);
+    setHoverPlacement(null);
+    setEditableGhostRect(null);
+    setDesignSelected(false);
+  }, [activeView, designImage, placementEngine.placements]);
+
+  useEffect(() => {
+    if (!designImage) {
+      lastAutoPlacementViewRef.current = null;
+    }
+  }, [designImage]);
+
+  // ── Place design at preset position when image first loads ─────────────────
+  const prevDesignImageRef = useRef<HTMLImageElement | null>(null);
+  useEffect(() => {
+    // Only trigger on new image load, not on canvasWidth resize
+    if (!designImage || designImage === prevDesignImageRef.current) return;
+    if (!naturalDesignSize) return;
+    prevDesignImageRef.current = designImage;
+
+    // Compute center position
+    let cx: number;
+    let cy: number;
+    const presetKey = activePlacementKey;
+    if (presetKey) {
+      const placement = placementEngine.placements.find((p) => p.placementKey === presetKey);
+      if (placement) {
+        const rect = placementEngine.presetToCanvasRect(placement);
+        cx = rect.x + rect.width / 2;
+        cy = rect.y + rect.height / 2;
+      } else {
+        cx = canvasWidth / 2;
+        cy = (placementEngine.safeAreaRect?.y ?? 0) + (placementEngine.safeAreaRect?.height ?? canvasWidth) / 2;
+      }
+    } else {
+      const sa = placementEngine.safeAreaRect;
+      cx = sa ? sa.x + sa.width / 2 : canvasWidth / 2;
+      cy = sa ? sa.y + sa.height / 2 : canvasWidth / 2;
+    }
+
+    const initial: KonvaImageAttrs = { x: cx, y: cy, scaleX: 1, scaleY: 1, rotation: 0 };
+    resetDesign(initial);
+    setDesignSelected(true);
+    setIsOutsideSafeArea(false);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [designImage]);
+
+  // ── Handle design change (drag/transform end) ───────────────────────────────
+  const checkSafeArea = useCallback(
+    (attrs: KonvaImageAttrs, nW: number, nH: number): boolean => {
+      const sa = placementEngine.safeAreaRect;
+      if (!sa) return false;
+      const { x, y, scaleX, scaleY, rotation } = attrs;
+      const halfW = (nW * Math.abs(scaleX)) / 2;
+      const halfH = (nH * Math.abs(scaleY)) / 2;
+      const rad = (rotation * Math.PI) / 180;
+      const corners = [
+        [-halfW, -halfH],
+        [halfW, -halfH],
+        [halfW, halfH],
+        [-halfW, halfH],
+      ].map(([lx, ly]) => ({
+        x: x + lx * Math.cos(rad) - ly * Math.sin(rad),
+        y: y + lx * Math.sin(rad) + ly * Math.cos(rad),
+      }));
+      return corners.some(
+        (c) =>
+          c.x < sa.x ||
+          c.y < sa.y ||
+          c.x > sa.x + sa.width ||
+          c.y > sa.y + sa.height
+      );
+    },
+    [placementEngine.safeAreaRect]
+  );
+
+  const handleDesignChangeEnd = useCallback(
+    (newAttrs: KonvaImageAttrs) => {
+      hasManualDesignAdjustmentsRef.current = true;
+      pushDesignAttrs(newAttrs);
+      if (naturalDesignSize) {
+        setIsOutsideSafeArea(
+          checkSafeArea(newAttrs, naturalDesignSize.width, naturalDesignSize.height)
+        );
+      }
+    },
+    [pushDesignAttrs, checkSafeArea, naturalDesignSize]
+  );
+
+  // Apply selected placement preset to current design (position + size fit)
+  useEffect(() => {
+    if (!activePlacementKey || !designImage || !naturalDesignSize) return;
+    if (hasManualDesignAdjustmentsRef.current) return;
+    const applySignature = `${activePlacementKey}:${activeView}:${Math.round(canvasWidth)}`;
+    if (lastAppliedPresetRef.current === applySignature) return;
+    const placement = placementEngine.placements.find((p) => p.placementKey === activePlacementKey);
+    if (!placement) return;
+
+    const rect = placementEngine.presetToCanvasRect(placement);
+    const nextAttrs: KonvaImageAttrs = {
+      x: rect.x + rect.width / 2,
+      y: rect.y + rect.height / 2,
+      scaleX: 1,
+      scaleY: 1,
+      rotation: 0,
+    };
+
+    if (designAttrs) {
+      pushDesignAttrs(nextAttrs);
+    } else {
+      resetDesign(nextAttrs);
+    }
+    setDesignSelected(true);
+    setIsOutsideSafeArea(false);
+    lastAppliedPresetRef.current = applySignature;
+  }, [
+    activePlacementKey,
+    activeView,
+    canvasWidth,
+    designImage,
+    naturalDesignSize,
+    placementEngine,
+    designAttrs,
+    pushDesignAttrs,
+    resetDesign,
+  ]);
+
+  useEffect(() => {
+    if (!activePlacementKey) {
+      lastAppliedPresetRef.current = null;
+    }
+  }, [activePlacementKey]);
+
+  useEffect(() => {
+    hasManualDesignAdjustmentsRef.current = false;
+    lastAppliedPresetRef.current = null;
+  }, [activePlacementKey, designImage, activeView]);
+
+  // Clear design state when asset is removed
+  useEffect(() => {
+    if (!asset) {
+      prevDesignImageRef.current = null;
+      resetDesign(null);
+      setDesignSelected(false);
+      setIsOutsideSafeArea(false);
+    }
+  }, [asset, resetDesign]);
 
   // ── Quote ──────────────────────────────────────────────────────────────────
   const [quoteLoading, setQuoteLoading] = useState(false);
@@ -231,12 +540,13 @@ export default function CustomizePage() {
       setMockupPreviewUrl(null);
       return;
     }
+    setMockupPreviewLoading(true);
+    setMockupPreviewError(null);
+    setMockupPreviewUrl(null);
     let cancelled = false;
     const controller = new AbortController();
     const timer = window.setTimeout(() => {
       (async () => {
-        setMockupPreviewLoading(true);
-        setMockupPreviewError(null);
         try {
           const { data: { session } } = await supabase.auth.getSession();
           if (!session?.access_token) { if (!cancelled) setMockupPreviewLoading(false); return; }
@@ -258,7 +568,7 @@ export default function CustomizePage() {
       })();
     }, 350);
     return () => { cancelled = true; window.clearTimeout(timer); controller.abort(); };
-  }, [asset?.id, selectedVariant?.id, activeAreaId, activeSizeTierId, activePlacement.offsetX, activePlacement.offsetY, activePlacement.rotation, activePlacement.scale, isCustomizable]);
+  }, [asset?.id, selectedVariant?.id, activeAreaId, activeSizeTierId, activePlacement.offsetX, activePlacement.offsetY, activePlacement.rotation, activePlacement.scale, isCustomizable, activeView]);
 
   // ── Auto-quote when selections complete ───────────────────────────────────
   const canRequestQuote =
@@ -402,36 +712,36 @@ export default function CustomizePage() {
   if (!quoteBreakdown)   blockingReasons.push(t('Үнийн тооцоо хийгдэж байна...', 'Calculating price...'));
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 pb-24 pt-28">
-
-        {/* ── Breadcrumb ── */}
-        <div className="mb-4 flex items-center gap-1 text-sm text-muted-foreground">
-          <Link to={`/product/${product.slug}`} className="flex items-center gap-1 hover:text-primary transition-colors">
-            <ArrowLeft className="h-4 w-4" />
-            {t('Бүтээгдэхүүн рүү буцах', 'Back to product')}
-          </Link>
-          <ChevronRight className="h-3 w-3" />
-          <span className="text-foreground font-medium">{t('Захиалгат хэвлэл', 'Customize')}</span>
-        </div>
-
-        {/* ── Header ── */}
-        <div className="mb-6 flex items-start gap-4">
-          {baseImage && (
-            <div className="hidden sm:block h-14 w-14 flex-shrink-0 overflow-hidden rounded-lg border border-border">
-              <img src={baseImage} alt={product.name} className="h-full w-full object-cover" />
-            </div>
-          )}
-          <div>
-            <h1 className="text-2xl font-bold text-foreground sm:text-3xl">{product.name}</h1>
-            <p className="mt-0.5 text-sm text-muted-foreground">
-              {t('Хэвлэх талбай сонгож, дизайнаа оруулан захиалга өгнө үү.', 'Choose print areas, upload your artwork, and place your order.')}
-            </p>
+    <div className="flex h-screen w-screen flex-col overflow-hidden bg-background">
+      {/* ── Header bar ── */}
+      <div className="flex-shrink-0 border-b border-border bg-card">
+        <div className="px-6 py-4">
+          {/* Breadcrumb */}
+          <div className="mb-3 flex items-center gap-1 text-sm text-muted-foreground">
+            <Link to={`/product/${product.slug}`} className="flex items-center gap-1 hover:text-primary transition-colors">
+              <ArrowLeft className="h-4 w-4" />
+              {t('Бүтээгдэхүүн рүү буцах', 'Back to product')}
+            </Link>
+            <ChevronRight className="h-3 w-3" />
+            <span className="text-foreground font-medium">{t('Захиалгат хэвлэл', 'Customize')}</span>
           </div>
-        </div>
 
-        {/* ── Step progress bar ── */}
-        <div className="mb-8">
+          {/* Product header */}
+          <div className="mb-4 flex items-start gap-4">
+            {baseImage && (
+              <div className="hidden sm:block h-12 w-12 flex-shrink-0 overflow-hidden rounded-lg border border-border">
+                <img src={baseImage} alt={product.name} className="h-full w-full object-cover" />
+              </div>
+            )}
+            <div>
+              <h1 className="text-xl font-bold text-foreground sm:text-2xl">{product.name}</h1>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {t('Хэвлэх талбай сонгож, дизайнаа оруулан захиалга өгнө үү.', 'Choose print areas, upload your artwork, and place your order.')}
+              </p>
+            </div>
+          </div>
+
+          {/* Step progress bar */}
           <div className="flex items-center gap-0">
             {STEPS.map((step, idx) => {
               const done = completedSteps.has(step.id);
@@ -439,14 +749,14 @@ export default function CustomizePage() {
               return (
                 <div key={step.id} className="flex flex-1 items-center">
                   <div className="flex flex-col items-center gap-1.5 flex-shrink-0">
-                    <div className={`flex h-8 w-8 items-center justify-center rounded-full border-2 text-xs font-semibold transition-all ${
+                    <div className={`flex h-7 w-7 items-center justify-center rounded-full border-2 text-xs font-semibold transition-all ${
                       done
                         ? 'border-primary bg-primary text-primary-foreground'
                         : active
                         ? 'border-primary bg-background text-primary'
                         : 'border-border bg-background text-muted-foreground'
                     }`}>
-                      {done ? <CheckCircle2 className="h-4 w-4" /> : step.id}
+                      {done ? <CheckCircle2 className="h-3.5 w-3.5" /> : step.id}
                     </div>
                     <span className={`hidden text-xs font-medium sm:block ${done || active ? 'text-foreground' : 'text-muted-foreground'}`}>
                       {t(step.labelMn, step.labelEn)}
@@ -460,60 +770,181 @@ export default function CustomizePage() {
             })}
           </div>
         </div>
+      </div>
 
-        {/* ── Main content grid ── */}
-        <div className="grid gap-6 lg:grid-cols-[1fr,420px]">
+      {/* ── Main content area ── */}
+      <div className="flex min-h-0 flex-1 overflow-hidden">
 
-          {/* ─────────── LEFT: preview column ─────────────────────────────── */}
-          <div className="space-y-4">
-            {/* Canvas Editor */}
-            <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-              <div className="border-b border-border px-4 py-3">
-                <h2 className="text-sm font-semibold text-foreground">
-                  {t('Байршуулах засварлагч', 'Placement Editor')}
-                </h2>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {t('Дизайнаа чирэх, масштаблах, эргүүлэх боломжтой', 'Drag, scale, and rotate your design on the print area')}
-                </p>
+          {/* ─────────── LEFT: canvas preview area (flex-grow, centered) ─────────────────────────────── */}
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-muted/20 p-6">
+            {/* Top controls — View switcher + Placement presets */}
+            <div className="mb-4 flex flex-shrink-0 flex-col gap-3">
+              {/* View switcher tabs */}
+              <div className="flex items-center justify-between gap-4 rounded-xl border border-border bg-card px-4 py-2 shadow-sm">
+                <div className="flex-1">
+                  <ViewSwitcherTabs
+                    productType={productType}
+                    activeView={activeView}
+                    onViewChange={(v) => {
+                      setActiveView(v);
+                      setActivePlacementKey(null);
+                      setHoverPlacement(null);
+                      setDesignSelected(false);
+                    }}
+                  />
+                </div>
+
+                {/* Undo / Redo / Delete toolbar — only visible when a design is on canvas */}
+                {designAttrs && (
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={undoDesign}
+                      disabled={!canUndoDesign}
+                      title={t('Буцаах', 'Undo')}
+                      className="flex h-8 w-8 items-center justify-center rounded-lg border border-border hover:bg-muted transition-colors disabled:opacity-40"
+                    >
+                      <Undo2 className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={redoDesign}
+                      disabled={!canRedoDesign}
+                      title={t('Дахин хийх', 'Redo')}
+                      className="flex h-8 w-8 items-center justify-center rounded-lg border border-border hover:bg-muted transition-colors disabled:opacity-40"
+                    >
+                      <Redo2 className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAsset(null);
+                        setDesignSelected(false);
+                      }}
+                      title={t('Дизайн устгах', 'Delete design')}
+                      className="flex h-8 w-8 items-center justify-center rounded-lg border border-border hover:bg-destructive/10 hover:border-destructive/50 transition-colors text-muted-foreground hover:text-destructive"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                )}
               </div>
-              <CanvasEditor
-                productName={product.name}
-                baseImage={baseImage}
-                designImage={asset?.originalUrl || asset?.thumbnailUrl || null}
-                selectedAreas={selectedAreas}
-                activeAreaId={activeAreaId}
-                placementsByArea={placementByArea}
-                onActiveAreaChange={setActiveAreaId}
-                onPlacementChange={handlePlacementChange}
+
+              {/* Placement preset buttons */}
+              <PlacementPresetBar
+                productType={productType}
+                view={activeView}
+                sizeCategory="Adult"
+                activePlacementKey={activePlacementKey}
+                onPresetSelect={(placement) => {
+                  setActivePlacementKey(placement.placementKey);
+                  setHoverPlacement(null);
+                }}
+                onPresetHover={setHoverPlacement}
               />
             </div>
 
-            {/* Mockup Preview */}
-            {(mockupPreviewUrl || mockupPreviewLoading) && (
-              <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-                <div className="border-b border-border px-4 py-3">
-                  <h2 className="text-sm font-semibold text-foreground">
-                    {t('Урьдчилан харах', 'Preview')}
-                  </h2>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {activeArea ? t(`${activeArea.label} — урьдчилан харах`, `${activeArea.label} preview`) : ''}
-                  </p>
-                </div>
-                <div className="p-4">
-                  <AutoMockupPreview
-                    previewUrl={mockupPreviewUrl}
-                    fallbackUrl={baseImage}
-                    loading={mockupPreviewLoading}
-                    error={mockupPreviewError}
-                    activeAreaLabel={activeArea?.label || null}
-                  />
+            {/* Canvas area wrapper — contains canvas, status messages, and mockup preview */}
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+              {/* Canvas container — centered, height-driven */}
+              <div ref={canvasContainerRef} className="flex min-h-0 flex-1 items-center justify-center overflow-hidden">
+                {/* Konva canvas wrapper with 4:3 aspect ratio */}
+              <div
+                className="relative"
+                style={{ width: canvasWidth, height: Math.round(canvasWidth * 0.75) }}
+              >
+                <div
+                  className="relative h-full w-full"
+                  onClick={(e) => {
+                    if (e.target === e.currentTarget) setDesignSelected(false);
+                  }}
+                >
+                <KonvaCustomizeCanvas
+                  productType={productType}
+                  view={activeView}
+                  imageSrc={viewImages[activeView] ?? null}
+                  canvasWidth={canvasWidth}
+                  ghostRect={designAttrs ? null : ghostRect}
+                  ghostRectEditable={!designAttrs && Boolean(ghostRect)}
+                  onGhostRectChange={setEditableGhostRect}
+                  isOutsideSafeArea={isOutsideSafeArea}
+                >
+                  {/* Design image node — only rendered when image is loaded and attrs exist */}
+                  {designImage && designAttrs && naturalDesignSize && (
+                    <KonvaDesignImage
+                      imageElement={designImage}
+                      naturalWidth={naturalDesignSize.width}
+                      naturalHeight={naturalDesignSize.height}
+                      attrs={designAttrs}
+                      onChangeEnd={handleDesignChangeEnd}
+                      isSelected={designSelected}
+                      onSelect={() => setDesignSelected(true)}
+                    />
+                  )}
+                </KonvaCustomizeCanvas>
+
+                {/* Live size indicator — positioned bottom-left over the canvas */}
+                {designAttrs && naturalDesignSize && (
+                  <div className="pointer-events-none absolute bottom-2 left-2">
+                    <DesignSizeIndicator
+                      attrs={designAttrs}
+                      naturalWidth={naturalDesignSize.width}
+                      naturalHeight={naturalDesignSize.height}
+                      displayScale={placementEngine.displayScale}
+                      pxPerCmInImage={placementEngine.pxPerCmInImage}
+                    />
+                  </div>
+                )}
                 </div>
               </div>
-            )}
+            </div>
+
+            {/* Status messages below canvas */}
+            <div className="mt-3 flex flex-col gap-2">
+              {/* Upload progress indicator */}
+              {designImageStatus === 'loading' && asset && (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  {t('Дизайн ачааллаж байна...', 'Loading design onto canvas...')}
+                </div>
+              )}
+
+              {/* Outside safe area warning */}
+              {isOutsideSafeArea && (
+                <p className="text-xs font-medium text-red-600 dark:text-red-400">
+                  {t('Дизайн хэвлэх талбайгаас гарч байна — дотогш зөөнө үү', 'Design extends outside the print area — move it inward')}
+                </p>
+              )}
+            </div>
+
+              {/* Mockup Preview (optional) */}
+              {(mockupPreviewUrl || mockupPreviewLoading) && (
+                <div className="mt-4 overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+                  <div className="border-b border-border px-4 py-3">
+                    <h2 className="text-sm font-semibold text-foreground">
+                      {t('Урьдчилан харах', 'Preview')}
+                    </h2>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {activeArea ? t(`${activeArea.label} — урьдчилан харах`, `${activeArea.label} preview`) : ''}
+                    </p>
+                  </div>
+                  <div className="p-4">
+                    <AutoMockupPreview
+                      previewUrl={mockupPreviewUrl}
+                      fallbackUrl={baseImage}
+                      loading={mockupPreviewLoading}
+                      error={mockupPreviewError}
+                      activeAreaLabel={activeArea?.label || null}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* ─────────── RIGHT: config column ─────────────────────────────── */}
-          <div className="space-y-4">
+          {/* ─────────── RIGHT: configuration sidebar (fixed 420px, scrollable) ─────────────────────────────── */}
+          <div className="w-[420px] min-h-0 flex-shrink-0 overflow-y-auto border-l border-border bg-card">
+            <div className="space-y-4 p-6">
 
             {/* Step 1: Variant */}
             <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">

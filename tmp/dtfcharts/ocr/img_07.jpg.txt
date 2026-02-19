@@ -1,0 +1,20 @@
+0.99	Soccer Jersey Placement Guide
+0.63	ECOROS
+0.98	These are some suggested sizes and placements for your soccer jersey designs. You
+0.98	shouldalwaysverifywithyour local leagueforspecificmeasurements and placements.
+0.98	Front Number Design Size
+0.97	·Adult 4"
+0.95	·Youth 3"
+0.99	Front Logo Design Size
+0.99	TEAM
+0.96	·Adult 4"
+1.00	LOGO
+0.93	· Youth 3"
+1.00	Back Name Design Size
+0.90	·Adult 3"
+0.96	· Youth 2"
+0.99	Back Number Design Size
+0.94	·Adult / Youth 8""
+0.98	Shorts Number Design Size
+0.93	·Adult 4"
+0.96	·Youth 3"

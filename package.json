@@ -1,4 +1,7 @@
 {
+  "scripts": {
+    "extract:garment-bounds": "node scripts/extract-garment-bounds.js"
+  },
   "devDependencies": {
     "@prisma/client": "^5.19.1",
     "@supabase/supabase-js": "^2.93.3",
@@ -6,6 +9,7 @@
     "@types/react": "^19.2.10",
     "@types/react-dom": "^19.2.3",
     "prisma": "^5.19.1",
+    "sharp": "^0.34.5",
     "tsx": "^4.21.0"
   },
   "dependencies": {
