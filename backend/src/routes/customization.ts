@@ -32,6 +32,7 @@ export default async function customizationRoutes(app: FastifyInstance) {
             select: {
               id: true,
               isCustomizable: true,
+              metadata: true,
               printAreas: {
                 select: {
                   isDefault: true,
@@ -137,6 +138,9 @@ export default async function customizationRoutes(app: FastifyInstance) {
         variantId: variant.id,
         productId: variant.product.id,
         isCustomizable: variant.product.isCustomizable,
+        layoutTemplate: (variant.product.metadata && typeof variant.product.metadata === 'object')
+          ? ((variant.product.metadata as Record<string, unknown>).customizationTemplateV1 ?? null)
+          : null,
         printAreas,
         printSizeTiers: printSizeTiers.map((tier) => ({
           id: tier.id,

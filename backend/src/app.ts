@@ -32,6 +32,7 @@ import adminCollectionsRoutes from './routes/admin/collections';
 import { adminUploadsRoutes } from './routes/admin/uploads'; // P2-07: Upload moderation
 import { adminPrintAreaRoutes } from './routes/admin/print-areas'; // Product wizard
 import { adminSizeTierRoutes } from './routes/admin/size-tiers'; // Product wizard
+import { adminLayoutTemplateRoutes } from './routes/admin/layout-template'; // BLANKS layout authoring
 import { adminReprintRoutes } from './routes/admin/reprints'; // P3-05: Reprint queue
 import { publicProductRoutes } from './routes/products';
 import collectionsRoutes from './routes/collections';
@@ -581,6 +582,7 @@ app.register(adminPricingRoutes);
 app.register(adminUploadsRoutes, { prefix: '/api/admin/uploads' }); // P2-07: Upload moderation queue
 app.register(adminPrintAreaRoutes, { prefix: '/api/admin/print-areas' }); // Product wizard
 app.register(adminSizeTierRoutes, { prefix: '/api/admin/size-tiers' }); // Product wizard
+app.register(adminLayoutTemplateRoutes, { prefix: '/api/admin/products' }); // BLANKS layout template
 app.register(builderRoutes, { prefix: '/api/builder/projects' }); // P3-02: Builder API
 app.register(adminReprintRoutes); // P3-05: Reprint queue
 app.register(testEmailRoutes);

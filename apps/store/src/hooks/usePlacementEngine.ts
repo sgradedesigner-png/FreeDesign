@@ -25,6 +25,25 @@ export interface SnapResult {
   snapTarget: string | null;
 }
 
+export interface NormalizedRect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+export interface EnginePlacement {
+  placementKey: string;
+  view: ViewName;
+  label?: string;
+  widthCm?: number;
+  heightCm?: number;
+  topFromCollarCm?: number;
+  leftFromCenterCm?: number;
+  rectNorm?: NormalizedRect;
+  source?: string;
+}
+
 export const SNAP_THRESHOLD_PX = 12;
 const APPAREL_FRONT_BACK_REFERENCE_WIDTH_CM = 38.1; // 15" max print reference
 const CENTER_CHEST_OVERRIDE_WIDTH_CM = 15.2;
@@ -65,7 +84,10 @@ export function usePlacementEngine(
   productType: ProductType,
   view: ViewName,
   sizeCategory: SizeCategory,
-  canvasWidth: number
+  canvasWidth: number,
+  runtimeImageSize?: { width: number; height: number } | null,
+  templatePlacements?: EnginePlacement[] | null,
+  allowLegacyFallback = true
 ) {
   // ── Garment bounds ──────────────────────────────────────────────────────────
   const bounds = useMemo(() => {
@@ -77,8 +99,10 @@ export function usePlacementEngine(
   }, [productType, view]);
 
   // Canvas is forced to 4:3 aspect ratio — compute canvas height
-  const imgW = bounds?.imgPx.w ?? 1536;
-  const imgH = bounds?.imgPx.h ?? 1024;
+  const refImgW = bounds?.imgPx.w ?? 1536;
+  const refImgH = bounds?.imgPx.h ?? 1024;
+  const imgW = runtimeImageSize?.width ?? refImgW;
+  const imgH = runtimeImageSize?.height ?? refImgH;
   const canvasHeight = Math.round(canvasWidth * 0.75); // 4:3 aspect ratio
 
   // displayScale to fit image within 4:3 canvas
@@ -92,6 +116,9 @@ export function usePlacementEngine(
   const garmentOffsetX = Math.round((canvasWidth - scaledGarmentW) / 2);
   const garmentOffsetY = Math.round((canvasHeight - scaledGarmentH) / 2);
 
+  const refToRuntimeScaleX = refImgW > 0 ? imgW / refImgW : 1;
+  const refToRuntimeScaleY = refImgH > 0 ? imgH / refImgH : 1;
+
   // px per cm in native image coordinates
   const placementReferenceWidthCm = useMemo(() => {
     const isApparelFrontBack =
@@ -102,29 +129,40 @@ export function usePlacementEngine(
   }, [productType, view, bounds?.garmentWidthCm]);
 
   const pxPerCmInImage = bounds
-    ? (bounds.boxPx.x2 - bounds.boxPx.x1) / placementReferenceWidthCm
+    ? ((bounds.boxPx.x2 - bounds.boxPx.x1) * refToRuntimeScaleX) / placementReferenceWidthCm
     : 1;
 
   // ── Safe area in canvas px ──────────────────────────────────────────────────
   const safeAreaRect: KonvaRect | null = useMemo(() => {
     if (!bounds) return null;
     return {
-      x: bounds.safeFrame.x1 * displayScale + garmentOffsetX,
-      y: bounds.safeFrame.y1 * displayScale + garmentOffsetY,
-      width:  (bounds.safeFrame.x2 - bounds.safeFrame.x1) * displayScale,
-      height: (bounds.safeFrame.y2 - bounds.safeFrame.y1) * displayScale,
+      x: bounds.safeFrame.x1 * refToRuntimeScaleX * displayScale + garmentOffsetX,
+      y: bounds.safeFrame.y1 * refToRuntimeScaleY * displayScale + garmentOffsetY,
+      width: (bounds.safeFrame.x2 - bounds.safeFrame.x1) * refToRuntimeScaleX * displayScale,
+      height: (bounds.safeFrame.y2 - bounds.safeFrame.y1) * refToRuntimeScaleY * displayScale,
     };
-  }, [bounds, displayScale, garmentOffsetX, garmentOffsetY]);
+  }, [bounds, displayScale, garmentOffsetX, garmentOffsetY, refToRuntimeScaleX, refToRuntimeScaleY]);
 
   // ── Available placements for this product+view ──────────────────────────────
   const allPlacements = useMemo(() => listPlacements(productType, view), [productType, view]);
+  const templatePlacementsForView = useMemo(
+    () => (templatePlacements ?? []).filter((placement) => placement.view === view),
+    [templatePlacements, view]
+  );
 
   /**
    * Deduplicated list: one entry per placementKey, preferring the sizeCategory
    * match, falling back to the first entry (usually Adult).
    */
-  const placements = useMemo(() => {
-    const withOverrides = (p: PlacementStandard): PlacementStandard => {
+  const placements = useMemo<EnginePlacement[]>(() => {
+    if (templatePlacementsForView.length > 0) {
+      return templatePlacementsForView;
+    }
+    if (!allowLegacyFallback) {
+      return [];
+    }
+
+    const withOverrides = (p: PlacementStandard): EnginePlacement => {
       const isApparelFront =
         view === 'front' &&
         (productType === 'hoodie' || productType === 'sweatshirt' || productType === 'polo' || productType === 'tanktop');
@@ -227,7 +265,7 @@ export function usePlacementEngine(
       }
     }
     return Array.from(map.values()).map(withOverrides);
-  }, [allPlacements, sizeCategory, productType, view]);
+  }, [allPlacements, allowLegacyFallback, sizeCategory, productType, templatePlacementsForView, view]);
 
   // ── Core conversion functions ───────────────────────────────────────────────
 
@@ -244,8 +282,18 @@ export function usePlacementEngine(
    * Y: boxPx.y1 (collar) + topFromCollarCm + garment offset
    */
   const presetToCanvasRect = useCallback(
-    (placement: PlacementStandard): KonvaRect => {
+    (placement: EnginePlacement): KonvaRect => {
       if (!bounds) return { x: 0, y: 0, width: 100, height: 100 };
+
+      if (placement.rectNorm) {
+        return {
+          x: placement.rectNorm.x * imgW * displayScale + garmentOffsetX,
+          y: placement.rectNorm.y * imgH * displayScale + garmentOffsetY,
+          width: placement.rectNorm.w * imgW * displayScale,
+          height: placement.rectNorm.h * imgH * displayScale,
+        };
+      }
+
       const isApparelFront =
         view === 'front' &&
         (productType === 'hoodie' || productType === 'sweatshirt' || productType === 'polo' || productType === 'tanktop');
@@ -258,7 +306,7 @@ export function usePlacementEngine(
       const isApparelRightSleeve =
         view === 'right' &&
         (productType === 'hoodie' || productType === 'sweatshirt' || productType === 'polo');
-      const resolvedPlacement: PlacementStandard = (() => {
+      const resolvedPlacement: EnginePlacement = (() => {
         if (isApparelFront && placement.placementKey === 'front_center') {
           return {
             ...placement,
@@ -332,30 +380,48 @@ export function usePlacementEngine(
         return placement;
       })();
 
-      const boxPxWidth = bounds.boxPx.x2 - bounds.boxPx.x1;
-      const pxPerCm   = boxPxWidth / placementReferenceWidthCm;
-      const widthCm = resolvedPlacement.widthCm;
-      const heightCm = resolvedPlacement.heightCm;
+      const boxPxWidthRef = bounds.boxPx.x2 - bounds.boxPx.x1;
+      const pxPerCmRef = boxPxWidthRef / placementReferenceWidthCm;
+      const widthCm = resolvedPlacement.widthCm ?? 10;
+      const heightCm = resolvedPlacement.heightCm ?? 10;
 
-      const designWImg = widthCm  * pxPerCm;
-      const designHImg = heightCm * pxPerCm;
+      const designWRef = widthCm * pxPerCmRef;
+      const designHRef = heightCm * pxPerCmRef;
 
       // Horizontal
-      const offsetPxImg     = (resolvedPlacement.leftFromCenterCm / placementReferenceWidthCm) * boxPxWidth;
-      const designCenterXImg = bounds.center.x + offsetPxImg;
-      const designXImg       = designCenterXImg - designWImg / 2;
+      const offsetPxRef = ((resolvedPlacement.leftFromCenterCm ?? 0) / placementReferenceWidthCm) * boxPxWidthRef;
+      const designCenterXRef = bounds.center.x + offsetPxRef;
+      const designXRef = designCenterXRef - designWRef / 2;
 
       // Vertical (collar = boxPx.y1)
-      const designYImg = bounds.boxPx.y1 + resolvedPlacement.topFromCollarCm * pxPerCm;
+      const designYRef = bounds.boxPx.y1 + (resolvedPlacement.topFromCollarCm ?? 0) * pxPerCmRef;
+
+      // Project from reference image-space into the runtime image-space.
+      const designXRuntime = designXRef * refToRuntimeScaleX;
+      const designYRuntime = designYRef * refToRuntimeScaleY;
+      const designWRuntime = designWRef * refToRuntimeScaleX;
+      const designHRuntime = designHRef * refToRuntimeScaleY;
 
       return {
-        x:      designXImg  * displayScale + garmentOffsetX,
-        y:      designYImg  * displayScale + garmentOffsetY,
-        width:  designWImg  * displayScale,
-        height: designHImg  * displayScale,
+        x: designXRuntime * displayScale + garmentOffsetX,
+        y: designYRuntime * displayScale + garmentOffsetY,
+        width: designWRuntime * displayScale,
+        height: designHRuntime * displayScale,
       };
     },
-    [bounds, displayScale, garmentOffsetX, garmentOffsetY, placementReferenceWidthCm, productType, view]
+    [
+      bounds,
+      displayScale,
+      garmentOffsetX,
+      garmentOffsetY,
+      placementReferenceWidthCm,
+      productType,
+      refToRuntimeScaleX,
+      refToRuntimeScaleY,
+      imgW,
+      imgH,
+      view,
+    ]
   );
 
   /**

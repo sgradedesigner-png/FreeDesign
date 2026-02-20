@@ -1,6 +1,7 @@
-﻿import { useMemo, useState, useEffect, useRef } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { imageUrl } from "@/lib/imageUrl";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { orderGalleryByViews } from "@/lib/viewImageOrdering";
 
 type ProductGalleryProps = {
   // Accepts R2 keys (products/uuid/web/main.webp) or full URLs.
@@ -9,10 +10,15 @@ type ProductGalleryProps = {
 };
 
 export default function ProductGallery({ images, name }: ProductGalleryProps) {
+  const orderedImages = useMemo(
+    () => orderGalleryByViews(images ?? [], ["front", "back", "left", "right"]),
+    [images]
+  );
+
   // Normalize each image to a usable URL via imageUrl helper.
   const resolvedImages = useMemo(
-    () => (images ?? []).map((img) => imageUrl(img)).filter(Boolean),
-    [images]
+    () => orderedImages.map((img) => imageUrl(img)).filter(Boolean),
+    [orderedImages]
   );
 
   const [activeImage, setActiveImage] = useState<string>(resolvedImages[0] ?? "");
@@ -248,4 +254,5 @@ export default function ProductGallery({ images, name }: ProductGalleryProps) {
     </div>
   );
 }
+
 

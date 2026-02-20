@@ -27,6 +27,15 @@ function sanitizeFilenameBase(filename: string): string {
   return sanitized || `asset-${Date.now()}`;
 }
 
+function detectViewToken(filename: string): 'front' | 'back' | 'left' | 'right' | null {
+  const name = filename.toLowerCase();
+  if (/(^|[^a-z])(front|frt)([^a-z]|$)/i.test(name)) return 'front';
+  if (/(^|[^a-z])back([^a-z]|$)/i.test(name)) return 'back';
+  if (/(^|[^a-z])(leftsleeve|left_sleeve|left-sleeve|leftside|left_side|left-side|left|ls)([^a-z]|$)/i.test(name)) return 'left';
+  if (/(^|[^a-z])(rightsleeve|right_sleeve|right-sleeve|rightside|right_side|right-side|right|rs)([^a-z]|$)/i.test(name)) return 'right';
+  return null;
+}
+
 export async function adminUploadPresignedRoutes(app: FastifyInstance) {
   app.addHook('preHandler', adminGuard);
 
@@ -36,7 +45,9 @@ export async function adminUploadPresignedRoutes(app: FastifyInstance) {
       const productId = body.productId || `temp-${Date.now()}`;
 
       const folder = `products/${productId}`;
-      const publicId = `${Date.now()}-${sanitizeFilenameBase(body.filename)}`;
+      const sanitizedBase = sanitizeFilenameBase(body.filename);
+      const viewToken = detectViewToken(body.filename);
+      const publicId = `${Date.now()}-${viewToken ? `${viewToken}-` : ''}${sanitizedBase}`;
       const signed = generateSignedUploadParams(folder, { publicId });
 
       const uploadUrl = `https://api.cloudinary.com/v1_1/${signed.cloudName}/image/upload`;

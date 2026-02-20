@@ -41,6 +41,55 @@ const productFamilySchema = z.enum([
   'UV_GANG_BUILDER',
 ]);
 
+const layoutRectNormSchema = z.object({
+  x: z.number().min(0).max(1),
+  y: z.number().min(0).max(1),
+  w: z.number().gt(0).max(1),
+  h: z.number().gt(0).max(1),
+}).superRefine((value, ctx) => {
+  if (value.x + value.w > 1) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['w'],
+      message: 'x + w must be <= 1',
+    });
+  }
+  if (value.y + value.h > 1) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['h'],
+      message: 'y + h must be <= 1',
+    });
+  }
+});
+
+const layoutViewSchema = z.object({
+  imagePath: z.string().optional(),
+  naturalWidth: z.number().int().positive().optional(),
+  naturalHeight: z.number().int().positive().optional(),
+});
+
+const customizationTemplateV1Schema = z.object({
+  version: z.literal(1),
+  views: z.object({
+    front: layoutViewSchema.optional(),
+    back: layoutViewSchema.optional(),
+    left: layoutViewSchema.optional(),
+    right: layoutViewSchema.optional(),
+  }).default({}),
+  presets: z.array(z.object({
+    id: z.string().optional(),
+    key: z.string().min(1),
+    labelMn: z.string().optional(),
+    labelEn: z.string().optional(),
+    view: z.enum(['front', 'back', 'left', 'right']),
+    rectNorm: layoutRectNormSchema,
+    printAreaId: z.string().uuid().nullable().optional(),
+    sortOrder: z.number().int().optional().default(0),
+    isDefault: z.boolean().optional().default(false),
+  })).default([]),
+});
+
 const REMOTE_IMAGE_IMPORT_CONCURRENCY = (() => {
   const rawValue = Number(process.env.REMOTE_IMAGE_IMPORT_CONCURRENCY ?? process.env.R2_REMOTE_IMPORT_CONCURRENCY ?? 4);
   if (!Number.isFinite(rawValue)) return 4;
@@ -163,6 +212,7 @@ export async function adminProductRoutes(app: FastifyInstance) {
         minHeight: z.number(),
         allowedFormats: z.array(z.string()),
       }).optional(),
+      customizationTemplateV1: customizationTemplateV1Schema.optional().nullable(),
     });
 
     const body = schema.parse(request.body);
@@ -191,6 +241,9 @@ export async function adminProductRoutes(app: FastifyInstance) {
     const metadata: Prisma.JsonObject = {};
     if (body.uploadConstraints) {
       metadata.uploadConstraints = body.uploadConstraints;
+    }
+    if (body.customizationTemplateV1) {
+      metadata.customizationTemplateV1 = body.customizationTemplateV1;
     }
 
     const product = await prisma.product.create({
@@ -344,6 +397,13 @@ export async function adminProductRoutes(app: FastifyInstance) {
       include: {
         category: true,
         variants: { orderBy: { sortOrder: 'asc' } },
+        printAreas: {
+          select: {
+            printAreaId: true,
+            isDefault: true,
+          },
+          orderBy: { printArea: { sortOrder: 'asc' } },
+        },
       },
     });
 
@@ -491,6 +551,17 @@ export async function adminProductRoutes(app: FastifyInstance) {
       features: z.array(z.string()).optional(),
       benefits: z.array(z.string()).optional(),
       productDetails: z.array(z.string()).optional(),
+      // Product wizard fields
+      printAreas: z.array(z.string().uuid()).optional(),
+      printAreaDefaults: z.record(z.string(), z.boolean()).optional(),
+      uploadConstraints: z.object({
+        maxFileSizeMB: z.number(),
+        minDPI: z.number().optional(),
+        minWidth: z.number(),
+        minHeight: z.number(),
+        allowedFormats: z.array(z.string()),
+      }).optional(),
+      customizationTemplateV1: customizationTemplateV1Schema.optional().nullable(),
       variants: z.array(variantSchema).optional(),
     });
 
@@ -568,13 +639,50 @@ export async function adminProductRoutes(app: FastifyInstance) {
       };
     }
 
-    const updated = await prisma.product.update({
-      where: { id },
-      data: updateData,
-      include: {
-        category: true,
-        variants: { orderBy: { sortOrder: 'asc' } },
-      },
+    if (data.uploadConstraints !== undefined || data.customizationTemplateV1 !== undefined) {
+      const existing = await prisma.product.findUnique({
+        where: { id },
+        select: { metadata: true },
+      });
+      const metadata = (existing?.metadata && typeof existing.metadata === 'object'
+        ? { ...(existing.metadata as Prisma.JsonObject) }
+        : {}) as Prisma.JsonObject;
+      if (data.uploadConstraints !== undefined) {
+        metadata.uploadConstraints = data.uploadConstraints as unknown as Prisma.JsonValue;
+      }
+      if (data.customizationTemplateV1 === null) {
+        delete metadata.customizationTemplateV1;
+      } else if (data.customizationTemplateV1 !== undefined) {
+        metadata.customizationTemplateV1 = data.customizationTemplateV1 as unknown as Prisma.JsonValue;
+      }
+      updateData.metadata = metadata;
+    }
+
+    const updated = await prisma.$transaction(async (tx) => {
+      const saved = await tx.product.update({
+        where: { id },
+        data: updateData,
+        include: {
+          category: true,
+          variants: { orderBy: { sortOrder: 'asc' } },
+        },
+      });
+
+      if (data.printAreas !== undefined) {
+        const uniquePrintAreas = Array.from(new Set(data.printAreas));
+        await tx.productPrintArea.deleteMany({ where: { productId: id } });
+        if (uniquePrintAreas.length > 0) {
+          await tx.productPrintArea.createMany({
+            data: uniquePrintAreas.map((areaId) => ({
+              productId: id,
+              printAreaId: areaId,
+              isDefault: data.printAreaDefaults?.[areaId] ?? false,
+            })),
+          });
+        }
+      }
+
+      return saved;
     });
 
     productsCache.clear();
@@ -632,5 +740,3 @@ export async function adminProductRoutes(app: FastifyInstance) {
     }
   });
 }
-
-

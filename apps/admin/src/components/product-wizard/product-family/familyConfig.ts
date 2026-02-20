@@ -54,7 +54,7 @@ export const PRODUCT_FAMILIES: ProductFamilyConfig[] = [
     description: 'Physical products without customization',
     example: 'Pre-printed t-shirts, hoodies, accessories',
     showStep3: false,
-    showStep4: false,
+    showStep4: true,
   },
   {
     value: 'UV_BY_SIZE',
@@ -96,8 +96,16 @@ export function calculateVisibleSteps(family: ProductFamilyValue | undefined): n
   const steps = [1, 2]; // Always show family selection and basic info
 
   if (config.showStep3) steps.push(3); // Upload config
-  if (config.showStep4) steps.push(4); // Print config
 
+  // BLANKS needs variant images first so Print Configuration can map placements visually.
+  if (family === 'BLANKS') {
+    steps.push(5);
+    if (config.showStep4) steps.push(4);
+    steps.push(6);
+    return steps;
+  }
+
+  if (config.showStep4) steps.push(4); // Print config
   steps.push(5, 6); // Always show variants and review
 
   return steps;

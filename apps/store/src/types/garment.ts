@@ -72,21 +72,7 @@ export interface GarmentBounds {
 // Source JSON: apps/store/src/data/placementStandards.json
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type PlacementKey =
-  | 'front_center'
-  | 'front_left_chest'
-  | 'back_center'
-  | 'full_front'
-  | 'oversize_front'
-  | 'full_back'
-  | 'top_back'
-  | 'lower_back'
-  | 'vertical_back'
-  | 'across_chest'
-  | 'sleeve'
-  | 'front_number'
-  | 'back_number'
-  | 'back_name';
+export type PlacementKey = string;
 
 export interface PlacementStandard {
   placementKey: PlacementKey;

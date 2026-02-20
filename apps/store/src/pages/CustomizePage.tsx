@@ -35,10 +35,10 @@ import ViewSwitcherTabs from '@/components/customize/ViewSwitcherTabs';
 import PlacementPresetBar from '@/components/customize/PlacementPresetBar';
 import { resolveProductType, galleryPathsToViewMap } from '@/lib/garmentBoundsLoader';
 import { usePlacementEngine } from '@/hooks/usePlacementEngine';
+import type { EnginePlacement, NormalizedRect } from '@/hooks/usePlacementEngine';
 import { useHistory } from '@/hooks/useHistory';
 import { useKonvaImage } from '@/hooks/useKonvaImage';
 import type { ViewName } from '@/types/garment';
-import type { PlacementStandard } from '@/types/garment';
 import type { KonvaImageAttrs, KonvaRect } from '@/types/customization';
 
 // Legacy Fabric placement config — kept for Phase 2→3 migration
@@ -49,6 +49,23 @@ type CustomizationOptionsResponse = {
   variantId: string;
   productId: string;
   isCustomizable: boolean;
+  layoutTemplate?: {
+    version: 1;
+    views?: Partial<Record<ViewName, {
+      imagePath?: string;
+      naturalWidth?: number;
+      naturalHeight?: number;
+    }>>;
+    presets?: Array<{
+      key: string;
+      labelMn?: string;
+      labelEn?: string;
+      view: ViewName;
+      rectNorm: NormalizedRect;
+      sortOrder?: number;
+      isDefault?: boolean;
+    }>;
+  } | null;
   printAreas: PrintAreaOption[];
   printSizeTiers: PrintSizeTierOption[];
   addOnOptions: AddOnOption[];
@@ -111,6 +128,7 @@ export default function CustomizePage() {
   const [printAreas, setPrintAreas] = useState<PrintAreaOption[]>([]);
   const [sizeTiers, setSizeTiers] = useState<PrintSizeTierOption[]>([]);
   const [addOnOptions, setAddOnOptions] = useState<AddOnOption[]>([]);
+  const [layoutTemplate, setLayoutTemplate] = useState<CustomizationOptionsResponse['layoutTemplate'] | undefined>(undefined);
 
   const [selectedAreaIds, setSelectedAreaIds] = useState<string[]>([]);
   const [selectedSizeTierByArea, setSelectedSizeTierByArea] = useState<Record<string, string>>({});
@@ -132,12 +150,35 @@ export default function CustomizePage() {
   // Map view → Cloudinary URL from variant gallery
   const viewImages = useMemo(() => {
     if (!selectedVariant) return {};
-    return galleryPathsToViewMap(
+    const fromGallery = galleryPathsToViewMap(
       productType,
       selectedVariant.imagePath ?? '',
       selectedVariant.galleryPaths ?? []
     );
-  }, [productType, selectedVariant]);
+    const templateViews = layoutTemplate?.views ?? {};
+    const withTemplate: Partial<Record<ViewName, string | undefined>> = { ...fromGallery };
+    (Object.keys(templateViews) as ViewName[]).forEach((viewKey) => {
+      const path = templateViews[viewKey]?.imagePath;
+      if (path) withTemplate[viewKey] = imageUrl(path);
+    });
+    return withTemplate;
+  }, [layoutTemplate?.views, productType, selectedVariant]);
+
+  const templatePlacements = useMemo<EnginePlacement[]>(() => {
+    const raw = layoutTemplate?.presets ?? [];
+    if (raw.length === 0) return [];
+    const byView = raw
+      .filter((preset) => preset.view === activeView)
+      .slice()
+      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+
+    return byView.map((preset) => ({
+      placementKey: preset.key,
+      view: preset.view,
+      label: t(preset.labelMn || preset.labelEn || preset.key, preset.labelEn || preset.labelMn || preset.key),
+      rectNorm: preset.rectNorm,
+    }));
+  }, [activeView, layoutTemplate?.presets, t]);
 
   // ── Responsive canvas width ─────────────────────────────────────────────────
   const [canvasContainerEl, setCanvasContainerEl] = useState<HTMLDivElement | null>(null);
@@ -145,6 +186,9 @@ export default function CustomizePage() {
     setCanvasContainerEl(node);
   }, []);
   const [canvasWidth, setCanvasWidth] = useState(560);
+  const [viewImageNaturalSize, setViewImageNaturalSize] = useState<
+    Partial<Record<ViewName, { width: number; height: number }>>
+  >({});
 
   // Single effect for canvas width measurement
   useEffect(() => {
@@ -173,11 +217,19 @@ export default function CustomizePage() {
   }, [canvasContainerEl]);
 
   // ── Placement engine ────────────────────────────────────────────────────────
-  const placementEngine = usePlacementEngine(productType, activeView, 'Adult', canvasWidth);
+  const placementEngine = usePlacementEngine(
+    productType,
+    activeView,
+    'Adult',
+    canvasWidth,
+    viewImageNaturalSize[activeView] ?? null,
+    templatePlacements,
+    layoutTemplate !== undefined
+  );
 
   // Active preset selection + ghost rect
   const [activePlacementKey, setActivePlacementKey] = useState<string | null>(null);
-  const [hoverPlacement, setHoverPlacement] = useState<PlacementStandard | null>(null);
+  const [hoverPlacement, setHoverPlacement] = useState<EnginePlacement | null>(null);
   const [editableGhostRect, setEditableGhostRect] = useState<KonvaRect | null>(null);
   const lastAutoPlacementViewRef = useRef<ViewName | null>(null);
 
@@ -432,6 +484,7 @@ export default function CustomizePage() {
   useEffect(() => {
     const loadOptions = async () => {
       if (!selectedVariant?.id) return;
+      setLayoutTemplate(undefined);
       setOptionsLoading(true);
       setOptionsError(null);
       setQuoteBreakdown(null);
@@ -443,6 +496,7 @@ export default function CustomizePage() {
         if (!res.ok) throw new Error(data?.error || t('Уншиж чадсангүй', 'Failed to load options'));
         const payload = data as CustomizationOptionsResponse;
         setIsCustomizable(Boolean(payload.isCustomizable));
+        setLayoutTemplate(payload.layoutTemplate ?? null);
         setPrintAreas(payload.printAreas ?? []);
         setSizeTiers(payload.printSizeTiers ?? []);
         setAddOnOptions(payload.addOnOptions ?? []);
@@ -474,6 +528,7 @@ export default function CustomizePage() {
           return next;
         });
       } catch (err: any) {
+        setLayoutTemplate(null);
         setOptionsError(err?.message || t('Алдаа гарлаа', 'Failed to load options'));
       } finally {
         setOptionsLoading(false);
@@ -832,9 +887,7 @@ export default function CustomizePage() {
 
               {/* Placement preset buttons */}
               <PlacementPresetBar
-                productType={productType}
-                view={activeView}
-                sizeCategory="Adult"
+                placements={placementEngine.placements}
                 activePlacementKey={activePlacementKey}
                 onPresetSelect={(placement) => {
                   setActivePlacementKey(placement.placementKey);
@@ -864,6 +917,18 @@ export default function CustomizePage() {
                   view={activeView}
                   imageSrc={viewImages[activeView] ?? null}
                   canvasWidth={canvasWidth}
+                  onImageMetaChange={({ naturalWidth, naturalHeight }) => {
+                    setViewImageNaturalSize((prev) => {
+                      const current = prev[activeView];
+                      if (current && current.width === naturalWidth && current.height === naturalHeight) {
+                        return prev;
+                      }
+                      return {
+                        ...prev,
+                        [activeView]: { width: naturalWidth, height: naturalHeight },
+                      };
+                    });
+                  }}
                   ghostRect={designAttrs ? null : ghostRect}
                   ghostRectEditable={!designAttrs && Boolean(ghostRect)}
                   onGhostRectChange={setEditableGhostRect}

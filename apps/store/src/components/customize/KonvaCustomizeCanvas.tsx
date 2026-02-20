@@ -11,7 +11,7 @@
  * pixels; use displayScale to convert to/from native image pixels.
  */
 
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { Stage, Layer, Image as KonvaImage, Rect, Line, Text, Circle } from 'react-konva';
 import type Konva from 'konva';
 import type { ReactNode } from 'react';
@@ -68,6 +68,8 @@ interface Props {
   snapCenter?: { x: number; y: number } | null;
   /** Called once the stage is mounted and ready */
   onReady?: (payload: KonvaCanvasReadyPayload) => void;
+  /** Emits loaded garment image natural dimensions for active view */
+  onImageMetaChange?: (meta: { naturalWidth: number; naturalHeight: number }) => void;
   /** Layer 2 design objects */
   children?: ReactNode;
 }
@@ -86,6 +88,7 @@ export default function KonvaCustomizeCanvas({
   onGhostRectChange,
   snapCenter = null,
   onReady,
+  onImageMetaChange,
   children,
 }: Props) {
   const stageRef = useRef<Konva.Stage>(null);
@@ -99,26 +102,6 @@ export default function KonvaCustomizeCanvas({
     bounds = null;
   }
 
-  const imgW = bounds?.imgPx.w ?? 1536;
-  const imgH = bounds?.imgPx.h ?? 1024;
-  const { canvasHeight, displayScale } = useCanvasDimensions(canvasWidth, imgW, imgH);
-
-  // ── Compute scaled garment image dimensions and centering offset ──────────
-  const scaledGarmentW = Math.round(imgW * displayScale);
-  const scaledGarmentH = Math.round(imgH * displayScale);
-  const garmentOffsetX = Math.round((canvasWidth - scaledGarmentW) / 2);
-  const garmentOffsetY = Math.round((canvasHeight - scaledGarmentH) / 2);
-
-  // ── Safe area rect in canvas coordinates ──────────────────────────────────
-  const safeArea: SafeAreaRect = bounds
-    ? {
-        x: bounds.safeFrame.x1 * displayScale + garmentOffsetX,
-        y: bounds.safeFrame.y1 * displayScale + garmentOffsetY,
-        width: (bounds.safeFrame.x2 - bounds.safeFrame.x1) * displayScale,
-        height: (bounds.safeFrame.y2 - bounds.safeFrame.y1) * displayScale,
-      }
-    : { x: canvasWidth * 0.05, y: canvasHeight * 0.05, width: canvasWidth * 0.9, height: canvasHeight * 0.9 };
-
   // ── Garment image ─────────────────────────────────────────────────────────
   // Priority: explicit imageSrc prop > fallback from imageBaseUrl + filename
   const imageFile = bounds?.imageFile ?? null;
@@ -129,6 +112,38 @@ export default function KonvaCustomizeCanvas({
       : null;
 
   const [garmentImage, imageStatus] = useKonvaImage(imageSrc);
+
+  const refImgW = bounds?.imgPx.w ?? 1536;
+  const refImgH = bounds?.imgPx.h ?? 1024;
+  const imgW = garmentImage?.naturalWidth ?? refImgW;
+  const imgH = garmentImage?.naturalHeight ?? refImgH;
+  const { canvasHeight, displayScale } = useCanvasDimensions(canvasWidth, imgW, imgH);
+
+  // ── Compute scaled garment image dimensions and centering offset ──────────
+  const scaledGarmentW = Math.round(imgW * displayScale);
+  const scaledGarmentH = Math.round(imgH * displayScale);
+  const garmentOffsetX = Math.round((canvasWidth - scaledGarmentW) / 2);
+  const garmentOffsetY = Math.round((canvasHeight - scaledGarmentH) / 2);
+  const refToRuntimeScaleX = refImgW > 0 ? imgW / refImgW : 1;
+  const refToRuntimeScaleY = refImgH > 0 ? imgH / refImgH : 1;
+
+  // ── Safe area rect in canvas coordinates ──────────────────────────────────
+  const safeArea: SafeAreaRect = bounds
+    ? {
+        x: bounds.safeFrame.x1 * refToRuntimeScaleX * displayScale + garmentOffsetX,
+        y: bounds.safeFrame.y1 * refToRuntimeScaleY * displayScale + garmentOffsetY,
+        width: (bounds.safeFrame.x2 - bounds.safeFrame.x1) * refToRuntimeScaleX * displayScale,
+        height: (bounds.safeFrame.y2 - bounds.safeFrame.y1) * refToRuntimeScaleY * displayScale,
+      }
+    : { x: canvasWidth * 0.05, y: canvasHeight * 0.05, width: canvasWidth * 0.9, height: canvasHeight * 0.9 };
+
+  useEffect(() => {
+    if (!garmentImage || !onImageMetaChange) return;
+    onImageMetaChange({
+      naturalWidth: garmentImage.naturalWidth,
+      naturalHeight: garmentImage.naturalHeight,
+    });
+  }, [garmentImage, onImageMetaChange]);
 
   // ── Stage ready callback ──────────────────────────────────────────────────
   const handleStageRef = (stage: Konva.Stage | null) => {

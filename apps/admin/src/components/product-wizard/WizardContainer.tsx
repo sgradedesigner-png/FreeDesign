@@ -89,6 +89,7 @@ export function WizardContainer({ productId }: WizardContainerProps) {
         printAreas: values.printAreas,
         printAreaDefaults: values.printAreaDefaults,
         uploadConstraints: values.uploadConstraints,
+        customizationTemplateV1: values.customizationTemplateV1,
       };
 
       if (productId) {

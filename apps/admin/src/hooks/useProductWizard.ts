@@ -14,6 +14,59 @@ const uploadConstraintsSchema = z.object({
   allowedFormats: z.array(z.string()),
 });
 
+const rectNormSchema = z.object({
+  x: z.number().min(0).max(1),
+  y: z.number().min(0).max(1),
+  w: z.number().gt(0).max(1),
+  h: z.number().gt(0).max(1),
+}).superRefine((value, ctx) => {
+  if (value.x + value.w > 1) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'x + w must be <= 1',
+      path: ['w'],
+    });
+  }
+  if (value.y + value.h > 1) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'y + h must be <= 1',
+      path: ['h'],
+    });
+  }
+});
+
+const layoutViewKeySchema = z.enum(['front', 'back', 'left', 'right']);
+
+const layoutViewSchema = z.object({
+  imagePath: z.string().optional(),
+  naturalWidth: z.number().int().positive().optional(),
+  naturalHeight: z.number().int().positive().optional(),
+});
+
+const layoutPresetSchema = z.object({
+  id: z.string().optional(),
+  key: z.string().min(1, 'Preset key is required'),
+  labelMn: z.string().optional(),
+  labelEn: z.string().optional(),
+  view: layoutViewKeySchema,
+  rectNorm: rectNormSchema,
+  printAreaId: z.string().uuid().nullable().optional(),
+  sortOrder: z.number().int().default(0),
+  isDefault: z.boolean().default(false),
+});
+
+const customizationTemplateSchema = z.object({
+  version: z.literal(1),
+  views: z.object({
+    front: layoutViewSchema.optional(),
+    back: layoutViewSchema.optional(),
+    left: layoutViewSchema.optional(),
+    right: layoutViewSchema.optional(),
+  }).default({}),
+  presets: z.array(layoutPresetSchema).default([]),
+});
+
 // Product variant schema
 const productVariantSchema = z.object({
   id: z.string().optional(),
@@ -67,6 +120,7 @@ const productWizardSchema = z.object({
   printAreas: z.array(z.string()).default([]),
   printAreaDefaults: z.record(z.string(), z.boolean()).optional(),
   sizeTiers: z.array(z.string()).default([]),
+  customizationTemplateV1: customizationTemplateSchema.optional(),
 
   // Step 5
   variants: z.array(productVariantSchema).min(1, 'At least one variant is required'),
@@ -78,6 +132,9 @@ const productWizardSchema = z.object({
 export type WizardFormData = z.infer<typeof productWizardSchema>;
 export type ProductVariant = z.infer<typeof productVariantSchema>;
 export type UploadConstraints = z.infer<typeof uploadConstraintsSchema>;
+export type LayoutViewKey = z.infer<typeof layoutViewKeySchema>;
+export type LayoutPreset = z.infer<typeof layoutPresetSchema>;
+export type CustomizationTemplateV1 = z.infer<typeof customizationTemplateSchema>;
 
 const DEFAULT_WIZARD_VALUES: Partial<WizardFormData> = {
   productFamily: 'BY_SIZE',
@@ -161,12 +218,14 @@ export function useProductWizard(productId?: string) {
       api
         .get(`/admin/products/${productId}`)
         .then(({ data }) => {
-          const product = data.product;
+          const product = data.product ?? data;
+          const productFamily = (product.product_family ?? product.productFamily ?? 'BLANKS') as ProductFamilyValue;
+          const configuredPrintAreas = product.product_print_areas ?? product.printAreas ?? [];
           form.reset({
-            productFamily: product.product_family as ProductFamilyValue,
+            productFamily,
             title: product.title,
             slug: product.slug,
-            categoryId: product.category_id,
+            categoryId: product.category_id ?? product.categoryId,
             description: product.description || '',
             subtitle: product.subtitle || '',
             basePrice: product.base_price?.toString() || '0',
@@ -174,15 +233,18 @@ export function useProductWizard(productId?: string) {
             reviews: product.reviews?.toString() || '0',
             features: product.features || [],
             benefits: product.benefits || [],
-            productDetails: product.product_details || [],
-            isPublished: product.is_published || false,
-            printAreas: product.product_print_areas?.map((pa: any) => pa.print_area_id) || [],
-            printAreaDefaults: product.product_print_areas?.reduce((acc: any, pa: any) => {
-              if (pa.is_default) acc[pa.print_area_id] = true;
+            productDetails: product.product_details ?? product.productDetails ?? [],
+            isPublished: product.is_published ?? product.isPublished ?? false,
+            printAreas: configuredPrintAreas.map((pa: any) => pa.print_area_id ?? pa.printAreaId).filter(Boolean),
+            printAreaDefaults: configuredPrintAreas.reduce((acc: any, pa: any) => {
+              const areaId = pa.print_area_id ?? pa.printAreaId;
+              const isDefault = pa.is_default ?? pa.isDefault ?? false;
+              if (areaId && isDefault) acc[areaId] = true;
               return acc;
             }, {}),
             variants: product.variants || [],
-            uploadConstraints: product.metadata?.uploadConstraints,
+            uploadConstraints: (product.metadata as any)?.uploadConstraints,
+            customizationTemplateV1: (product.metadata as any)?.customizationTemplateV1,
           });
         })
         .catch((error) => {
@@ -212,7 +274,7 @@ export function useProductWizard(productId?: string) {
       case 3:
         return ['uploadConstraints'];
       case 4:
-        return ['printAreas', 'sizeTiers'];
+        return ['printAreas', 'sizeTiers', 'customizationTemplateV1'];
       case 5:
         return ['variants'];
       case 6:

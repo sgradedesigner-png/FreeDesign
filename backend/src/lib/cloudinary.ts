@@ -25,6 +25,15 @@ cloudinary.config({
   secure: true,
 });
 
+function detectViewToken(filename: string): 'front' | 'back' | 'left' | 'right' | null {
+  const name = filename.toLowerCase();
+  if (/(^|[^a-z])(front|frt)([^a-z]|$)/i.test(name)) return 'front';
+  if (/(^|[^a-z])back([^a-z]|$)/i.test(name)) return 'back';
+  if (/(^|[^a-z])(leftsleeve|left_sleeve|left-sleeve|leftside|left_side|left-side|left|ls)([^a-z]|$)/i.test(name)) return 'left';
+  if (/(^|[^a-z])(rightsleeve|right_sleeve|right-sleeve|rightside|right_side|right-side|right|rs)([^a-z]|$)/i.test(name)) return 'right';
+  return null;
+}
+
 export async function uploadProductImage(
   productId: string,
   buffer: Buffer,
@@ -32,10 +41,12 @@ export async function uploadProductImage(
   contentType: string
 ): Promise<string> {
   return new Promise((resolve, reject) => {
+    const baseName = filename.replace(/\.[^.]+$/, '');
+    const viewToken = detectViewToken(filename);
     const uploadStream = cloudinary.uploader.upload_stream(
       {
         folder: `products/${productId}`,
-        public_id: `${Date.now()}-${filename.replace(/\.[^.]+$/, '')}`,
+        public_id: `${Date.now()}-${viewToken ? `${viewToken}-` : ''}${baseName}`,
         resource_type: 'image',
         transformation: [{ quality: 'auto', fetch_format: 'auto' }],
       },

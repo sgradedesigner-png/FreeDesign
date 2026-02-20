@@ -1,5 +1,6 @@
 import type { GarmentBounds, ProductType, ViewName } from '@/types/garment';
 import rawData from '@/data/garmentBounds.json';
+import { mapGalleryToViews } from '@/lib/viewImageOrdering';
 
 type BoundsMap = Record<string, GarmentBounds>;
 const data = rawData as BoundsMap;
@@ -57,11 +58,7 @@ export function galleryPathsToViewMap(
   galleryPaths: string[]
 ): Partial<Record<ViewName, string>> {
   const views = PRODUCT_VIEWS[productType] ?? ['front'];
-  const result: Partial<Record<ViewName, string>> = {};
-  views.forEach((view, idx) => {
-    result[view] = galleryPaths[idx] ?? (view === 'front' ? imagePath : undefined);
-  });
-  return result;
+  return mapGalleryToViews(imagePath, galleryPaths, views);
 }
 
 /**
