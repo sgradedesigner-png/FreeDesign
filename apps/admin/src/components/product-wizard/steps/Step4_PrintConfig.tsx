@@ -242,6 +242,9 @@ export function Step4_PrintConfig({ form }: Step4_PrintConfigProps) {
   const [layoutHint, setLayoutHint] = useState<string | null>(null);
   const [previewImageError, setPreviewImageError] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<LayoutViewKey>('front');
+  const [activePresetIdByView, setActivePresetIdByView] = useState<
+    Partial<Record<LayoutViewKey, string>>
+  >({});
   const dragStateRef = useRef<DragState | null>(null);
 
   const selectedAreas = form.watch('printAreas') || [];
@@ -337,6 +340,28 @@ export function Step4_PrintConfig({ form }: Step4_PrintConfigProps) {
         .sort((a, b) => (a.preset.sortOrder ?? 0) - (b.preset.sortOrder ?? 0)),
     [activeView, effectiveTemplate.presets]
   );
+  const activePresetEntry = useMemo(() => {
+    if (presetsInView.length === 0) return null;
+    const selectedId = activePresetIdByView[activeView];
+    const matched = selectedId
+      ? presetsInView.find(({ preset }) => preset.id === selectedId)
+      : undefined;
+    return matched ?? presetsInView[0];
+  }, [activePresetIdByView, activeView, presetsInView]);
+
+  useEffect(() => {
+    if (presetsInView.length === 0) return;
+    const selectedId = activePresetIdByView[activeView];
+    const exists = selectedId
+      ? presetsInView.some(({ preset }) => preset.id === selectedId)
+      : false;
+    if (!exists) {
+      setActivePresetIdByView((prev) => ({
+        ...prev,
+        [activeView]: presetsInView[0].preset.id,
+      }));
+    }
+  }, [activePresetIdByView, activeView, presetsInView]);
 
   const updateTemplate = (updater: (current: CustomizationTemplateV1) => CustomizationTemplateV1) => {
     const current = form.getValues('customizationTemplateV1') ?? createEmptyTemplate();
@@ -363,13 +388,14 @@ export function Step4_PrintConfig({ form }: Step4_PrintConfigProps) {
   };
 
   const addPreset = () => {
+    const nextId = crypto.randomUUID();
     updateTemplate((current) => {
       const existingInView = current.presets.filter((preset) => preset.view === activeView);
       const sortOrder = existingInView.length === 0
         ? 10
         : Math.max(...existingInView.map((preset) => preset.sortOrder || 0)) + 10;
       const nextPreset: LayoutPreset = {
-        id: crypto.randomUUID(),
+        id: nextId,
         key: `${activeView}_preset_${existingInView.length + 1}`,
         labelMn: '',
         labelEn: `${VIEW_OPTIONS.find((item) => item.key === activeView)?.label ?? activeView} Preset ${existingInView.length + 1}`,
@@ -381,6 +407,7 @@ export function Step4_PrintConfig({ form }: Step4_PrintConfigProps) {
       };
       return { ...current, presets: [...current.presets, nextPreset] };
     });
+    setActivePresetIdByView((prev) => ({ ...prev, [activeView]: nextId }));
   };
 
   const updatePreset = (index: number, updater: (preset: LayoutPreset) => LayoutPreset) => {
@@ -653,12 +680,40 @@ export function Step4_PrintConfig({ form }: Step4_PrintConfigProps) {
             </p>
           ) : (
             <div className="space-y-3">
-              {presetsInView.map(({ preset, index }) => (
-                <Card key={preset.id ?? `${preset.key}-${index}`}>
+              <div className="flex flex-wrap gap-2">
+                {presetsInView.map(({ preset }) => {
+                  const isActive = activePresetEntry?.preset.id === preset.id;
+                  return (
+                    <button
+                      key={preset.id ?? preset.key}
+                      type="button"
+                      className={cn(
+                        'h-8 rounded-md border px-3 text-xs',
+                        isActive
+                          ? 'border-primary bg-primary/10 text-primary'
+                          : 'border-border text-foreground hover:bg-muted'
+                      )}
+                      onClick={() =>
+                        setActivePresetIdByView((prev) => ({ ...prev, [activeView]: preset.id }))
+                      }
+                    >
+                      {preset.labelEn?.trim() || preset.key}
+                    </button>
+                  );
+                })}
+              </div>
+              {activePresetEntry && (
+                <Card key={activePresetEntry.preset.id ?? `${activePresetEntry.preset.key}-${activePresetEntry.index}`}>
                   <CardContent className="pt-4 space-y-3">
                     <div
                       className="relative w-full aspect-[4/3] overflow-hidden rounded-lg border border-border bg-muted/40"
-                      onMouseMove={(event) => handleRectInteraction(event, index, preset.rectNorm)}
+                      onMouseMove={(event) =>
+                        handleRectInteraction(
+                          event,
+                          activePresetEntry.index,
+                          activePresetEntry.preset.rectNorm
+                        )
+                      }
                       onMouseUp={() => {
                         dragStateRef.current = null;
                       }}
@@ -703,12 +758,14 @@ export function Step4_PrintConfig({ form }: Step4_PrintConfigProps) {
                       <div
                         className="absolute border-2 border-cyan-400 bg-cyan-200/20"
                         style={{
-                          left: `${(containFrameN.x + preset.rectNorm.x * containFrameN.w) * 100}%`,
-                          top: `${(containFrameN.y + preset.rectNorm.y * containFrameN.h) * 100}%`,
-                          width: `${preset.rectNorm.w * containFrameN.w * 100}%`,
-                          height: `${preset.rectNorm.h * containFrameN.h * 100}%`,
+                          left: `${(containFrameN.x + activePresetEntry.preset.rectNorm.x * containFrameN.w) * 100}%`,
+                          top: `${(containFrameN.y + activePresetEntry.preset.rectNorm.y * containFrameN.h) * 100}%`,
+                          width: `${activePresetEntry.preset.rectNorm.w * containFrameN.w * 100}%`,
+                          height: `${activePresetEntry.preset.rectNorm.h * containFrameN.h * 100}%`,
                         }}
-                        onMouseDown={(event) => startRectInteraction(event, 'move', preset.rectNorm)}
+                        onMouseDown={(event) =>
+                          startRectInteraction(event, 'move', activePresetEntry.preset.rectNorm)
+                        }
                       >
                         {(['tl', 'tr', 'bl', 'br'] as DragMode[]).map((corner) => {
                           const styles =
@@ -724,7 +781,9 @@ export function Step4_PrintConfig({ form }: Step4_PrintConfigProps) {
                               key={corner}
                               type="button"
                               className={`absolute h-3 w-3 rounded-full border border-white bg-cyan-500 ${styles}`}
-                              onMouseDown={(event) => startRectInteraction(event, corner, preset.rectNorm)}
+                              onMouseDown={(event) =>
+                                startRectInteraction(event, corner, activePresetEntry.preset.rectNorm)
+                              }
                             />
                           );
                         })}
@@ -734,15 +793,17 @@ export function Step4_PrintConfig({ form }: Step4_PrintConfigProps) {
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex items-center gap-2">
                         <Checkbox
-                          checked={preset.isDefault}
-                          onCheckedChange={() => setPresetDefault(index, preset.view)}
+                          checked={activePresetEntry.preset.isDefault}
+                          onCheckedChange={() =>
+                            setPresetDefault(activePresetEntry.index, activePresetEntry.preset.view)
+                          }
                         />
                         <Label>Default preset for {activeView}</Label>
                       </div>
                       <button
                         type="button"
                         className="text-destructive hover:underline inline-flex items-center gap-1 text-sm"
-                        onClick={() => removePreset(index)}
+                        onClick={() => removePreset(activePresetEntry.index)}
                       >
                         <Trash2 size={14} />
                         Delete
@@ -753,36 +814,36 @@ export function Step4_PrintConfig({ form }: Step4_PrintConfigProps) {
                       <div className="space-y-2">
                         <Label>Preset Key</Label>
                         <Input
-                          value={preset.key}
+                          value={activePresetEntry.preset.key}
                           onChange={(e) =>
-                            updatePreset(index, (current) => ({ ...current, key: e.target.value }))
+                            updatePreset(activePresetEntry.index, (current) => ({ ...current, key: e.target.value }))
                           }
                         />
                       </div>
                       <div className="space-y-2">
                         <Label>English Label</Label>
                         <Input
-                          value={preset.labelEn ?? ''}
+                          value={activePresetEntry.preset.labelEn ?? ''}
                           onChange={(e) =>
-                            updatePreset(index, (current) => ({ ...current, labelEn: e.target.value }))
+                            updatePreset(activePresetEntry.index, (current) => ({ ...current, labelEn: e.target.value }))
                           }
                         />
                       </div>
                       <div className="space-y-2">
                         <Label>Mongolian Label</Label>
                         <Input
-                          value={preset.labelMn ?? ''}
+                          value={activePresetEntry.preset.labelMn ?? ''}
                           onChange={(e) =>
-                            updatePreset(index, (current) => ({ ...current, labelMn: e.target.value }))
+                            updatePreset(activePresetEntry.index, (current) => ({ ...current, labelMn: e.target.value }))
                           }
                         />
                       </div>
                       <div className="space-y-2">
                         <Label>Linked Print Area</Label>
                         <Select
-                          value={preset.printAreaId ?? 'none'}
+                          value={activePresetEntry.preset.printAreaId ?? 'none'}
                           onValueChange={(value) =>
-                            updatePreset(index, (current) => ({
+                            updatePreset(activePresetEntry.index, (current) => ({
                               ...current,
                               printAreaId: value === 'none' ? null : value,
                             }))
@@ -806,9 +867,9 @@ export function Step4_PrintConfig({ form }: Step4_PrintConfigProps) {
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                       <NormInput
                         label="x"
-                        value={preset.rectNorm.x}
+                        value={activePresetEntry.preset.rectNorm.x}
                         onChange={(value) =>
-                          updatePreset(index, (current) => ({
+                          updatePreset(activePresetEntry.index, (current) => ({
                             ...current,
                             rectNorm: clampRect({ ...current.rectNorm, x: value }),
                           }))
@@ -816,9 +877,9 @@ export function Step4_PrintConfig({ form }: Step4_PrintConfigProps) {
                       />
                       <NormInput
                         label="y"
-                        value={preset.rectNorm.y}
+                        value={activePresetEntry.preset.rectNorm.y}
                         onChange={(value) =>
-                          updatePreset(index, (current) => ({
+                          updatePreset(activePresetEntry.index, (current) => ({
                             ...current,
                             rectNorm: clampRect({ ...current.rectNorm, y: value }),
                           }))
@@ -826,9 +887,9 @@ export function Step4_PrintConfig({ form }: Step4_PrintConfigProps) {
                       />
                       <NormInput
                         label="w"
-                        value={preset.rectNorm.w}
+                        value={activePresetEntry.preset.rectNorm.w}
                         onChange={(value) =>
-                          updatePreset(index, (current) => ({
+                          updatePreset(activePresetEntry.index, (current) => ({
                             ...current,
                             rectNorm: clampRect({ ...current.rectNorm, w: value }),
                           }))
@@ -836,9 +897,9 @@ export function Step4_PrintConfig({ form }: Step4_PrintConfigProps) {
                       />
                       <NormInput
                         label="h"
-                        value={preset.rectNorm.h}
+                        value={activePresetEntry.preset.rectNorm.h}
                         onChange={(value) =>
-                          updatePreset(index, (current) => ({
+                          updatePreset(activePresetEntry.index, (current) => ({
                             ...current,
                             rectNorm: clampRect({ ...current.rectNorm, h: value }),
                           }))
@@ -847,7 +908,7 @@ export function Step4_PrintConfig({ form }: Step4_PrintConfigProps) {
                     </div>
                   </CardContent>
                 </Card>
-              ))}
+              )}
             </div>
           )}
         </CardContent>

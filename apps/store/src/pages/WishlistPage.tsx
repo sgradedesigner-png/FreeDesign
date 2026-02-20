@@ -25,7 +25,7 @@ export default function WishlistPage() {
         <div className="flex items-center gap-2 text-sm text-muted-foreground mb-8">
           <Link to="/" className="hover:text-primary flex items-center gap-1">
             <ArrowLeft size={14} />
-            {language === 'mn' ? 'ÐÒ¯Ò¯Ñ€' : 'Home'}
+            {language === 'mn' ? 'Нүүр' : 'Home'}
           </Link>
           <span>/</span>
           <span className="text-foreground font-medium">
@@ -39,16 +39,16 @@ export default function WishlistPage() {
             <Heart size={64} className="text-muted-foreground" />
           </div>
           <h2 className="text-2xl font-bold mb-2">
-            {language === 'mn' ? 'Ð¢Ð°Ð½Ñ‹ wishlist Ñ…Ð¾Ð¾ÑÐ¾Ð½ Ð±Ð°Ð¹Ð½Ð°' : 'Your wishlist is empty'}
+            {language === 'mn' ? 'Таны wishlist хоосон байна' : 'Your wishlist is empty'}
           </h2>
           <p className="text-muted-foreground mb-6">
-            {language === 'mn' ? 'Ð¢Ð°Ð°Ð»Ð°Ð³Ð´ÑÐ°Ð½ Ð±Ð°Ñ€Ð°Ð°Ð³Ð°Ð° wishlist-Ð´ Ð½ÑÐ¼Ð½Ñ Ò¯Ò¯' : 'Add your favorite items to wishlist'}
+            {language === 'mn' ? 'Таалагдсан бараагаа wishlist-д нэмнэ үү' : 'Add your favorite items to wishlist'}
           </p>
           <Link
             to="/"
             className="px-8 py-3 bg-primary text-primary-foreground rounded-xl font-bold hover:bg-primary/90 transition-colors"
           >
-            {language === 'mn' ? 'Ð”ÑÐ»Ð³Ò¯Ò¯Ñ€ Ñ…ÑÑÑÑ…' : 'Continue Shopping'}
+            {language === 'mn' ? 'Дэлгүүр хэсэх' : 'Continue Shopping'}
           </Link>
         </div>
       </div>
@@ -61,7 +61,7 @@ export default function WishlistPage() {
       <div className="flex items-center gap-2 text-sm text-muted-foreground mb-8">
         <Link to="/" className="hover:text-primary flex items-center gap-1">
           <ArrowLeft size={14} />
-          {language === 'mn' ? 'ÐÒ¯Ò¯Ñ€' : 'Home'}
+          {language === 'mn' ? 'Нүүр' : 'Home'}
         </Link>
         <span>/</span>
         <span className="text-foreground font-medium">
@@ -73,9 +73,9 @@ export default function WishlistPage() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-foreground flex items-center gap-3">
           <Heart className="text-primary" size={32} />
-          {language === 'mn' ? 'ÐœÐ¸Ð½Ð¸Ð¹ Wishlist' : 'My Wishlist'}
+          {language === 'mn' ? 'Миний Wishlist' : 'My Wishlist'}
           <span className="text-sm font-medium text-muted-foreground bg-black/5 dark:bg-white/10 px-3 py-1 rounded-full">
-            {wishlist.length} {language === 'mn' ? 'Ð±Ð°Ñ€Ð°Ð°' : 'items'}
+            {wishlist.length} {language === 'mn' ? 'бараа' : 'items'}
           </span>
         </h1>
       </div>
@@ -138,7 +138,7 @@ export default function WishlistPage() {
                   className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-primary text-primary-foreground rounded-xl font-bold hover:bg-primary/90 transition-colors shadow-md shadow-primary/20"
                 >
                   <ShoppingCart size={18} />
-                  <span>{language === 'mn' ? 'Ð¡ÐÐ“Ð¡ÐÐÐ” ÐÐ­ÐœÐ­Ð¥' : 'ADD TO CART'}</span>
+                  <span>{language === 'mn' ? 'САГСАНД НЭМЭХ' : 'ADD TO CART'}</span>
                 </button>
               </div>
             </div>

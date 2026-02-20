@@ -8,7 +8,7 @@ import { imageUrl } from "@/lib/imageUrl";
 
 const PLACEHOLDER_IMG = 'https://placehold.co/800x1000/png?text=No+Image';
 const formatMNT = (value: number): string =>
-  `â‚®${Math.max(0, Math.round(value)).toLocaleString()}`;
+  `₮${Math.max(0, Math.round(value)).toLocaleString()}`;
 
 export default function CartSidebar() {
   const { cart, isCartOpen, setIsCartOpen, increaseQty, decreaseQty, removeItem, cartTotal } = useCart();
@@ -59,14 +59,14 @@ export default function CartSidebar() {
         <div className="flex items-center justify-between px-6 py-5 border-b border-black/5 dark:border-white/5">
           <SheetTitle className="text-xl font-heading font-bold text-foreground flex items-center gap-2">
             <ShoppingBag className="text-primary" size={22} />
-            {language === 'mn' ? 'Ð¢Ð°Ð½Ñ‹ Ð¡Ð°Ð³Ñ' : 'Your Cart'}
+            {language === 'mn' ? 'Таны сагс' : 'Your Cart'}
             <span className="text-sm font-medium text-muted-foreground bg-black/5 dark:bg-white/10 px-2 py-0.5 rounded-full">
               {cart.length}
             </span>
           </SheetTitle>
           <SheetDescription className="sr-only">
             {language === 'mn'
-              ? `Ð¢Ð°Ð½Ñ‹ ÑÐ°Ð³ÑÐ°Ð½Ð´ ${cart.length} Ð±Ð°Ñ€Ð°Ð° Ð±Ð°Ð¹Ð½Ð°. Ð”ÑÐ»Ð³ÑÑ€ÑÐ½Ð³Ò¯Ð¹Ð³ Ð´Ð¾Ð¾Ñ€ Ò¯Ð·Ð½Ñ Ò¯Ò¯.`
+              ? `Таны сагсанд ${cart.length} бараа байна. Дэлгэрэнгүйг доор үзнэ үү.`
               : `Your shopping cart contains ${cart.length} items. View details below.`}
           </SheetDescription>
           <button
@@ -89,13 +89,13 @@ export default function CartSidebar() {
               </div>
               <div>
                 <h3 className="text-xl font-bold text-foreground">
-                  {language === 'mn' ? 'Ð¡Ð°Ð³Ñ Ñ…Ð¾Ð¾ÑÐ¾Ð½ Ð±Ð°Ð¹Ð½Ð°' : 'Your cart is empty'}
+                  {language === 'mn' ? 'Сагс хоосон байна' : 'Your cart is empty'}
                 </h3>
                 <button
                   onClick={() => setIsCartOpen(false)}
                   className="mt-6 px-8 py-3 bg-primary text-white rounded-xl font-bold shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all"
                 >
-                  {language === 'mn' ? 'Ð”ÑÐ»Ð³Ò¯Ò¯Ñ€ Ñ…ÑÑÑÑ…' : 'Start Shopping'}
+                  {language === 'mn' ? 'Дэлгүүр хэсэх' : 'Start Shopping'}
                 </button>
               </div>
             </div>
@@ -190,7 +190,7 @@ export default function CartSidebar() {
         {cart.length > 0 && (
           <div className="border-t border-black/5 dark:border-white/5 p-6 space-y-3">
             <div className="flex justify-between text-lg font-bold text-foreground">
-              <p>{language === 'mn' ? 'ÐÐ¸Ð¹Ñ‚ Ð´Ò¯Ð½' : 'Total'}</p>
+              <p>{language === 'mn' ? 'Нийт дүн' : 'Total'}</p>
               <p data-testid="cart-total">{formatMNT(cartTotal)}</p>
             </div>
             <Link
@@ -199,7 +199,7 @@ export default function CartSidebar() {
               className="w-full rounded-xl border-2 border-primary text-primary px-6 py-3 font-bold flex items-center justify-center gap-2 hover:bg-primary/5 transition-colors"
             >
               <Eye size={18} />
-              {language === 'mn' ? 'Ð¡Ð°Ð³Ñ Ò¯Ð·ÑÑ…' : 'VIEW CART'}
+              {language === 'mn' ? 'Сагс үзэх' : 'VIEW CART'}
             </Link>
             <Link
               to="/checkout"
@@ -207,7 +207,7 @@ export default function CartSidebar() {
               onClick={() => setIsCartOpen(false)}
               className="w-full rounded-xl bg-primary px-6 py-3 text-white font-bold flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors"
             >
-              {language === 'mn' ? 'Ð¥ÑƒÐ´Ð°Ð»Ð´Ð°Ð½ Ð°Ð²Ð°Ñ…' : 'CHECKOUT'}
+              {language === 'mn' ? 'Худалдан авах' : 'CHECKOUT'}
               <ArrowRight size={18} />
             </Link>
           </div>

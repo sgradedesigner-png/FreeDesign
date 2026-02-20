@@ -3,7 +3,7 @@ import { useState, useEffect, useMemo } from 'react';
 import type { ChangeEvent } from 'react';
 import { ChevronDown, Check, Filter } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
-import { useCategoriesQuery } from '../../data/categories.queries'; // âœ… Categories query
+import { useCategoriesQuery } from '../../data/categories.queries';
 
 type Filters = {
   priceRange: [number, number];
@@ -61,7 +61,7 @@ export default function FilterSidebar({
     sizes: true
   });
 
-  // âœ… Fetch categories from database
+  // Fetch categories from database.
   const { data: categoriesData = [] } = useCategoriesQuery();
 
   const normalizePriceRange = (minValue: number, maxValue: number): [number, number] => {
@@ -95,7 +95,7 @@ export default function FilterSidebar({
     });
   }, [normalizedActiveCategories]);
 
-  // âœ… ÐžÑ€Ñ‡ÑƒÑƒÐ»Ð³Ñ‹Ð½ Ð¾Ð±ÑŠÐµÐºÑ‚
+  // Translation labels.
   const t = {
     title: language === 'mn' ? '\u0428\u04AF\u04AF\u043B\u0442\u04AF\u04AF\u0440' : 'Filters',
     categories: language === 'mn' ? '\u0410\u043D\u0433\u0438\u043B\u0430\u043B' : 'Categories',
@@ -190,13 +190,13 @@ export default function FilterSidebar({
       >
       <div className="space-y-6">
         
-        {/* 1. ÐÐ½Ð³Ð¸Ð»Ð°Ð» (Categories) */}
+        {/* Categories */}
         <div className="bg-card border border-border/50 rounded-2xl p-5 shadow-sm">
             <button 
                 onClick={() => toggleSection('categories')}
                 className="w-full flex items-center justify-between font-bold text-foreground mb-4 group"
             >
-                <span className="text-lg">{t.categories}</span> {/* âœ… ÐžÑ€Ñ‡ÑƒÑƒÐ»Ð³Ð° */}
+                <span className="text-lg">{t.categories}</span>
                 <ChevronDown size={18} className={`text-muted-foreground transition-transform duration-300 group-hover:text-primary ${openSections.categories ? 'rotate-180' : ''}`} />
             </button>
             
@@ -225,7 +225,7 @@ export default function FilterSidebar({
                             </div>
                             
                             <span className={`text-sm font-medium transition-colors ${isSelected ? 'text-primary' : 'text-slate-600 dark:text-slate-300 group-hover:text-foreground'}`}>
-                                {cat.name} {/* âœ… Ð¥ÑÐ»Ð½ÑÑÑ Ñ…Ð°Ð¼Ð°Ð°Ñ€ÑÐ°Ð½ Ð½ÑÑ€ */}
+                                {cat.name}
                             </span>
                         </div>
                     );
@@ -233,13 +233,13 @@ export default function FilterSidebar({
             </div>
         </div>
 
-        {/* 2. Ò®Ð½Ð¸Ð¹Ð½ Ñ…ÑÐ·Ð³Ð°Ð°Ñ€ (Price Range) */}
+        {/* Price Range */}
         <div className="bg-card border border-border/50 rounded-2xl p-5 shadow-sm">
              <button 
                 onClick={() => toggleSection('price')}
                 className="w-full flex items-center justify-between font-bold text-foreground mb-6 group"
             >
-                <span className="text-lg">{t.price}</span> {/* âœ… ÐžÑ€Ñ‡ÑƒÑƒÐ»Ð³Ð° */}
+                <span className="text-lg">{t.price}</span>
                 <ChevronDown size={18} className={`text-muted-foreground transition-transform duration-300 group-hover:text-primary ${openSections.price ? 'rotate-180' : ''}`} />
              </button>
              
@@ -299,13 +299,13 @@ export default function FilterSidebar({
              </div>
         </div>
 
-        {/* 3. Ð¥ÑÐ¼Ð¶ÑÑ (Sizes) */}
+        {/* Sizes */}
         <div className="bg-card border border-border/50 rounded-2xl p-5 shadow-sm">
             <button 
                 onClick={() => toggleSection('sizes')}
                 className="w-full flex items-center justify-between font-bold text-foreground mb-4 group"
             >
-                <span className="text-lg">{t.sizes}</span> {/* âœ… ÐžÑ€Ñ‡ÑƒÑƒÐ»Ð³Ð° */}
+                <span className="text-lg">{t.sizes}</span>
                 <ChevronDown size={18} className={`text-muted-foreground transition-transform duration-300 group-hover:text-primary ${openSections.sizes ? 'rotate-180' : ''}`} />
             </button>
             
