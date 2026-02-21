@@ -45,8 +45,20 @@ yarn-error.log*
 
 # Codex local state (should never be committed)
 /.codex-home/
+/.claude/
+/.gemini/
+/.playwright-mcp/
 
 # Local temp files (may contain secrets)
 /tmp.js
 /update_env.ps1
 /utf8
+
+# Local/generated workspace folders
+/test-results/
+/dtfsheet_audit/
+/docs/
+/ai-team/
+/admin/
+/apps/admin/Blank Print Products/
+/ecommerce-platform/admin/
