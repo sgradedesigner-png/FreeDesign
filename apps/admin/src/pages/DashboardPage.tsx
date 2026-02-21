@@ -275,7 +275,7 @@ export default function DashboardPage() {
                 <div
                   key={product.id}
                   className="group flex flex-col gap-4 rounded-lg p-4 transition-colors hover:bg-muted/50 cursor-pointer sm:flex-row sm:items-center"
-                  onClick={() => nav(`/products/${product.id}`)}
+                  onClick={() => nav(`/product-wizard/${product.id}`)}
                 >
                   {firstVariant?.imagePath ? (
                     <img

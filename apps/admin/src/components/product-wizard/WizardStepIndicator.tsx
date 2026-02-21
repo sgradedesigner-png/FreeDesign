@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils';
 import { getStepLabel } from './product-family/familyConfig';
 
 type WizardStepIndicatorProps = {
+  title?: string;
   currentStep: number;
   totalSteps: number;
   completedSteps: Set<number>;
@@ -11,6 +12,7 @@ type WizardStepIndicatorProps = {
 };
 
 export function WizardStepIndicator({
+  title = 'Create Product',
   currentStep,
   totalSteps,
   completedSteps,
@@ -20,7 +22,7 @@ export function WizardStepIndicator({
   return (
     <div className="mb-8">
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-3xl font-bold">Create Product</h1>
+        <h1 className="text-3xl font-bold">{title}</h1>
         <span className="text-sm text-muted-foreground">
           Step {currentStep} of {totalSteps}
         </span>

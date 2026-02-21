@@ -22,8 +22,7 @@ import { api } from '@/lib/api';
 
 type Step6_ReviewProps = {
   form: UseFormReturn<WizardFormData>;
-  onSave: () => void;
-  isSubmitting: boolean;
+  isEditMode: boolean;
 };
 
 type PricingBreakdown = {
@@ -41,7 +40,7 @@ type PricingBreakdown = {
   total: number;
 };
 
-export function Step6_Review({ form, onSave, isSubmitting }: Step6_ReviewProps) {
+export function Step6_Review({ form, isEditMode }: Step6_ReviewProps) {
   const values = form.getValues();
   const familyConfig = getFamilyConfig(values.productFamily);
   const errors = Object.entries(form.formState.errors);
@@ -263,7 +262,7 @@ export function Step6_Review({ form, onSave, isSubmitting }: Step6_ReviewProps) 
             {errors.length === 0 ? (
               <>
                 <CheckCircle2 size={20} className="text-green-500" />
-                Ready to Create
+                {isEditMode ? 'Ready to Update' : 'Ready to Create'}
               </>
             ) : (
               <>
@@ -290,7 +289,9 @@ export function Step6_Review({ form, onSave, isSubmitting }: Step6_ReviewProps) 
           ) : (
             <Alert className="border-green-500 bg-green-50">
               <AlertDescription className="text-green-700">
-                Product is ready to be created. Click "Create Product" below to save.
+                {isEditMode
+                  ? 'Product is ready to be updated. Click "Update Product" below to save changes.'
+                  : 'Product is ready to be created. Click "Create Product" below to save.'}
               </AlertDescription>
             </Alert>
           )}

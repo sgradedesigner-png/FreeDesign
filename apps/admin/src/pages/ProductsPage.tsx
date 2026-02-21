@@ -488,7 +488,7 @@ export default function ProductsPage() {
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8"
-                        onClick={() => navigate(`/products/${product.id}`)}
+                        onClick={() => navigate(`/product-wizard/${product.id}`)}
                       >
                         <Edit className="w-4 h-4" />
                       </Button>

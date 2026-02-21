@@ -236,6 +236,8 @@ export async function adminProductRoutes(app: FastifyInstance) {
 
     const productId = randomUUID();
     const normalizedVariants = await normalizeVariantMediaForCloudinary(body.variants, productId);
+    const uniquePrintAreas = Array.from(new Set(body.printAreas ?? []));
+    const isCustomizable = uniquePrintAreas.length > 0 || Boolean(body.customizationTemplateV1);
 
     // Build metadata including upload constraints
     const metadata: Prisma.JsonObject = {};
@@ -257,6 +259,7 @@ export async function adminProductRoutes(app: FastifyInstance) {
         requiresUpload: body.requires_upload,
         requiresBuilder: body.requires_builder,
         uploadProfileId: body.upload_profile_id ?? null,
+        isCustomizable,
         subtitle: body.subtitle ?? null,
         description: body.description,
         basePrice: body.basePrice,
@@ -289,9 +292,9 @@ export async function adminProductRoutes(app: FastifyInstance) {
     });
 
     // Create print area links if provided
-    if (body.printAreas && body.printAreas.length > 0) {
+    if (uniquePrintAreas.length > 0) {
       await prisma.productPrintArea.createMany({
-        data: body.printAreas.map((areaId) => ({
+        data: uniquePrintAreas.map((areaId) => ({
           productId: product.id,
           printAreaId: areaId,
           isDefault: body.printAreaDefaults?.[areaId] ?? false,
@@ -568,6 +571,9 @@ export async function adminProductRoutes(app: FastifyInstance) {
     const { id } = paramsSchema.parse(request.params);
     const data = bodySchema.parse(request.body);
     let normalizedVariants: VariantInput[] | undefined;
+    const uniquePrintAreas = data.printAreas !== undefined
+      ? Array.from(new Set(data.printAreas))
+      : undefined;
 
     // slug uniqueness if changing
     if (data.slug) {
@@ -658,6 +664,33 @@ export async function adminProductRoutes(app: FastifyInstance) {
       updateData.metadata = metadata;
     }
 
+    if (data.printAreas !== undefined || data.customizationTemplateV1 !== undefined) {
+      const existing = await prisma.product.findUnique({
+        where: { id },
+        select: {
+          metadata: true,
+          _count: {
+            select: {
+              printAreas: true,
+            },
+          },
+        },
+      });
+
+      const existingMetadata = (existing?.metadata && typeof existing.metadata === 'object'
+        ? (existing.metadata as Prisma.JsonObject)
+        : {}) as Prisma.JsonObject;
+
+      const hasTemplate = data.customizationTemplateV1 !== undefined
+        ? data.customizationTemplateV1 !== null
+        : Boolean(existingMetadata.customizationTemplateV1);
+      const printAreaCount = uniquePrintAreas !== undefined
+        ? uniquePrintAreas.length
+        : (existing?._count.printAreas ?? 0);
+
+      updateData.isCustomizable = printAreaCount > 0 || hasTemplate;
+    }
+
     const updated = await prisma.$transaction(async (tx) => {
       const saved = await tx.product.update({
         where: { id },
@@ -668,8 +701,7 @@ export async function adminProductRoutes(app: FastifyInstance) {
         },
       });
 
-      if (data.printAreas !== undefined) {
-        const uniquePrintAreas = Array.from(new Set(data.printAreas));
+      if (uniquePrintAreas !== undefined) {
         await tx.productPrintArea.deleteMany({ where: { productId: id } });
         if (uniquePrintAreas.length > 0) {
           await tx.productPrintArea.createMany({

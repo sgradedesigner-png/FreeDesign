@@ -172,6 +172,10 @@ const DEFAULT_WIZARD_VALUES: Partial<WizardFormData> = {
 const DRAFT_STORAGE_KEY = 'product-wizard-draft';
 
 export function useProductWizard(productId?: string) {
+  const isEditMode = Boolean(
+    productId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(productId)
+  );
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const form = useForm<WizardFormData>({
     resolver: zodResolver(productWizardSchema) as any,
@@ -186,8 +190,9 @@ export function useProductWizard(productId?: string) {
   // Calculate visible steps based on product family
   const productFamily = form.watch('productFamily');
   const visibleSteps = useMemo(() => {
-    return calculateVisibleSteps(productFamily);
-  }, [productFamily]);
+    const steps = calculateVisibleSteps(productFamily);
+    return isEditMode ? steps.filter((step) => step !== 1) : steps;
+  }, [isEditMode, productFamily]);
 
   // Auto-save to localStorage (debounced)
   useEffect(() => {
@@ -213,9 +218,7 @@ export function useProductWizard(productId?: string) {
   // Load existing product or restore draft
   useEffect(() => {
     // Only load if productId is a valid UUID (not a route segment like "new-wizard")
-    const isUUID = productId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(productId);
-
-    if (isUUID) {
+    if (isEditMode) {
       // Load existing product
       api
         .get(`/admin/products/${productId}`)
@@ -264,7 +267,7 @@ export function useProductWizard(productId?: string) {
         }
       }
     }
-  }, [productId, form]);
+  }, [productId, form, isEditMode]);
 
   // Get fields to validate for a specific step
   const getStepFields = (step: number): (keyof WizardFormData)[] => {

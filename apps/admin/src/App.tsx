@@ -45,8 +45,8 @@ export default function App() {
         <Route path="/product-wizard/:id" element={<ProductWizardPage />} />
         <Route path="/products/new-legacy" element={<ProductFormPage />} />
         <Route path="/products/new" element={<ProductWizardPage />} />
-        {/* Catch-all parameterized route */}
-        <Route path="/products/:id" element={<ProductFormPage />} />
+        {/* Keep canonical product edit on wizard */}
+        <Route path="/products/:id" element={<ProductWizardPage />} />
         <Route path="/categories" element={<CategoriesPage />} />
         <Route path="/collections" element={<CollectionsPage />} />
         <Route path="/orders" element={<OrdersPage />} />

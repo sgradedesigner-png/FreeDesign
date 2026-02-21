@@ -23,6 +23,9 @@ type WizardContainerProps = {
 };
 
 export function WizardContainer({ productId }: WizardContainerProps) {
+  const isEditMode = Boolean(
+    productId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(productId)
+  );
   const navigate = useNavigate();
   const {
     form,
@@ -55,7 +58,7 @@ export function WizardContainer({ productId }: WizardContainerProps) {
       case 5:
         return <Step5_Variants form={form} />;
       case 6:
-        return <Step6_Review form={form} onSave={handleSave} isSubmitting={isSubmitting} />;
+        return <Step6_Review form={form} isEditMode={isEditMode} />;
       default:
         return <div>Unknown step</div>;
     }
@@ -165,6 +168,7 @@ export function WizardContainer({ productId }: WizardContainerProps) {
   return (
     <div className="container mx-auto py-8 max-w-7xl">
       <WizardStepIndicator
+        title={isEditMode ? 'Edit Product' : 'Create Product'}
         currentStep={currentStep}
         totalSteps={visibleSteps.length}
         completedSteps={completedSteps}
@@ -194,8 +198,9 @@ export function WizardContainer({ productId }: WizardContainerProps) {
         onNext={nextStep}
         onPrev={prevStep}
         onSave={currentStep === visibleSteps.length ? handleSave : undefined}
-        isValid={form.formState.isValid}
+        isValid={Object.keys(form.formState.errors).length === 0}
         isSubmitting={isSubmitting}
+        saveLabel={isEditMode ? 'Update Product' : 'Create Product'}
       />
     </div>
   );

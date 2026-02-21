@@ -9,6 +9,7 @@ type WizardNavigationProps = {
   onSave?: () => void;
   isValid?: boolean;
   isSubmitting?: boolean;
+  saveLabel?: string;
 };
 
 export function WizardNavigation({
@@ -19,6 +20,7 @@ export function WizardNavigation({
   onSave,
   isValid = true,
   isSubmitting = false,
+  saveLabel = 'Create Product',
 }: WizardNavigationProps) {
   const isFirstStep = currentStep === 1;
   const isLastStep = currentStep === totalSteps;
@@ -75,7 +77,7 @@ export function WizardNavigation({
                 ) : (
                   <>
                     <Save className="mr-2 h-4 w-4" />
-                    Create Product
+                    {saveLabel}
                   </>
                 )}
               </Button>
