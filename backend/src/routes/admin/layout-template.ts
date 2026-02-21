@@ -3,65 +3,10 @@ import { z } from 'zod';
 import { Prisma } from '@prisma/client';
 import { adminGuard } from '../../supabaseauth';
 import { prisma } from '../../lib/prisma';
-
-const layoutRectNormSchema = z.object({
-  x: z.number().min(0).max(1),
-  y: z.number().min(0).max(1),
-  w: z.number().gt(0).max(1),
-  h: z.number().gt(0).max(1),
-}).superRefine((value, ctx) => {
-  if (value.x + value.w > 1) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ['w'],
-      message: 'x + w must be <= 1',
-    });
-  }
-  if (value.y + value.h > 1) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ['h'],
-      message: 'y + h must be <= 1',
-    });
-  }
-});
-
-const customizationTemplateV1Schema = z.object({
-  version: z.literal(1),
-  views: z.object({
-    front: z.object({
-      imagePath: z.string().optional(),
-      naturalWidth: z.number().int().positive().optional(),
-      naturalHeight: z.number().int().positive().optional(),
-    }).optional(),
-    back: z.object({
-      imagePath: z.string().optional(),
-      naturalWidth: z.number().int().positive().optional(),
-      naturalHeight: z.number().int().positive().optional(),
-    }).optional(),
-    left: z.object({
-      imagePath: z.string().optional(),
-      naturalWidth: z.number().int().positive().optional(),
-      naturalHeight: z.number().int().positive().optional(),
-    }).optional(),
-    right: z.object({
-      imagePath: z.string().optional(),
-      naturalWidth: z.number().int().positive().optional(),
-      naturalHeight: z.number().int().positive().optional(),
-    }).optional(),
-  }).default({}),
-  presets: z.array(z.object({
-    id: z.string().optional(),
-    key: z.string().min(1),
-    labelMn: z.string().optional(),
-    labelEn: z.string().optional(),
-    view: z.enum(['front', 'back', 'left', 'right']),
-    rectNorm: layoutRectNormSchema,
-    printAreaId: z.string().uuid().nullable().optional(),
-    sortOrder: z.number().int().optional().default(0),
-    isDefault: z.boolean().optional().default(false),
-  })).default([]),
-});
+import {
+  collectTemplatePrintAreaIds,
+  customizationTemplateV1Schema,
+} from '../../schemas/layout-template.schema';
 
 export async function adminLayoutTemplateRoutes(app: FastifyInstance) {
   app.addHook('preHandler', adminGuard);
@@ -95,7 +40,11 @@ export async function adminLayoutTemplateRoutes(app: FastifyInstance) {
 
     const existing = await prisma.product.findUnique({
       where: { id: params.id },
-      select: { id: true, metadata: true },
+      select: {
+        id: true,
+        metadata: true,
+        printAreas: { select: { printAreaId: true } },
+      },
     });
 
     if (!existing) {
@@ -105,6 +54,32 @@ export async function adminLayoutTemplateRoutes(app: FastifyInstance) {
     const metadata = (existing.metadata && typeof existing.metadata === 'object'
       ? { ...(existing.metadata as Prisma.JsonObject) }
       : {}) as Prisma.JsonObject;
+
+    if (body.customizationTemplateV1 !== null) {
+      const linkedAreaIds = collectTemplatePrintAreaIds(body.customizationTemplateV1);
+      if (linkedAreaIds.length > 0) {
+        const [activeCount, enabledAreaIds] = await Promise.all([
+          prisma.printArea.count({
+            where: {
+              id: { in: linkedAreaIds },
+              isActive: true,
+            },
+          }),
+          Promise.resolve(new Set(existing.printAreas.map((item) => item.printAreaId))),
+        ]);
+        if (activeCount !== linkedAreaIds.length) {
+          return reply.status(400).send({
+            message: 'Template presets reference invalid/inactive print areas',
+          });
+        }
+        const hasOutOfScope = linkedAreaIds.some((id) => !enabledAreaIds.has(id));
+        if (hasOutOfScope) {
+          return reply.status(400).send({
+            message: 'Template preset printAreaId must be enabled for this product',
+          });
+        }
+      }
+    }
 
     if (body.customizationTemplateV1 === null) {
       delete metadata.customizationTemplateV1;

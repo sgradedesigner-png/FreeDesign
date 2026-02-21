@@ -8,6 +8,10 @@ import { prisma } from '../../lib/prisma';
 import { productsCache } from '../../lib/cache';
 import { deleteFolder } from '../../lib/cloudinary';
 import { importRemoteImageToCloudinary, isCloudinaryUrl, isHttpUrl } from '../../lib/remote-image-import';
+import {
+  collectTemplatePrintAreaIds,
+  customizationTemplateV1Schema,
+} from '../../schemas/layout-template.schema';
 
 // price Decimal-Ð´ Ð·Ð¾Ñ€Ð¸ÑƒÐ»Ð¶ number/string Ð°Ð»ÑŒ Ð°Ð»Ð¸Ð½Ñ‹Ð³ Ð·Ó©Ð²ÑˆÓ©Ó©Ñ€Ð½Ó©
 const priceSchema = z.union([
@@ -40,55 +44,6 @@ const productFamilySchema = z.enum([
   'UV_GANG_UPLOAD',
   'UV_GANG_BUILDER',
 ]);
-
-const layoutRectNormSchema = z.object({
-  x: z.number().min(0).max(1),
-  y: z.number().min(0).max(1),
-  w: z.number().gt(0).max(1),
-  h: z.number().gt(0).max(1),
-}).superRefine((value, ctx) => {
-  if (value.x + value.w > 1) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ['w'],
-      message: 'x + w must be <= 1',
-    });
-  }
-  if (value.y + value.h > 1) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ['h'],
-      message: 'y + h must be <= 1',
-    });
-  }
-});
-
-const layoutViewSchema = z.object({
-  imagePath: z.string().optional(),
-  naturalWidth: z.number().int().positive().optional(),
-  naturalHeight: z.number().int().positive().optional(),
-});
-
-const customizationTemplateV1Schema = z.object({
-  version: z.literal(1),
-  views: z.object({
-    front: layoutViewSchema.optional(),
-    back: layoutViewSchema.optional(),
-    left: layoutViewSchema.optional(),
-    right: layoutViewSchema.optional(),
-  }).default({}),
-  presets: z.array(z.object({
-    id: z.string().optional(),
-    key: z.string().min(1),
-    labelMn: z.string().optional(),
-    labelEn: z.string().optional(),
-    view: z.enum(['front', 'back', 'left', 'right']),
-    rectNorm: layoutRectNormSchema,
-    printAreaId: z.string().uuid().nullable().optional(),
-    sortOrder: z.number().int().optional().default(0),
-    isDefault: z.boolean().optional().default(false),
-  })).default([]),
-});
 
 const REMOTE_IMAGE_IMPORT_CONCURRENCY = (() => {
   const rawValue = Number(process.env.REMOTE_IMAGE_IMPORT_CONCURRENCY ?? process.env.R2_REMOTE_IMPORT_CONCURRENCY ?? 4);
@@ -177,6 +132,19 @@ async function normalizeVariantMediaForCloudinary(
   return normalized;
 }
 
+async function assertActivePrintAreas(areaIds: string[]) {
+  if (areaIds.length === 0) return;
+  const count = await prisma.printArea.count({
+    where: {
+      id: { in: areaIds },
+      isActive: true,
+    },
+  });
+  if (count !== areaIds.length) {
+    throw new Error('One or more print areas are invalid/inactive');
+  }
+}
+
 export async function adminProductRoutes(app: FastifyInstance) {
   // ðŸ” Admin guard â€” Ð±Ò¯Ñ… product route-Ð´
   app.addHook('preHandler', adminGuard);
@@ -236,7 +204,15 @@ export async function adminProductRoutes(app: FastifyInstance) {
 
     const productId = randomUUID();
     const normalizedVariants = await normalizeVariantMediaForCloudinary(body.variants, productId);
-    const uniquePrintAreas = Array.from(new Set(body.printAreas ?? []));
+    const linkedTemplateAreaIds = collectTemplatePrintAreaIds(body.customizationTemplateV1);
+    const uniquePrintAreas = Array.from(new Set([...(body.printAreas ?? []), ...linkedTemplateAreaIds]));
+    try {
+      await assertActivePrintAreas(uniquePrintAreas);
+    } catch (validationError) {
+      return reply.status(400).send({
+        message: validationError instanceof Error ? validationError.message : 'Invalid print areas',
+      });
+    }
     const isCustomizable = uniquePrintAreas.length > 0 || Boolean(body.customizationTemplateV1);
 
     // Build metadata including upload constraints
@@ -571,9 +547,40 @@ export async function adminProductRoutes(app: FastifyInstance) {
     const { id } = paramsSchema.parse(request.params);
     const data = bodySchema.parse(request.body);
     let normalizedVariants: VariantInput[] | undefined;
-    const uniquePrintAreas = data.printAreas !== undefined
-      ? Array.from(new Set(data.printAreas))
-      : undefined;
+    const existingProduct = await prisma.product.findUnique({
+      where: { id },
+      select: {
+        metadata: true,
+        printAreas: { select: { printAreaId: true } },
+      },
+    });
+    if (!existingProduct) {
+      return reply.status(404).send({ message: 'Product not found' });
+    }
+
+    const existingMetadata = (existingProduct.metadata && typeof existingProduct.metadata === 'object'
+      ? (existingProduct.metadata as Prisma.JsonObject)
+      : {}) as Prisma.JsonObject;
+    const existingTemplateParse = customizationTemplateV1Schema.safeParse(existingMetadata.customizationTemplateV1);
+    const existingTemplate = existingTemplateParse.success ? existingTemplateParse.data : null;
+    const existingPrintAreaIds = existingProduct.printAreas.map((item) => item.printAreaId);
+
+    const nextTemplate = data.customizationTemplateV1 !== undefined
+      ? data.customizationTemplateV1
+      : existingTemplate;
+    const linkedTemplateAreaIds = collectTemplatePrintAreaIds(nextTemplate);
+    const nextPrintAreas = Array.from(
+      new Set([...(data.printAreas ?? existingPrintAreaIds), ...linkedTemplateAreaIds])
+    );
+    const shouldPersistPrintAreas = data.printAreas !== undefined || data.customizationTemplateV1 !== undefined;
+
+    try {
+      await assertActivePrintAreas(nextPrintAreas);
+    } catch (validationError) {
+      return reply.status(400).send({
+        message: validationError instanceof Error ? validationError.message : 'Invalid print areas',
+      });
+    }
 
     // slug uniqueness if changing
     if (data.slug) {
@@ -646,12 +653,8 @@ export async function adminProductRoutes(app: FastifyInstance) {
     }
 
     if (data.uploadConstraints !== undefined || data.customizationTemplateV1 !== undefined) {
-      const existing = await prisma.product.findUnique({
-        where: { id },
-        select: { metadata: true },
-      });
-      const metadata = (existing?.metadata && typeof existing.metadata === 'object'
-        ? { ...(existing.metadata as Prisma.JsonObject) }
+      const metadata = (existingProduct.metadata && typeof existingProduct.metadata === 'object'
+        ? { ...(existingProduct.metadata as Prisma.JsonObject) }
         : {}) as Prisma.JsonObject;
       if (data.uploadConstraints !== undefined) {
         metadata.uploadConstraints = data.uploadConstraints as unknown as Prisma.JsonValue;
@@ -664,32 +667,7 @@ export async function adminProductRoutes(app: FastifyInstance) {
       updateData.metadata = metadata;
     }
 
-    if (data.printAreas !== undefined || data.customizationTemplateV1 !== undefined) {
-      const existing = await prisma.product.findUnique({
-        where: { id },
-        select: {
-          metadata: true,
-          _count: {
-            select: {
-              printAreas: true,
-            },
-          },
-        },
-      });
-
-      const existingMetadata = (existing?.metadata && typeof existing.metadata === 'object'
-        ? (existing.metadata as Prisma.JsonObject)
-        : {}) as Prisma.JsonObject;
-
-      const hasTemplate = data.customizationTemplateV1 !== undefined
-        ? data.customizationTemplateV1 !== null
-        : Boolean(existingMetadata.customizationTemplateV1);
-      const printAreaCount = uniquePrintAreas !== undefined
-        ? uniquePrintAreas.length
-        : (existing?._count.printAreas ?? 0);
-
-      updateData.isCustomizable = printAreaCount > 0 || hasTemplate;
-    }
+    updateData.isCustomizable = nextPrintAreas.length > 0 || Boolean(nextTemplate);
 
     const updated = await prisma.$transaction(async (tx) => {
       const saved = await tx.product.update({
@@ -701,11 +679,11 @@ export async function adminProductRoutes(app: FastifyInstance) {
         },
       });
 
-      if (uniquePrintAreas !== undefined) {
+      if (shouldPersistPrintAreas) {
         await tx.productPrintArea.deleteMany({ where: { productId: id } });
-        if (uniquePrintAreas.length > 0) {
+        if (nextPrintAreas.length > 0) {
           await tx.productPrintArea.createMany({
-            data: uniquePrintAreas.map((areaId) => ({
+            data: nextPrintAreas.map((areaId) => ({
               productId: id,
               printAreaId: areaId,
               isDefault: data.printAreaDefaults?.[areaId] ?? false,
