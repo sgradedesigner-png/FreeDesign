@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useProductWizard } from '@/hooks/useProductWizard';
-import type { WizardFormData } from '@/hooks/useProductWizard';
 import { WizardStepIndicator } from './WizardStepIndicator';
 import { WizardNavigation } from './WizardNavigation';
 import { ProductPreview } from './shared/ProductPreview';

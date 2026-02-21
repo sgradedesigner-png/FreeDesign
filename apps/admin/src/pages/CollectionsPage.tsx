@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Plus, Edit, Trash2, GripVertical, X } from 'lucide-react';
+import { Plus, Edit, Trash2, X } from 'lucide-react';
 import { api } from '@/lib/api';
 
 type Collection = {
@@ -10,14 +10,6 @@ type Collection = {
   isActive: boolean;
   sortOrder: number;
   _count?: { products: number };
-};
-
-type Product = {
-  id: string;
-  title: string;
-  slug: string;
-  mockupImagePath: string | null;
-  is_published: boolean;
 };
 
 export default function CollectionsPage() {

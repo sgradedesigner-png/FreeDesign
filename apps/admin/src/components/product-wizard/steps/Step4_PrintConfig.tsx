@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { MouseEvent as ReactMouseEvent } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
+import { useNavigate } from 'react-router-dom';
 import type {
   CustomizationTemplateV1,
   LayoutPreset,
@@ -9,6 +10,7 @@ import type {
 } from '@/hooks/useProductWizard';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -86,18 +88,6 @@ type DragState = {
 function parseFinite(value: string, fallback: number): number {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
-}
-
-function uniqueNonEmpty(paths: string[]): string[] {
-  const seen = new Set<string>();
-  const out: string[] = [];
-  paths.forEach((path) => {
-    const value = path?.trim();
-    if (!value || seen.has(value)) return;
-    seen.add(value);
-    out.push(value);
-  });
-  return out;
 }
 
 type ViewImageEntry = {
@@ -235,6 +225,7 @@ function getContainFramePx(
 }
 
 export function Step4_PrintConfig({ form }: Step4_PrintConfigProps) {
+  const navigate = useNavigate();
   const [printAreas, setPrintAreas] = useState<PrintArea[]>([]);
   const [sizeTiers, setSizeTiers] = useState<SizeTier[]>([]);
   const [loading, setLoading] = useState(true);
@@ -248,7 +239,6 @@ export function Step4_PrintConfig({ form }: Step4_PrintConfigProps) {
   const dragStateRef = useRef<DragState | null>(null);
 
   const selectedAreas = form.watch('printAreas') || [];
-  const selectedTiers = form.watch('sizeTiers') || [];
   const template = form.watch('customizationTemplateV1');
   const variants = form.watch('variants') || [];
   const inferredVariantImages = useMemo(() => collectFirstVariantViewImages(form), [form, variants]);
@@ -378,13 +368,6 @@ export function Step4_PrintConfig({ form }: Step4_PrintConfigProps) {
 
   const setDefaultArea = (areaId: string) => {
     form.setValue('printAreaDefaults', { [areaId]: true }, { shouldValidate: true });
-  };
-
-  const toggleTier = (tierId: string) => {
-    const next = selectedTiers.includes(tierId)
-      ? selectedTiers.filter((id) => id !== tierId)
-      : [...selectedTiers, tierId];
-    form.setValue('sizeTiers', next, { shouldValidate: true });
   };
 
   const addPreset = () => {
@@ -923,7 +906,12 @@ export function Step4_PrintConfig({ form }: Step4_PrintConfigProps) {
         </CardHeader>
         <CardContent className="space-y-4">
           {printAreas.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No print areas available</p>
+            <div className="space-y-3 rounded-lg border border-dashed border-border p-4">
+              <p className="text-sm text-muted-foreground">No print areas available.</p>
+              <Button type="button" variant="outline" onClick={() => navigate('/print-areas')}>
+                Go to Print Areas
+              </Button>
+            </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {printAreas.map((area) => {
@@ -949,22 +937,26 @@ export function Step4_PrintConfig({ form }: Step4_PrintConfigProps) {
       <Card>
         <CardHeader>
           <CardTitle>Size Tiers</CardTitle>
-          <CardDescription>Select available print sizes for this product</CardDescription>
+          <CardDescription>
+            Size tiers are global settings. Manage them once and they apply to all customizable products.
+          </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-3">
+          <Badge variant="secondary" className="w-fit">Global / Read-only in this step</Badge>
           {sizeTiers.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No size tiers available</p>
+            <div className="space-y-3 rounded-lg border border-dashed border-border p-4">
+              <p className="text-sm text-muted-foreground">No size tiers available.</p>
+              <Button type="button" variant="outline" onClick={() => navigate('/size-tiers')}>
+                Go to Size Tiers
+              </Button>
+            </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {sizeTiers.map((tier) => {
-                const isSelected = selectedTiers.includes(tier.id);
-
                 return (
                   <SizeTierCard
                     key={tier.id}
                     tier={tier}
-                    selected={isSelected}
-                    onToggle={() => toggleTier(tier.id)}
                   />
                 );
               })}
@@ -1058,25 +1050,17 @@ function PrintAreaCard({
 
 function SizeTierCard({
   tier,
-  selected,
-  onToggle,
 }: {
   tier: SizeTier;
-  selected: boolean;
-  onToggle: () => void;
 }) {
   return (
     <Card
-      className={cn(
-        'cursor-pointer transition-all hover:shadow-md',
-        selected && 'ring-2 ring-primary bg-primary/5'
-      )}
-      onClick={onToggle}
+      className="transition-all"
     >
       <CardContent className="p-4">
         <div className="flex items-center justify-between mb-2">
           <p className="font-medium text-sm">{tier.label}</p>
-          {selected && <Check size={16} className="text-primary" />}
+          <Check size={16} className="text-muted-foreground" />
         </div>
         <p className="text-xs text-muted-foreground">
           {tier.widthCm}x{tier.heightCm} cm

@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import { logger } from '../lib/logger';
 
 export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { loading, ok, logout } = useAuth();
+  const { loading, ok } = useAuth();
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [checking, setChecking] = useState(true);
 

@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
+import type { ReactNode } from 'react';
 
 type Language = 'en' | 'mn';
 
@@ -22,6 +23,8 @@ const translations: Record<Language, Record<string, string>> = {
     'nav.production': 'Production',
     'nav.moderation': 'Upload Moderation',
     'nav.pricing': 'Pricing Rules',
+    'nav.printAreas': 'Print Areas',
+    'nav.sizeTiers': 'Size Tiers',
     'nav.emailTest': 'Email Test',
     'nav.reprints': 'Reprint Queue',
     'nav.settings': 'Settings',
@@ -88,6 +91,8 @@ const translations: Record<Language, Record<string, string>> = {
     'nav.production': 'Үйлдвэрлэл',
     'nav.moderation': 'Upload хянах',
     'nav.pricing': 'Үнийн дүрэм',
+    'nav.printAreas': 'Хэвлэх талбай',
+    'nav.sizeTiers': 'Хэмжээний шатлал',
     'nav.emailTest': 'Email тест',
     'nav.reprints': 'Дахин хэвлэх дараалал',
     'nav.settings': 'Тохиргоо',

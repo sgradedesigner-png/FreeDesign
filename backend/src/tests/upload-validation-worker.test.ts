@@ -14,7 +14,7 @@ describe('Upload Validation Worker', () => {
       });
 
       expect(result.passed).toBe(true);
-      expect(result.errors).toEqual([]);
+      expect(result.errorCode).toBeUndefined();
     });
 
     it('should fail oversized gang upload', async () => {
@@ -26,7 +26,7 @@ describe('Upload Validation Worker', () => {
       });
 
       expect(result.passed).toBe(false);
-      expect(result.errors).toContain('FILE_TOO_LARGE');
+      expect(result.errorCode).toBe('FILE_TOO_LARGE');
     });
 
     it('should fail invalid mime type', async () => {
@@ -38,7 +38,7 @@ describe('Upload Validation Worker', () => {
       });
 
       expect(result.passed).toBe(false);
-      expect(result.errors).toContain('UNSUPPORTED_FORMAT');
+      expect(result.errorCode).toBe('INVALID_FILE_TYPE');
     });
 
     it('should pass valid UV gang upload', async () => {
@@ -50,7 +50,7 @@ describe('Upload Validation Worker', () => {
       });
 
       expect(result.passed).toBe(true);
-      expect(result.errors).toEqual([]);
+      expect(result.errorCode).toBeUndefined();
     });
 
     it('should pass by-size upload', async () => {
@@ -62,7 +62,7 @@ describe('Upload Validation Worker', () => {
       });
 
       expect(result.passed).toBe(true);
-      expect(result.errors).toEqual([]);
+      expect(result.errorCode).toBeUndefined();
     });
   });
 

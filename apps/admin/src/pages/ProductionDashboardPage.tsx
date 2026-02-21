@@ -1044,7 +1044,7 @@ export default function ProductionDashboardPage() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {printPackQuery.data.uploadAssets.map((upload, index) => (
+                          {printPackQuery.data.uploadAssets.map((upload) => (
                             <TableRow key={upload.uploadAssetId}>
                               <TableCell>{upload.orderItemIndex + 1}</TableCell>
                               <TableCell className="font-mono text-sm">{upload.fileName}</TableCell>

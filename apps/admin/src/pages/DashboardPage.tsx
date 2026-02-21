@@ -54,11 +54,6 @@ type Product = {
   createdAt: string;
 };
 
-type ProductsResponse = {
-  items: Product[];
-  total: number;
-};
-
 // Mock revenue data for the chart (in a real app, this would come from orders)
 const generateRevenueData = () => {
   return Array.from({ length: 7 }, (_, i) => ({
@@ -236,7 +231,7 @@ export default function DashboardPage() {
                   fill="#8884d8"
                   dataKey="value"
                 >
-                  {stats.categoryDistribution.map((entry, index) => (
+                  {stats.categoryDistribution.map((_, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
