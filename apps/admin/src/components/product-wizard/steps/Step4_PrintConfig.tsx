@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { MouseEvent as ReactMouseEvent } from 'react';
-import { UseFormReturn } from 'react-hook-form';
-import {
+import type { UseFormReturn } from 'react-hook-form';
+import type {
   CustomizationTemplateV1,
   LayoutPreset,
   LayoutViewKey,
@@ -612,7 +612,7 @@ export function Step4_PrintConfig({ form }: Step4_PrintConfigProps) {
           </Tabs>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div className="space-y-2 md:col-span-3">
+            <div className="hidden space-y-2 md:col-span-3">
               <button
                 type="button"
                 className="inline-flex h-9 items-center rounded-md border border-border px-3 text-sm hover:bg-muted"
@@ -622,7 +622,7 @@ export function Step4_PrintConfig({ form }: Step4_PrintConfigProps) {
               </button>
               {layoutHint && <p className="text-xs text-muted-foreground">{layoutHint}</p>}
             </div>
-            <div className="space-y-2 md:col-span-3">
+            <div className="hidden space-y-2 md:col-span-3">
               <Label>View Image Path ({activeView})</Label>
               <Input
                 value={activeViewImagePath}
@@ -1085,3 +1085,4 @@ function SizeTierCard({
     </Card>
   );
 }
+

@@ -1,5 +1,5 @@
-import { UseFormReturn } from 'react-hook-form';
-import { WizardFormData } from '@/hooks/useProductWizard';
+import type { UseFormReturn } from 'react-hook-form';
+import type { WizardFormData } from '@/hooks/useProductWizard';
 import { PRODUCT_FAMILIES } from '../product-family/familyConfig';
 import { ProductFamilyCard } from '../product-family/ProductFamilyCard';
 
@@ -32,3 +32,5 @@ export function Step1_ProductFamily({ form }: Step1_ProductFamilyProps) {
     </div>
   );
 }
+
+

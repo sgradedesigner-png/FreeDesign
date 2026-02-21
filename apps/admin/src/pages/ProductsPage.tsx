@@ -30,9 +30,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Edit, Plus, Search, Trash2, Download, Filter, ArrowUpDown } from 'lucide-react';
+import { Edit, Plus, Search, Trash2, Download, ArrowUpDown } from 'lucide-react';
 import { useDebounce } from '@/hooks/useDebounce';
-import AddProductSkuDialog from '@/components/AddProductSkuDialog';
 
 type Category = {
   id: string;
@@ -106,7 +105,6 @@ export default function ProductsPage() {
   });
   const [bulkDeleteDialog, setBulkDeleteDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [skuDialogOpen, setSkuDialogOpen] = useState(false);
 
   const debouncedSearch = useDebounce(search, 500);
 
@@ -298,10 +296,6 @@ export default function ProductsPage() {
           <Button variant="outline" onClick={exportToCSV} disabled={products.length === 0} className="w-full sm:w-auto">
             <Download className="w-4 h-4 mr-2" />
             Export CSV
-          </Button>
-          <Button variant="outline" onClick={() => setSkuDialogOpen(true)} className="w-full sm:w-auto">
-            <Plus className="w-4 h-4 mr-2" />
-            Add Product SKU
           </Button>
           <Button onClick={() => navigate('/products/new')} className="w-full sm:w-auto">
             <Plus className="w-4 h-4 mr-2" />
@@ -618,8 +612,6 @@ export default function ProductsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      <AddProductSkuDialog open={skuDialogOpen} onOpenChange={setSkuDialogOpen} />
     </div>
   );
 }

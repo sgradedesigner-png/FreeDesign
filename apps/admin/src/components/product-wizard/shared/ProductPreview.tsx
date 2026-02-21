@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { UseFormReturn } from 'react-hook-form';
-import { WizardFormData } from '@/hooks/useProductWizard';
+import type { UseFormReturn } from 'react-hook-form';
+import type { WizardFormData } from '@/hooks/useProductWizard';
 import { getFamilyConfig } from '../product-family/familyConfig';
 
 type ProductPreviewProps = {
@@ -78,3 +78,5 @@ export function ProductPreview({ form }: ProductPreviewProps) {
     </Card>
   );
 }
+
+

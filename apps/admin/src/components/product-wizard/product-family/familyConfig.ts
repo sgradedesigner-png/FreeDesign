@@ -97,6 +97,7 @@ export function calculateVisibleSteps(family: ProductFamilyValue | undefined): n
 
   if (config.showStep3) steps.push(3); // Upload config
 
+  // Only BLANKS should show Print Configuration.
   // BLANKS needs variant images first so Print Configuration can map placements visually.
   if (family === 'BLANKS') {
     steps.push(5);
@@ -105,7 +106,7 @@ export function calculateVisibleSteps(family: ProductFamilyValue | undefined): n
     return steps;
   }
 
-  if (config.showStep4) steps.push(4); // Print config
+  // Non-BLANKS families skip Print Configuration.
   steps.push(5, 6); // Always show variants and review
 
   return steps;

@@ -2,7 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { ProductFamilyConfig } from './familyConfig';
+import type { ProductFamilyConfig } from './familyConfig';
 
 type ProductFamilyCardProps = {
   family: ProductFamilyConfig;

@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { UseFormReturn } from 'react-hook-form';
-import { WizardFormData } from '@/hooks/useProductWizard';
+import type { UseFormReturn } from 'react-hook-form';
+import type { WizardFormData } from '@/hooks/useProductWizard';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -299,3 +299,5 @@ export function Step6_Review({ form, onSave, isSubmitting }: Step6_ReviewProps) 
     </div>
   );
 }
+
+

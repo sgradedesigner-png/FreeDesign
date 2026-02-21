@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Plus, Edit, Trash2, GripVertical, X } from 'lucide-react';
+import { api } from '@/lib/api';
 
 type Collection = {
   id: string;
@@ -36,13 +37,8 @@ export default function CollectionsPage() {
   const fetchCollections = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/admin/collections', {
-        credentials: 'include',
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setCollections(data.collections);
-      }
+      const res = await api.get<{ collections: Collection[] }>('/api/admin/collections');
+      setCollections(res.data.collections ?? []);
     } catch (error) {
       console.error('Failed to fetch collections:', error);
     } finally {
@@ -60,21 +56,18 @@ export default function CollectionsPage() {
     const method = editingId ? 'PUT' : 'POST';
 
     try {
-      const res = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(formData),
-      });
+      const res =
+        method === 'POST'
+          ? await api.post(url, formData)
+          : await api.put(url, formData);
 
-      if (res.ok) {
+      if (res.status >= 200 && res.status < 300) {
         await fetchCollections();
         setShowForm(false);
         setEditingId(null);
         setFormData({ name: '', slug: '', description: '', isActive: true, sortOrder: 0 });
       } else {
-        const data = await res.json();
-        alert(data.error || 'Failed to save collection');
+        alert('Failed to save collection');
       }
     } catch (error) {
       console.error('Failed to save collection:', error);
@@ -87,16 +80,11 @@ export default function CollectionsPage() {
     if (!confirm('Are you sure you want to delete this collection?')) return;
 
     try {
-      const res = await fetch(`/api/admin/collections/${id}`, {
-        method: 'DELETE',
-        credentials: 'include',
-      });
-
-      if (res.ok) {
+      const res = await api.delete(`/api/admin/collections/${id}`);
+      if (res.status >= 200 && res.status < 300) {
         await fetchCollections();
       } else {
-        const data = await res.json();
-        alert(data.error || 'Failed to delete collection');
+        alert('Failed to delete collection');
       }
     } catch (error) {
       console.error('Failed to delete collection:', error);
@@ -125,9 +113,9 @@ export default function CollectionsPage() {
   };
 
   // Load collections on mount
-  useState(() => {
+  useEffect(() => {
     fetchCollections();
-  });
+  }, []);
 
   return (
     <div className="p-6">

@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
-import { UseFormReturn } from 'react-hook-form';
-import { WizardFormData, UploadConstraints } from '@/hooks/useProductWizard';
+import type { UseFormReturn } from 'react-hook-form';
+import type { WizardFormData, UploadConstraints } from '@/hooks/useProductWizard';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -172,3 +172,5 @@ function ConstraintPreview({ constraints }: { constraints?: UploadConstraints })
     </div>
   );
 }
+
+

@@ -1,8 +1,10 @@
-import { useForm, UseFormReturn } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
+import type { UseFormReturn } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useState, useEffect, useMemo } from 'react';
 import { z } from 'zod';
-import { ProductFamilyValue, calculateVisibleSteps, getStepLabel } from '@/components/product-wizard/product-family/familyConfig';
+import { calculateVisibleSteps, getStepLabel } from '@/components/product-wizard/product-family/familyConfig';
+import type { ProductFamilyValue } from '@/components/product-wizard/product-family/familyConfig';
 import { api } from '@/lib/api';
 
 // Upload constraints schema
@@ -353,3 +355,4 @@ export function useProductWizard(productId?: string) {
 }
 
 export type UseProductWizardReturn = ReturnType<typeof useProductWizard>;
+

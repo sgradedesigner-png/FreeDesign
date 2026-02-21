@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { UseFormReturn } from 'react-hook-form';
-import { WizardFormData, ProductVariant } from '@/hooks/useProductWizard';
+import type { UseFormReturn } from 'react-hook-form';
+import type { WizardFormData, ProductVariant } from '@/hooks/useProductWizard';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -25,6 +25,15 @@ const DEFAULT_VARIANT: ProductVariant = {
   isAvailable: true,
   sortOrder: 0,
 };
+
+function generateSkuFromVariantName(name: string) {
+  return name
+    .toUpperCase()
+    .replace(/[^A-Z0-9\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-');
+}
 
 export function Step5_Variants({ form }: Step5_VariantsProps) {
   const variants = form.watch('variants') || [];
@@ -53,6 +62,22 @@ export function Step5_Variants({ form }: Step5_VariantsProps) {
   const updateVariant = (index: number, field: keyof ProductVariant, value: any) => {
     const newVariants = [...variants];
     newVariants[index] = { ...newVariants[index], [field]: value };
+    form.setValue('variants', newVariants, { shouldValidate: true });
+  };
+
+  const updateVariantNameWithSkuAutofill = (index: number, name: string) => {
+    const current = variants[index];
+    const previousAutoSku = generateSkuFromVariantName(current.name || '');
+    const nextAutoSku = generateSkuFromVariantName(name || '');
+    const currentSku = (current.sku || '').trim();
+    const shouldAutofillSku = currentSku === '' || currentSku === previousAutoSku;
+
+    const newVariants = [...variants];
+    newVariants[index] = {
+      ...newVariants[index],
+      name,
+      sku: shouldAutofillSku ? nextAutoSku : current.sku,
+    };
     form.setValue('variants', newVariants, { shouldValidate: true });
   };
 
@@ -149,7 +174,7 @@ export function Step5_Variants({ form }: Step5_VariantsProps) {
                   <Label>Variant Name *</Label>
                   <Input
                     value={variant.name}
-                    onChange={(e) => updateVariant(index, 'name', e.target.value)}
+                    onChange={(e) => updateVariantNameWithSkuAutofill(index, e.target.value)}
                     placeholder="e.g., Black/White, Ocean Blue"
                     className={(form.formState.errors.variants as any)?.[index]?.name ? 'border-destructive' : ''}
                   />
@@ -381,3 +406,5 @@ export function Step5_Variants({ form }: Step5_VariantsProps) {
     </Card>
   );
 }
+
+

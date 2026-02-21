@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="450" viewBox="0 0 1600 450">
+  <defs>
+    <!-- Gradients -->
+    <linearGradient id="gradCyan" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7FF6FF"/>
+      <stop offset="1" stop-color="#00D6FF"/>
+    </linearGradient>
+    <linearGradient id="gradMagenta" x1="1" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FF4DFF"/>
+      <stop offset="1" stop-color="#FF2E7A"/>
+    </linearGradient>
+    <linearGradient id="gradAccent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#00D6FF"/>
+      <stop offset="0.5" stop-color="#B45CFF"/>
+      <stop offset="1" stop-color="#FFB800"/>
+    </linearGradient>
+
+    <!-- Glow -->
+    <filter id="softGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feColorMatrix in="blur" type="matrix"
+        values="1 0 0 0 0
+                0 1 0 0 0
+                0 0 1 0 0
+                0 0 0 0.65 0" result="glow"/>
+      <feMerge>
+        <feMergeNode in="glow"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Subtle shadow -->
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000000" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <!-- Transparent background by default (no rect) -->
+
+  <!-- Icon (two overlapping triangular outlines) -->
+  <g transform="translate(110,112)" filter="url(#softGlow)">
+    <!-- Left cyan triangle outline -->
+    <path d="M 0 205 L 118 0 L 236 205 Z"
+          fill="none" stroke="url(#gradCyan)" stroke-width="18"
+          stroke-linejoin="round" stroke-linecap="round"/>
+    <!-- Right magenta triangle outline (slightly shifted) -->
+    <path d="M 70 205 L 188 0 L 306 205 Z"
+          fill="none" stroke="url(#gradMagenta)" stroke-width="18"
+          stroke-linejoin="round" stroke-linecap="round"/>
+    <!-- Inner small triangle cut (adds depth) -->
+    <path d="M 118 150 L 165 70 L 212 150 Z"
+          fill="none" stroke="#0B0F14" stroke-opacity="0.55" stroke-width="10"
+          stroke-linejoin="round" stroke-linecap="round"/>
+  </g>
+
+  <!-- Wordmark -->
+  <g transform="translate(470,150)" filter="url(#shadow)">
+    <text x="0" y="0"
+          font-family="Poppins, Montserrat, Inter, Arial, sans-serif"
+          font-size="118"
+          font-weight="700"
+          letter-spacing="2">
+      <tspan fill="url(#gradCyan)">FREE</tspan>
+      <tspan fill="#FFFFFF" dx="18">DESIGN</tspan>
+    </text>
+
+    <text x="4" y="92"
+          font-family="Poppins, Montserrat, Inter, Arial, sans-serif"
+          font-size="46"
+          font-weight="500"
+          letter-spacing="6"
+          fill="#DDE6F0"
+          opacity="0.92">
+      FUTURE DTF PRINTING
+    </text>
+  </g>
+
+  <!-- Accent swoosh -->
+  <path d="M 505 332 C 720 395, 1030 400, 1320 308"
+        fill="none" stroke="url(#gradAccent)" stroke-width="12"
+        stroke-linecap="round" opacity="0.9" filter="url(#softGlow)"/>
+
+  <!-- Sparkle dots -->
+  <g opacity="0.75" filter="url(#softGlow)">
+    <circle cx="750" cy="322" r="3" fill="#7FF6FF"/>
+    <circle cx="840" cy="352" r="2.5" fill="#FF4DFF"/>
+    <circle cx="1010" cy="350" r="2.5" fill="#FFB800"/>
+    <circle cx="1180" cy="324" r="2.5" fill="#7FF6FF"/>
+  </g>
+</svg>

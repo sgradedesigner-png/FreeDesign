@@ -4,6 +4,10 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "clean:src-artifacts": "node ./scripts/clean-src-artifacts.mjs",
+    "check:no-src-js": "node ./scripts/clean-src-artifacts.mjs --check",
+    "predev": "npm run clean:src-artifacts",
+    "prebuild": "npm run clean:src-artifacts",
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",

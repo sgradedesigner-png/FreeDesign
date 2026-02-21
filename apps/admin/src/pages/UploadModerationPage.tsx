@@ -141,7 +141,7 @@ export default function UploadModerationPage() {
   const { data: stats } = useQuery<StatsResponse>({
     queryKey: ['upload-moderation-stats'],
     queryFn: async () => {
-      const response = await api.get<StatsResponse>('/admin/uploads/stats/overview');
+      const response = await api.get<StatsResponse>('/api/admin/uploads/stats/overview');
       return response.data;
     },
   });
@@ -163,7 +163,7 @@ export default function UploadModerationPage() {
         params.set('uploadFamily', selectedFamily);
       }
 
-      const response = await api.get<UploadsQueueResponse>(`/admin/uploads/queue?${params.toString()}`);
+      const response = await api.get<UploadsQueueResponse>(`/api/admin/uploads/queue?${params.toString()}`);
       return response.data;
     },
   });
@@ -171,7 +171,7 @@ export default function UploadModerationPage() {
   // Moderation mutation
   const moderateMutation = useMutation({
     mutationFn: async (payload: { uploadId: string; action: string; reason?: string }) => {
-      await api.post(`/admin/uploads/${payload.uploadId}/moderate`, {
+      await api.post(`/api/admin/uploads/${payload.uploadId}/moderate`, {
         action: payload.action,
         reason: payload.reason || undefined,
       });
