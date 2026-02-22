@@ -148,7 +148,7 @@ export default async function orderRoutes(fastify: FastifyInstance) {
         );
         await ensureCustomizationAssetsOwnedByUser(userId, uniqueAssetIds);
 
-        const uniqueVariantIds = Array.from(new Set(items.map((item) => item.id)));
+        const uniqueVariantIds = Array.from(new Set(items.map((item) => item.variantId)));
         const variants = await prisma.productVariant.findMany({
           where: { id: { in: uniqueVariantIds } },
           select: {
@@ -172,7 +172,7 @@ export default async function orderRoutes(fastify: FastifyInstance) {
 
         for (const customization of pendingCustomizations) {
           const item = items[customization.orderItemIndex];
-          const variant = item ? variantMap.get(item.id) : undefined;
+          const variant = item ? variantMap.get(item.variantId) : undefined;
 
           if (!variant) {
             throw new BadRequestError('Customization references an invalid order item');
@@ -308,7 +308,7 @@ export default async function orderRoutes(fastify: FastifyInstance) {
             paymentStatus: 'UNPAID',
             paymentMethod: 'QPAY',
             shippingAddress: shippingAddress ? JSON.stringify(shippingAddress) : null,
-            items: items, // DEPRECATED: Kept for backward compatibility
+            items: items as any, // DEPRECATED: Kept for backward compatibility
             rushFee: rushOrder && rushFee > 0 ? rushFee : null,
             addOnFees: addOnFees > 0 ? addOnFees : null,
           }

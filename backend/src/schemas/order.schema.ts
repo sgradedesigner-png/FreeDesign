@@ -24,24 +24,27 @@ export const orderItemAddOnSchema = z.object({
  * Validates individual items in an order
  */
 export const createOrderItemSchema = z.object({
-  id: z.string().uuid('Invalid product ID'),
+  variantId: z.string().uuid('Invalid variant ID'),
   quantity: z.number()
     .int('Quantity must be integer')
     .positive('Quantity must be positive')
     .max(100, 'Max quantity is 100'),
   // Accept either 'price' or 'variantPrice' from frontend
   price: z.number()
-    .positive('Price must be positive')
+    .nonnegative('Price cannot be negative')
     .finite('Price must be finite')
     .optional(),
   variantPrice: z.number()
-    .positive('Price must be positive')
+    .nonnegative('Price cannot be negative')
     .finite('Price must be finite')
     .optional(),
   // Optional fields from frontend for order snapshot
   productName: z.string().optional(),
   variantName: z.string().optional(),
   imagePath: z.string().optional(),
+  productId: z.string().uuid('Invalid product ID').optional(),
+  variantSku: z.string().optional(),
+  selectedOptions: z.record(z.string(), z.any()).optional(),
   addOns: z.array(orderItemAddOnSchema)
     .max(20, 'Too many add-ons for one item')
     .optional(),

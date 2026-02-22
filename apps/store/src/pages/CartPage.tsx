@@ -115,7 +115,7 @@ export default function CartPage() {
                         {item.variantName}
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        ${item.variantPrice.toFixed(2)}
+                        ₮{Number(item.variantPrice).toLocaleString()}
                       </p>
                       {item.size && (
                         <div className="flex gap-2 mt-1 text-xs text-muted-foreground">
@@ -151,7 +151,7 @@ export default function CartPage() {
                   {/* Total Price */}
                   <div className="text-right">
                     <p className="text-xl font-bold text-primary">
-                      ${itemTotal.toFixed(2)}
+                      ₮{Number(itemTotal).toLocaleString()}
                     </p>
                   </div>
 
@@ -184,7 +184,7 @@ export default function CartPage() {
                 <span className="text-muted-foreground">
                   {language === 'mn' ? 'Нийт дүн' : 'Subtotal'}
                 </span>
-                <span className="font-semibold">${cartTotal.toFixed(2)}</span>
+                <span className="font-semibold">₮{Number(cartTotal).toLocaleString()}</span>
               </div>
 
               <div className="flex justify-between text-sm">
@@ -208,7 +208,7 @@ export default function CartPage() {
               <div className="border-t border-border pt-3">
                 <div className="flex justify-between text-lg font-bold">
                   <span>{language === 'mn' ? 'НИЙТ' : 'TOTAL'}</span>
-                  <span className="text-primary">${total.toFixed(2)}</span>
+                  <span className="text-primary">₮{Number(total).toLocaleString()}</span>
                 </div>
               </div>
             </div>
