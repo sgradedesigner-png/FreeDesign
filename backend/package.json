@@ -11,7 +11,9 @@
         "test:watch": "vitest",
         "test:ui": "vitest --ui",
         "test:coverage": "vitest run --coverage",
-        "migrate:fix-paths": "ts-node scripts/fix-double-path.ts"
+        "migrate:fix-paths": "ts-node scripts/fix-double-path.ts",
+        "backfill:layout-template:dry": "ts-node scripts/backfill-layout-template.ts --dry-run",
+        "backfill:layout-template": "ts-node scripts/backfill-layout-template.ts --apply"
     },
     "keywords": [],
     "author": "",

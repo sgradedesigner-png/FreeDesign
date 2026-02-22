@@ -24,6 +24,7 @@ interface Props {
   activePlacementKey?: string | null;
   onPresetSelect: (placement: EnginePlacement) => void;
   onPresetHover?: (placement: EnginePlacement | null) => void;
+  orientation?: 'horizontal' | 'vertical';
 }
 
 function formatSizeLabel(placement: EnginePlacement): string | null {
@@ -43,6 +44,7 @@ export default function PlacementPresetBar({
   activePlacementKey,
   onPresetSelect,
   onPresetHover,
+  orientation = 'horizontal',
 }: Props) {
   const [localHover, setLocalHover] = useState<string | null>(null);
 
@@ -59,7 +61,16 @@ export default function PlacementPresetBar({
   if (deduped.length === 0) return null;
 
   return (
-    <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }} aria-label="Placement presets">
+    <div
+      className={cn(
+        'flex gap-2 pb-1',
+        orientation === 'vertical'
+          ? 'max-h-[620px] flex-col overflow-y-auto pr-1'
+          : 'overflow-x-auto'
+      )}
+      style={{ scrollbarWidth: 'none' }}
+      aria-label="Placement presets"
+    >
       {deduped.map((placement) => {
         const isActive = placement.placementKey === activePlacementKey;
         const isHovered = placement.placementKey === localHover;
@@ -83,8 +94,9 @@ export default function PlacementPresetBar({
               onPresetHover?.(null);
             }}
             className={cn(
-              'flex min-w-[76px] flex-shrink-0 flex-col items-center rounded-xl border px-3 py-2 text-center',
+              'flex flex-shrink-0 flex-col items-center rounded-xl border px-3 py-2 text-center',
               'transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+              orientation === 'vertical' ? 'w-[116px]' : 'min-w-[76px]',
               isActive
                 ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-500 dark:bg-blue-950/30'
                 : isHovered

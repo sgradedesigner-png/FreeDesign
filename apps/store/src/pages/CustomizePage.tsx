@@ -16,7 +16,7 @@ import {
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import { env } from '@/lib/env';
-import { Sentry } from '@/lib/sentry';
+import { Sentry, addBreadcrumb, captureMessage } from '@/lib/sentry';
 import { uploadCustomizationDesignSigned } from '@/lib/cloudinaryUpload';
 import { useProductQuery } from '@/data/products.queries';
 import { imageUrl } from '@/lib/imageUrl';
@@ -33,7 +33,7 @@ import KonvaDesignImage from '@/components/customize/KonvaDesignImage';
 import DesignSizeIndicator from '@/components/customize/DesignSizeIndicator';
 import ViewSwitcherTabs from '@/components/customize/ViewSwitcherTabs';
 import PlacementPresetBar from '@/components/customize/PlacementPresetBar';
-import { resolveProductType, galleryPathsToViewMap } from '@/lib/garmentBoundsLoader';
+import { detectViewFromPath, mapGalleryToViews } from '@/lib/viewImageOrdering';
 import { usePlacementEngine } from '@/hooks/usePlacementEngine';
 import type { EnginePlacement, NormalizedRect } from '@/hooks/usePlacementEngine';
 import { useHistory } from '@/hooks/useHistory';
@@ -86,6 +86,10 @@ const DEFAULT_CANVAS_PLACEMENT: CanvasPlacementConfig = {
   scale: 1,
 };
 const CANVAS_ASPECT_RATIO = 4 / 3;
+const MAX_CANVAS_HEIGHT = 1188;
+const MAX_CANVAS_WIDTH = Math.round(MAX_CANVAS_HEIGHT * CANVAS_ASPECT_RATIO);
+const VIEW_ORDER: ViewName[] = ['front', 'back', 'left', 'right'];
+const EMPTY_VIEW_PATHS: Partial<Record<ViewName, string>> = {};
 
 // ── Step definitions ─────────────────────────────────────────────────────────
 const STEPS = [
@@ -140,29 +144,128 @@ export default function CustomizePage() {
   const [quantity, setQuantity] = useState(1);
   const [rushOrder, setRushOrder] = useState(false);
 
-  // ── Konva canvas — product type + view ────────────────────────────────────
-  const productType = useMemo(
-    () => resolveProductType(product?.productSubfamily ?? (product as any)?.title ?? product?.name ?? ''),
-    [product?.productSubfamily, product?.name]
-  );
+  // ── Konva canvas views ─────────────────────────────────────────────────────
   const [activeView, setActiveView] = useState<ViewName>('front');
+  const fallbackTelemetryRef = useRef<Set<string>>(new Set());
+  const strictGuardTelemetryRef = useRef<Set<string>>(new Set());
 
-  // Map view → Cloudinary URL from variant gallery
-  const viewImages = useMemo(() => {
-    if (!selectedVariant) return {};
-    const fromGallery = galleryPathsToViewMap(
-      productType,
-      selectedVariant.imagePath ?? '',
-      selectedVariant.galleryPaths ?? []
-    );
+  const inferredVariantViewPaths = useMemo(
+    () =>
+      mapGalleryToViews(
+        selectedVariant?.imagePath ?? '',
+        selectedVariant?.galleryPaths ?? [],
+        VIEW_ORDER
+      ),
+    [selectedVariant?.galleryPaths, selectedVariant?.imagePath]
+  );
+
+  const hasTemplateLayout = useMemo(() => {
+    if (!layoutTemplate) return false;
+    const hasPreset = (layoutTemplate.presets?.length ?? 0) > 0;
+    const hasTemplateViewImage = VIEW_ORDER.some((view) => Boolean(layoutTemplate.views?.[view]?.imagePath));
+    return hasPreset || hasTemplateViewImage;
+  }, [layoutTemplate]);
+
+  const allowVariantViewFallback = !env.FF_CUSTOM_LAYOUT_TEMPLATE_STRICT || !hasTemplateLayout;
+
+  const fallbackViewPaths = useMemo(
+    () => (allowVariantViewFallback ? inferredVariantViewPaths : EMPTY_VIEW_PATHS),
+    [allowVariantViewFallback, inferredVariantViewPaths]
+  );
+
+  const availableViews = useMemo<ViewName[]>(() => {
     const templateViews = layoutTemplate?.views ?? {};
-    const withTemplate: Partial<Record<ViewName, string | undefined>> = { ...fromGallery };
-    (Object.keys(templateViews) as ViewName[]).forEach((viewKey) => {
-      const path = templateViews[viewKey]?.imagePath;
+    const viewsWithImage = VIEW_ORDER.filter(
+      (view) => Boolean(templateViews[view]?.imagePath) || Boolean(fallbackViewPaths[view])
+    );
+    return viewsWithImage.length > 0 ? viewsWithImage : ['front'];
+  }, [layoutTemplate?.views, fallbackViewPaths]);
+
+  // Map view -> Cloudinary URL from layout template only (canonical source-of-truth)
+  const viewImages = useMemo(() => {
+    const templateViews = layoutTemplate?.views ?? {};
+    const withTemplate: Partial<Record<ViewName, string | undefined>> = {};
+    (Object.keys(fallbackViewPaths) as ViewName[]).forEach((viewKey) => {
+      const path = fallbackViewPaths[viewKey];
       if (path) withTemplate[viewKey] = imageUrl(path);
     });
+    (Object.keys(templateViews) as ViewName[]).forEach((viewKey) => {
+      const templatePath = templateViews[viewKey]?.imagePath;
+      if (!templatePath) return;
+
+      // Guard against mis-mapped template views (e.g., front image stored under back).
+      const templateDetectedView = detectViewFromPath(templatePath);
+      const inferredPath = inferredVariantViewPaths[viewKey];
+      const inferredDetectedView = inferredPath ? detectViewFromPath(inferredPath) : null;
+      if (
+        templateDetectedView &&
+        templateDetectedView !== viewKey &&
+        inferredPath &&
+        inferredDetectedView === viewKey
+      ) {
+        withTemplate[viewKey] = imageUrl(inferredPath);
+        return;
+      }
+
+      withTemplate[viewKey] = imageUrl(templatePath);
+    });
     return withTemplate;
-  }, [layoutTemplate?.views, productType, selectedVariant]);
+  }, [fallbackViewPaths, inferredVariantViewPaths, layoutTemplate?.views]);
+
+  useEffect(() => {
+    if (!allowVariantViewFallback) return;
+    const templateViews = layoutTemplate?.views ?? {};
+    const fallbackUsedViews = VIEW_ORDER.filter(
+      (view) => !templateViews[view]?.imagePath && Boolean(inferredVariantViewPaths[view])
+    );
+    if (fallbackUsedViews.length === 0 || !selectedVariant?.id) return;
+
+    const key = `${selectedVariant.id}:${fallbackUsedViews.join(',')}`;
+    if (fallbackTelemetryRef.current.has(key)) return;
+    fallbackTelemetryRef.current.add(key);
+
+    addBreadcrumb({
+      category: 'customization.fallback',
+      level: 'warning',
+      message: 'Template view image fallback used',
+      data: {
+        productSlug,
+        variantId: selectedVariant.id,
+        fallbackUsedViews,
+      },
+    });
+    captureMessage('customization_template_view_image_fallback_used', 'warning');
+  }, [allowVariantViewFallback, inferredVariantViewPaths, layoutTemplate?.views, productSlug, selectedVariant?.id]);
+
+  useEffect(() => {
+    if (!env.FF_CUSTOM_LAYOUT_TEMPLATE_STRICT || !hasTemplateLayout || !selectedVariant?.id) return;
+    const templateViews = layoutTemplate?.views ?? {};
+    const blockedViews = VIEW_ORDER.filter(
+      (view) => !templateViews[view]?.imagePath && Boolean(inferredVariantViewPaths[view])
+    );
+    if (blockedViews.length === 0) return;
+
+    const key = `${selectedVariant.id}:${blockedViews.join(',')}`;
+    if (strictGuardTelemetryRef.current.has(key)) return;
+    strictGuardTelemetryRef.current.add(key);
+
+    addBreadcrumb({
+      category: 'customization.fallback',
+      level: 'warning',
+      message: 'Template strict mode blocked variant-gallery fallback',
+      data: {
+        productSlug,
+        variantId: selectedVariant.id,
+        blockedViews,
+      },
+    });
+    captureMessage('customization_template_strict_mode_blocked_fallback', 'warning');
+  }, [hasTemplateLayout, inferredVariantViewPaths, layoutTemplate?.views, productSlug, selectedVariant?.id]);
+
+  const strictModeMissingViewImage = useMemo(() => {
+    if (!env.FF_CUSTOM_LAYOUT_TEMPLATE_STRICT || !hasTemplateLayout) return false;
+    return !layoutTemplate?.views?.[activeView]?.imagePath && Boolean(inferredVariantViewPaths[activeView]);
+  }, [activeView, hasTemplateLayout, inferredVariantViewPaths, layoutTemplate?.views]);
 
   const templatePlacements = useMemo<EnginePlacement[]>(() => {
     const raw = layoutTemplate?.presets ?? [];
@@ -195,9 +298,14 @@ export default function CustomizePage() {
     if (!canvasContainerEl) return;
 
     const measure = (rect: DOMRectReadOnly | DOMRect) => {
-      const nextWidth = Math.floor(
-        Math.min(rect.width, rect.height > 0 ? rect.height * CANVAS_ASPECT_RATIO : rect.width)
-      );
+      // Fit canvas by viewport height + available container width to avoid clipping at 100% browser zoom.
+      const byWidth = rect.width;
+      const top = canvasContainerEl.getBoundingClientRect().top;
+      const viewportHeight = window.innerHeight || 0;
+      const bottomGutter = 24;
+      const availableHeight = Math.max(220, viewportHeight - top - bottomGutter);
+      const byHeight = availableHeight * CANVAS_ASPECT_RATIO;
+      const nextWidth = Math.floor(Math.min(byWidth, byHeight, MAX_CANVAS_WIDTH));
       if (nextWidth > 0) {
         setCanvasWidth((prev) => (prev === nextWidth ? prev : nextWidth));
       }
@@ -218,13 +326,12 @@ export default function CustomizePage() {
 
   // ── Placement engine ────────────────────────────────────────────────────────
   const placementEngine = usePlacementEngine(
-    productType,
+    'hoodie',
     activeView,
     'Adult',
     canvasWidth,
     viewImageNaturalSize[activeView] ?? null,
-    templatePlacements,
-    layoutTemplate !== undefined
+    templatePlacements
   );
 
   // Active preset selection + ghost rect
@@ -232,6 +339,14 @@ export default function CustomizePage() {
   const [hoverPlacement, setHoverPlacement] = useState<EnginePlacement | null>(null);
   const [editableGhostRect, setEditableGhostRect] = useState<KonvaRect | null>(null);
   const lastAutoPlacementViewRef = useRef<ViewName | null>(null);
+
+  useEffect(() => {
+    if (availableViews.includes(activeView)) return;
+    const nextView = availableViews[0] ?? 'front';
+    setActiveView(nextView);
+    setActivePlacementKey(null);
+    setHoverPlacement(null);
+  }, [activeView, availableViews]);
 
   // Ghost rect: prefer hover preview, fall back to active preset
   // Hidden once a design is placed on canvas (user can see the real design)
@@ -249,6 +364,25 @@ export default function CustomizePage() {
   }, [activePlacementKey, hoverPlacement?.placementKey, activeView]);
 
   const ghostRect = useMemo(() => editableGhostRect ?? derivedGhostRect, [editableGhostRect, derivedGhostRect]);
+  const ghostRectMetrics = useMemo(() => {
+    if (!ghostRect) return null;
+    return {
+      x: Number(ghostRect.x.toFixed(3)),
+      y: Number(ghostRect.y.toFixed(3)),
+      width: Number(ghostRect.width.toFixed(3)),
+      height: Number(ghostRect.height.toFixed(3)),
+      canvasWidth: Number(canvasWidth.toFixed(3)),
+      canvasHeight: Number((canvasWidth * 0.75).toFixed(3)),
+      view: activeView,
+      placementKey: activePlacementKey || '',
+    };
+  }, [activePlacementKey, activeView, canvasWidth, ghostRect]);
+
+  const activePresetRectNorm = useMemo<NormalizedRect | null>(() => {
+    if (!activePlacementKey) return null;
+    const placement = placementEngine.placements.find((p) => p.placementKey === activePlacementKey);
+    return placement?.rectNorm ?? null;
+  }, [activePlacementKey, placementEngine.placements]);
 
   // ── Upload asset ───────────────────────────────────────────────────────────
   // Declared here (before design image hook) so the design loader can reference it
@@ -608,7 +742,17 @@ export default function CustomizePage() {
           const res = await fetch(`${import.meta.env.VITE_API_URL}/api/customization/mockup-preview`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-            body: JSON.stringify({ variantId: selectedVariant.id, printAreaId: activeAreaId, printSizeTierId: activeSizeTierId || undefined, assetId: asset.id, placementConfig: activePlacement }),
+            body: JSON.stringify({
+              variantId: selectedVariant.id,
+              printAreaId: activeAreaId,
+              printSizeTierId: activeSizeTierId || undefined,
+              assetId: asset.id,
+              baseImageUrl: viewImages[activeView] || undefined,
+              presetRectNorm: activePresetRectNorm || undefined,
+              baseImageNaturalWidth: viewImageNaturalSize[activeView]?.width,
+              baseImageNaturalHeight: viewImageNaturalSize[activeView]?.height,
+              placementConfig: activePlacement,
+            }),
             signal: controller.signal,
           });
           const data = await res.json();
@@ -623,11 +767,14 @@ export default function CustomizePage() {
       })();
     }, 350);
     return () => { cancelled = true; window.clearTimeout(timer); controller.abort(); };
-  }, [asset?.id, selectedVariant?.id, activeAreaId, activeSizeTierId, activePlacement.offsetX, activePlacement.offsetY, activePlacement.rotation, activePlacement.scale, isCustomizable, activeView]);
+  }, [asset?.id, selectedVariant?.id, activeAreaId, activeSizeTierId, activePlacement.offsetX, activePlacement.offsetY, activePlacement.rotation, activePlacement.scale, isCustomizable, activeView, viewImages, activePresetRectNorm, viewImageNaturalSize]);
 
   // ── Auto-quote when selections complete ───────────────────────────────────
   const canRequestQuote =
     Boolean(selectedVariant?.id) &&
+    isCustomizable &&
+    !optionsLoading &&
+    !optionsError &&
     selectedAreaIds.length > 0 &&
     selectedCustomizationsForQuote.length === selectedAreaIds.length;
 
@@ -770,9 +917,9 @@ export default function CustomizePage() {
     <div className="flex h-screen w-screen flex-col overflow-hidden bg-background">
       {/* ── Header bar ── */}
       <div className="flex-shrink-0 border-b border-border bg-card">
-        <div className="px-6 py-4">
+        <div className="px-6 py-2.5">
           {/* Breadcrumb */}
-          <div className="mb-3 flex items-center gap-1 text-sm text-muted-foreground">
+          <div className="mb-1.5 flex items-center gap-1 text-sm text-muted-foreground">
             <Link to={`/product/${product.slug}`} className="flex items-center gap-1 hover:text-primary transition-colors">
               <ArrowLeft className="h-4 w-4" />
               {t('Бүтээгдэхүүн рүү буцах', 'Back to product')}
@@ -782,7 +929,7 @@ export default function CustomizePage() {
           </div>
 
           {/* Product header */}
-          <div className="mb-4 flex items-start gap-4">
+          <div className="mb-2.5 flex items-start gap-3">
             {baseImage && (
               <div className="hidden sm:block h-12 w-12 flex-shrink-0 overflow-hidden rounded-lg border border-border">
                 <img src={baseImage} alt={product.name} className="h-full w-full object-cover" />
@@ -831,14 +978,13 @@ export default function CustomizePage() {
       <div className="flex min-h-0 flex-1 overflow-hidden">
 
           {/* ─────────── LEFT: canvas preview area (flex-grow, centered) ─────────────────────────────── */}
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-muted/20 p-6">
-            {/* Top controls — View switcher + Placement presets */}
-            <div className="mb-4 flex flex-shrink-0 flex-col gap-3">
-              {/* View switcher tabs */}
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overflow-x-hidden bg-muted/20 p-4">
+            {/* Top controls — View switcher */}
+            <div className="mb-2.5 flex flex-shrink-0 flex-col gap-1.5">
               <div className="flex items-center justify-between gap-4 rounded-xl border border-border bg-card px-4 py-2 shadow-sm">
                 <div className="flex-1">
                   <ViewSwitcherTabs
-                    productType={productType}
+                    availableViews={availableViews}
                     activeView={activeView}
                     onViewChange={(v) => {
                       setActiveView(v);
@@ -848,8 +994,6 @@ export default function CustomizePage() {
                     }}
                   />
                 </div>
-
-                {/* Undo / Redo / Delete toolbar — only visible when a design is on canvas */}
                 {designAttrs && (
                   <div className="flex items-center gap-1">
                     <button
@@ -884,89 +1028,101 @@ export default function CustomizePage() {
                   </div>
                 )}
               </div>
-
-              {/* Placement preset buttons */}
-              <PlacementPresetBar
-                placements={placementEngine.placements}
-                activePlacementKey={activePlacementKey}
-                onPresetSelect={(placement) => {
-                  setActivePlacementKey(placement.placementKey);
-                  setHoverPlacement(null);
-                }}
-                onPresetHover={setHoverPlacement}
-              />
             </div>
 
-            {/* Canvas area wrapper — contains canvas, status messages, and mockup preview */}
-            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-              {/* Canvas container — centered, height-driven */}
-              <div ref={canvasContainerRef} className="flex min-h-0 flex-1 items-center justify-center overflow-hidden">
-                {/* Konva canvas wrapper with 4:3 aspect ratio */}
-              <div
-                className="relative"
-                style={{ width: canvasWidth, height: Math.round(canvasWidth * 0.75) }}
-              >
-                <div
-                  className="relative h-full w-full"
-                  onClick={(e) => {
-                    if (e.target === e.currentTarget) setDesignSelected(false);
-                  }}
-                >
-                <KonvaCustomizeCanvas
-                  productType={productType}
-                  view={activeView}
-                  imageSrc={viewImages[activeView] ?? null}
-                  canvasWidth={canvasWidth}
-                  onImageMetaChange={({ naturalWidth, naturalHeight }) => {
-                    setViewImageNaturalSize((prev) => {
-                      const current = prev[activeView];
-                      if (current && current.width === naturalWidth && current.height === naturalHeight) {
-                        return prev;
-                      }
-                      return {
-                        ...prev,
-                        [activeView]: { width: naturalWidth, height: naturalHeight },
-                      };
-                    });
-                  }}
-                  ghostRect={designAttrs ? null : ghostRect}
-                  ghostRectEditable={!designAttrs && Boolean(ghostRect)}
-                  onGhostRectChange={setEditableGhostRect}
-                  isOutsideSafeArea={isOutsideSafeArea}
-                >
-                  {/* Design image node — only rendered when image is loaded and attrs exist */}
-                  {designImage && designAttrs && naturalDesignSize && (
-                    <KonvaDesignImage
-                      imageElement={designImage}
-                      naturalWidth={naturalDesignSize.width}
-                      naturalHeight={naturalDesignSize.height}
-                      attrs={designAttrs}
-                      onChangeEnd={handleDesignChangeEnd}
-                      isSelected={designSelected}
-                      onSelect={() => setDesignSelected(true)}
-                    />
-                  )}
-                </KonvaCustomizeCanvas>
+            {/* Canvas area wrapper — preset at left, image preview at right */}
+            <div className="flex min-h-0 flex-1 flex-col">
+              <div className="flex min-h-0 flex-1 items-start gap-3">
+                <div className="w-[124px] flex-shrink-0">
+                  <PlacementPresetBar
+                    placements={placementEngine.placements}
+                    activePlacementKey={activePlacementKey}
+                    onPresetSelect={(placement) => {
+                      setActivePlacementKey(placement.placementKey);
+                      setHoverPlacement(null);
+                    }}
+                    onPresetHover={setHoverPlacement}
+                    orientation="vertical"
+                  />
+                </div>
 
-                {/* Live size indicator — positioned bottom-left over the canvas */}
-                {designAttrs && naturalDesignSize && (
-                  <div className="pointer-events-none absolute bottom-2 left-2">
-                    <DesignSizeIndicator
-                      attrs={designAttrs}
-                      naturalWidth={naturalDesignSize.width}
-                      naturalHeight={naturalDesignSize.height}
-                      displayScale={placementEngine.displayScale}
-                      pxPerCmInImage={placementEngine.pxPerCmInImage}
-                    />
+                <div ref={canvasContainerRef} className="flex min-h-0 min-w-0 flex-1 items-center justify-center overflow-hidden">
+                  <div
+                    className="relative"
+                    style={{ width: canvasWidth, height: Math.round(canvasWidth * 0.75) }}
+                  >
+                    <div
+                      className="relative h-full w-full"
+                      onClick={(e) => {
+                        if (e.target === e.currentTarget) setDesignSelected(false);
+                      }}
+                    >
+                      <KonvaCustomizeCanvas
+                        view={activeView}
+                        imageSrc={viewImages[activeView] ?? null}
+                        canvasWidth={canvasWidth}
+                        onImageMetaChange={({ naturalWidth, naturalHeight }) => {
+                          setViewImageNaturalSize((prev) => {
+                            const current = prev[activeView];
+                            if (current && current.width === naturalWidth && current.height === naturalHeight) {
+                              return prev;
+                            }
+                            return {
+                              ...prev,
+                              [activeView]: { width: naturalWidth, height: naturalHeight },
+                            };
+                          });
+                        }}
+                        ghostRect={designAttrs ? null : ghostRect}
+                        ghostRectEditable={!designAttrs && Boolean(ghostRect)}
+                        onGhostRectChange={setEditableGhostRect}
+                        isOutsideSafeArea={isOutsideSafeArea}
+                      >
+                        {designImage && designAttrs && naturalDesignSize && (
+                          <KonvaDesignImage
+                            imageElement={designImage}
+                            naturalWidth={naturalDesignSize.width}
+                            naturalHeight={naturalDesignSize.height}
+                            attrs={designAttrs}
+                            onChangeEnd={handleDesignChangeEnd}
+                            isSelected={designSelected}
+                            onSelect={() => setDesignSelected(true)}
+                          />
+                        )}
+                      </KonvaCustomizeCanvas>
+
+                      <div
+                        data-testid="ghost-rect-metrics"
+                        data-view={ghostRectMetrics?.view ?? ''}
+                        data-placement-key={ghostRectMetrics?.placementKey ?? ''}
+                        data-x={ghostRectMetrics ? String(ghostRectMetrics.x) : ''}
+                        data-y={ghostRectMetrics ? String(ghostRectMetrics.y) : ''}
+                        data-width={ghostRectMetrics ? String(ghostRectMetrics.width) : ''}
+                        data-height={ghostRectMetrics ? String(ghostRectMetrics.height) : ''}
+                        data-canvas-width={ghostRectMetrics ? String(ghostRectMetrics.canvasWidth) : ''}
+                        data-canvas-height={ghostRectMetrics ? String(ghostRectMetrics.canvasHeight) : ''}
+                        className="sr-only"
+                      />
+
+                      {designAttrs && naturalDesignSize && (
+                        <div className="pointer-events-none absolute bottom-2 left-2">
+                          <DesignSizeIndicator
+                            attrs={designAttrs}
+                            naturalWidth={naturalDesignSize.width}
+                            naturalHeight={naturalDesignSize.height}
+                            displayScale={placementEngine.displayScale}
+                            pxPerCmInImage={placementEngine.pxPerCmInImage}
+                          />
+                        </div>
+                      )}
+                    </div>
                   </div>
-                )}
                 </div>
               </div>
             </div>
 
             {/* Status messages below canvas */}
             <div className="mt-3 flex flex-col gap-2">
-              {/* Upload progress indicator */}
               {designImageStatus === 'loading' && asset && (
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -974,26 +1130,32 @@ export default function CustomizePage() {
                 </div>
               )}
 
-              {/* Outside safe area warning */}
               {isOutsideSafeArea && (
                 <p className="text-xs font-medium text-red-600 dark:text-red-400">
                   {t('Дизайн хэвлэх талбайгаас гарч байна — дотогш зөөнө үү', 'Design extends outside the print area — move it inward')}
                 </p>
               )}
+
+              {strictModeMissingViewImage && (
+                <p className="text-xs font-medium text-amber-600 dark:text-amber-400">
+                  {t(
+                    'Энэ view-д template зураг дутуу байна. Strict mode идэвхтэй тул variant fallback ашиглахгүй.',
+                    'This view is missing a template image. Strict mode is enabled, so variant fallback is blocked.'
+                  )}
+                </p>
+              )}
             </div>
 
-              {/* Mockup Preview (optional) */}
-              {(mockupPreviewUrl || mockupPreviewLoading) && (
-                <div className="mt-4 overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-                  <div className="border-b border-border px-4 py-3">
-                    <h2 className="text-sm font-semibold text-foreground">
-                      {t('Урьдчилан харах', 'Preview')}
-                    </h2>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {activeArea ? t(`${activeArea.label} — урьдчилан харах`, `${activeArea.label} preview`) : ''}
-                    </p>
-                  </div>
-                  <div className="p-4">
+            {(mockupPreviewUrl || mockupPreviewLoading) && (
+              <div className="mt-4 overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+                <div className="border-b border-border px-4 py-3">
+                  <h2 className="text-sm font-semibold text-foreground">{t('Урьдчилан харах', 'Preview')}</h2>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {activeArea ? t(`${activeArea.label} — урьдчилан харах`, `${activeArea.label} preview`) : ''}
+                  </p>
+                </div>
+                <div className="p-4">
+                  <div className="mx-auto w-full" style={{ maxWidth: canvasWidth }}>
                     <AutoMockupPreview
                       previewUrl={mockupPreviewUrl}
                       fallbackUrl={baseImage}
@@ -1003,8 +1165,8 @@ export default function CustomizePage() {
                     />
                   </div>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
 
           {/* ─────────── RIGHT: configuration sidebar (fixed 420px, scrollable) ─────────────────────────────── */}

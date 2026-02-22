@@ -64,7 +64,11 @@ export type CartItem = {
 
 type CartContextValue = {
   cart: CartItem[];
-  addItem: (product: Product, variant: ProductVariant, selectedSize?: string | null) => void;
+  addItem: (
+    productOrLegacyItem: Product | Record<string, unknown>,
+    variant?: ProductVariant,
+    selectedSize?: string | null
+  ) => void;
   addCustomizedItem: (params: {
     product: Product;
     variant: ProductVariant;

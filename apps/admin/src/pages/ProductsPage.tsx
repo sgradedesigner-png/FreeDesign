@@ -105,6 +105,7 @@ export default function ProductsPage() {
   });
   const [bulkDeleteDialog, setBulkDeleteDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [updatingStatusIds, setUpdatingStatusIds] = useState<Set<string>>(new Set());
 
   const debouncedSearch = useDebounce(search, 500);
 
@@ -153,6 +154,25 @@ export default function ProductsPage() {
 
   const resolvePublished = (product: Product) =>
     Boolean(product.is_published ?? product.isPublished ?? false);
+
+  const handleStatusChange = async (product: Product, nextPublished: boolean) => {
+    const currentPublished = resolvePublished(product);
+    if (currentPublished === nextPublished) return;
+
+    setUpdatingStatusIds((prev) => new Set(prev).add(product.id));
+    try {
+      await api.put(`/admin/products/${product.id}`, { is_published: nextPublished });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+    } catch (error) {
+      logger.error('Failed to update product status:', error);
+    } finally {
+      setUpdatingStatusIds((prev) => {
+        const next = new Set(prev);
+        next.delete(product.id);
+        return next;
+      });
+    }
+  };
 
   // Prefetch next page
   useEffect(() => {
@@ -470,9 +490,19 @@ export default function ProductsPage() {
                     <Badge variant="secondary">{product.category.name}</Badge>
                   </TableCell>
                   <TableCell className="hidden md:table-cell">
-                    <Badge variant={resolvePublished(product) ? 'default' : 'secondary'}>
-                      {resolvePublished(product) ? 'Published' : 'Draft'}
-                    </Badge>
+                    <Select
+                      value={resolvePublished(product) ? 'published' : 'draft'}
+                      onValueChange={(value) => handleStatusChange(product, value === 'published')}
+                      disabled={updatingStatusIds.has(product.id)}
+                    >
+                      <SelectTrigger className="h-8 w-[140px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="draft">Draft</SelectItem>
+                        <SelectItem value="published">Published</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </TableCell>
                   <TableCell className="hidden md:table-cell font-medium">
                     ${parseFloat(String(product.variants[0]?.price ?? 0)).toFixed(2)}

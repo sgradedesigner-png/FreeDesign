@@ -1,9 +1,15 @@
-import { listAvailableViews, VIEW_DISPLAY_NAMES } from '@/lib/garmentBoundsLoader';
-import type { ProductType, ViewName } from '@/types/garment';
+import type { ViewName } from '@/types/garment';
 import { cn } from '@/lib/utils';
 
+const VIEW_DISPLAY_NAMES: Record<ViewName, string> = {
+  front: 'Front',
+  back: 'Back',
+  left: 'Left Sleeve',
+  right: 'Right Sleeve',
+};
+
 interface Props {
-  productType: ProductType;
+  availableViews: ViewName[];
   activeView: ViewName;
   onViewChange: (view: ViewName) => void;
   /** Optional per-view thumbnail data URLs from Stage.toDataURL() */
@@ -13,18 +19,16 @@ interface Props {
 }
 
 export default function ViewSwitcherTabs({
-  productType,
+  availableViews,
   activeView,
   onViewChange,
   viewThumbDataUrls = {},
   viewsWithDesign = new Set(),
 }: Props) {
-  const availableViews = listAvailableViews(productType);
-
   if (availableViews.length <= 1) return null;
 
   return (
-    <div className="flex gap-1 rounded-lg border border-border bg-muted/50 p-1">
+    <div data-testid="view-switcher-tabs" className="flex gap-1 rounded-lg border border-border bg-muted/50 p-1">
       {availableViews.map((view) => {
         const isActive = view === activeView;
         const thumb = viewThumbDataUrls[view];
@@ -34,6 +38,7 @@ export default function ViewSwitcherTabs({
           <button
             key={view}
             type="button"
+            data-testid={`view-tab-${view}`}
             onClick={() => onViewChange(view)}
             className={cn(
               'relative flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2',

@@ -19,8 +19,7 @@ import type { KonvaRect } from '@/types/customization';
 
 import { useKonvaImage } from '@/hooks/useKonvaImage';
 import { useCanvasDimensions } from '@/hooks/useCanvasDimensions';
-import { getGarmentBounds } from '@/lib/garmentBoundsLoader';
-import type { ProductType, ViewName } from '@/types/garment';
+import type { ViewName } from '@/types/garment';
 import CanvasLoadingSkeleton from './CanvasLoadingSkeleton';
 
 export interface SafeAreaRect {
@@ -39,7 +38,6 @@ export interface KonvaCanvasReadyPayload {
 }
 
 interface Props {
-  productType: ProductType;
   view: ViewName;
   /**
    * Cloudinary (or any) URL of the garment mockup image for this view.
@@ -77,7 +75,6 @@ interface Props {
 const DEFAULT_CANVAS_WIDTH = 560;
 
 export default function KonvaCustomizeCanvas({
-  productType,
   view,
   imageSrc: imageSrcProp,
   canvasWidth = DEFAULT_CANVAS_WIDTH,
@@ -95,16 +92,11 @@ export default function KonvaCustomizeCanvas({
   const hasCalledReady = useRef(false);
 
   // ── Garment bounds ────────────────────────────────────────────────────────
-  let bounds;
-  try {
-    bounds = getGarmentBounds(productType, view);
-  } catch {
-    bounds = null;
-  }
+  const bounds = null;
 
   // ── Garment image ─────────────────────────────────────────────────────────
   // Priority: explicit imageSrc prop > fallback from imageBaseUrl + filename
-  const imageFile = bounds?.imageFile ?? null;
+  const imageFile = null;
   const imageSrc = imageSrcProp !== undefined
     ? imageSrcProp
     : imageFile
@@ -197,7 +189,7 @@ export default function KonvaCustomizeCanvas({
 
   return (
     <div
-      className="overflow-hidden rounded-xl border border-border bg-white shadow-sm"
+      className="overflow-hidden rounded-xl border border-border bg-white shadow-sm dark:bg-black"
       style={{ width: canvasWidth, height: canvasHeight }}
     >
       <Stage

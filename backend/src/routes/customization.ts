@@ -282,6 +282,10 @@ export default async function customizationRoutes(app: FastifyInstance) {
         printAreaId,
         printSizeTierId,
         assetId,
+        baseImageUrl,
+        presetRectNorm,
+        baseImageNaturalWidth,
+        baseImageNaturalHeight,
         placementConfig,
       } = validation.data;
 
@@ -369,8 +373,12 @@ export default async function customizationRoutes(app: FastifyInstance) {
         throw new BadRequestError('Selected print area is not enabled for this product');
       }
 
-      const baseImageUrl = variant.product.mockupImagePath || variant.imagePath;
-      if (!baseImageUrl) {
+      const fallbackBaseImageUrl = variant.product.mockupImagePath || variant.imagePath;
+      const preferredBaseImageUrl = baseImageUrl?.includes('res.cloudinary.com')
+        ? baseImageUrl
+        : fallbackBaseImageUrl;
+
+      if (!preferredBaseImageUrl) {
         throw new BadRequestError('Product variant does not have a base mockup image');
       }
 
@@ -380,7 +388,7 @@ export default async function customizationRoutes(app: FastifyInstance) {
       }
 
       const generated = buildCustomizationMockupPreviewUrl({
-        baseImageUrl,
+        baseImageUrl: preferredBaseImageUrl,
         overlayPublicId,
         printArea: {
           maxWidthCm: Number(printArea.maxWidthCm),
@@ -392,12 +400,15 @@ export default async function customizationRoutes(app: FastifyInstance) {
             heightCm: Number(printSizeTier.heightCm),
           }
           : undefined,
+        presetRectNorm,
+        baseImageNaturalWidth,
+        baseImageNaturalHeight,
         placementConfig,
       });
 
       return reply.send({
         previewUrl: generated.previewUrl,
-        baseImageUrl,
+        baseImageUrl: preferredBaseImageUrl,
         overlay: {
           widthPx: generated.overlayWidthPx,
           heightPx: generated.overlayHeightPx,

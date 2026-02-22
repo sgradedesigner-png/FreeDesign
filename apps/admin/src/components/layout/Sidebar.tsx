@@ -9,6 +9,8 @@ import {
   ShoppingCart,
   Factory,
   BadgeDollarSign,
+  Crop,
+  Ruler,
   Settings,
   Mail,
   ShieldCheck,
@@ -26,6 +28,8 @@ const menuItems = [
   { path: '/reprints', icon: Printer, labelKey: 'nav.reprints' },
   { path: '/moderation', icon: ShieldCheck, labelKey: 'nav.moderation' },
   { path: '/pricing', icon: BadgeDollarSign, labelKey: 'nav.pricing' },
+  { path: '/print-areas', icon: Crop, labelKey: 'nav.printAreas' },
+  { path: '/size-tiers', icon: Ruler, labelKey: 'nav.sizeTiers' },
   { path: '/email-test', icon: Mail, labelKey: 'nav.emailTest' },
   { path: '/settings', icon: Settings, labelKey: 'nav.settings' },
 ];

@@ -17,6 +17,14 @@ type BuildMockupPreviewParams = {
   overlayPublicId: string;
   printArea: PrintAreaDimension;
   printSizeTier?: PrintSizeTierDimension;
+  presetRectNorm?: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
+  baseImageNaturalWidth?: number;
+  baseImageNaturalHeight?: number;
   placementConfig?: PlacementConfigInput;
 };
 
@@ -83,6 +91,16 @@ function normalizePlacement(config?: PlacementConfigInput) {
   };
 }
 
+function canUsePresetRectBounds(params: BuildMockupPreviewParams): boolean {
+  return Boolean(
+    params.presetRectNorm &&
+    Number.isFinite(params.baseImageNaturalWidth) &&
+    Number.isFinite(params.baseImageNaturalHeight) &&
+    (params.baseImageNaturalWidth ?? 0) > 0 &&
+    (params.baseImageNaturalHeight ?? 0) > 0
+  );
+}
+
 export function buildCustomizationMockupPreviewUrl(
   params: BuildMockupPreviewParams
 ): {
@@ -108,20 +126,52 @@ export function buildCustomizationMockupPreviewUrl(
   }
 
   const placement = normalizePlacement(params.placementConfig);
-  const areaBounds = getAreaBounds(params.printArea);
-  const sizeCoverage = getSizeCoverageRatio(params.printArea, params.printSizeTier);
+  let overlayWidthPx: number;
+  let overlayHeightPx: number;
+  let offsetXPx: number;
+  let offsetYPx: number;
 
-  const overlayWidthPx = Math.max(
-    MIN_ARTWORK_EDGE_PX,
-    Math.round(areaBounds.width * sizeCoverage * ARTWORK_COVERAGE_RATIO * placement.scale)
-  );
-  const overlayHeightPx = Math.max(
-    MIN_ARTWORK_EDGE_PX,
-    Math.round(areaBounds.height * sizeCoverage * ARTWORK_COVERAGE_RATIO * placement.scale)
-  );
+  if (canUsePresetRectBounds(params)) {
+    const baseW = params.baseImageNaturalWidth as number;
+    const baseH = params.baseImageNaturalHeight as number;
+    const rect = params.presetRectNorm as NonNullable<BuildMockupPreviewParams['presetRectNorm']>;
 
-  const offsetXPx = Math.round((placement.offsetX / 100) * (areaBounds.width / 2));
-  const offsetYPx = Math.round((placement.offsetY / 100) * (areaBounds.height / 2));
+    const rectWidthPx = Math.max(MIN_ARTWORK_EDGE_PX, Math.round(rect.width * baseW));
+    const rectHeightPx = Math.max(MIN_ARTWORK_EDGE_PX, Math.round(rect.height * baseH));
+    const rectCenterX = rect.x * baseW + rectWidthPx / 2;
+    const rectCenterY = rect.y * baseH + rectHeightPx / 2;
+
+    overlayWidthPx = Math.max(
+      MIN_ARTWORK_EDGE_PX,
+      Math.round(rectWidthPx * placement.scale)
+    );
+    overlayHeightPx = Math.max(
+      MIN_ARTWORK_EDGE_PX,
+      Math.round(rectHeightPx * placement.scale)
+    );
+
+    offsetXPx =
+      Math.round(rectCenterX - baseW / 2) +
+      Math.round((placement.offsetX / 100) * (rectWidthPx / 2));
+    offsetYPx =
+      Math.round(rectCenterY - baseH / 2) +
+      Math.round((placement.offsetY / 100) * (rectHeightPx / 2));
+  } else {
+    const areaBounds = getAreaBounds(params.printArea);
+    const sizeCoverage = getSizeCoverageRatio(params.printArea, params.printSizeTier);
+
+    overlayWidthPx = Math.max(
+      MIN_ARTWORK_EDGE_PX,
+      Math.round(areaBounds.width * sizeCoverage * ARTWORK_COVERAGE_RATIO * placement.scale)
+    );
+    overlayHeightPx = Math.max(
+      MIN_ARTWORK_EDGE_PX,
+      Math.round(areaBounds.height * sizeCoverage * ARTWORK_COVERAGE_RATIO * placement.scale)
+    );
+
+    offsetXPx = Math.round((placement.offsetX / 100) * (areaBounds.width / 2));
+    offsetYPx = Math.round((placement.offsetY / 100) * (areaBounds.height / 2));
+  }
 
   const previewUrl = buildOverlayMockupUrl({
     basePublicId,

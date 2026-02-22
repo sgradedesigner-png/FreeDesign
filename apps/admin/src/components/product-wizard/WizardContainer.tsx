@@ -21,6 +21,35 @@ type WizardContainerProps = {
   productId?: string;
 };
 
+function normalizeTemplateForSubmit(
+  customizationTemplateV1: any,
+  printAreas: string[] = [],
+  printAreaDefaults?: Record<string, boolean>
+) {
+  if (!customizationTemplateV1 || !Array.isArray(customizationTemplateV1.presets)) {
+    return customizationTemplateV1;
+  }
+
+  const defaultAreaId =
+    Object.entries(printAreaDefaults || {}).find(([, isDefault]) => Boolean(isDefault))?.[0]
+    || printAreas[0]
+    || null;
+
+  if (!defaultAreaId) {
+    return customizationTemplateV1;
+  }
+
+  const normalizedPresets = customizationTemplateV1.presets.map((preset: any) => ({
+    ...preset,
+    printAreaId: preset?.printAreaId || defaultAreaId,
+  }));
+
+  return {
+    ...customizationTemplateV1,
+    presets: normalizedPresets,
+  };
+}
+
 export function WizardContainer({ productId }: WizardContainerProps) {
   const isEditMode = Boolean(
     productId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(productId)
@@ -72,6 +101,11 @@ export function WizardContainer({ productId }: WizardContainerProps) {
 
       // Upload variant images first if needed
       const variantsWithImages = await uploadVariantImages(values.variants);
+      const normalizedTemplate = normalizeTemplateForSubmit(
+        values.customizationTemplateV1,
+        values.printAreas,
+        values.printAreaDefaults
+      );
 
       // Prepare product data
       const productData = {
@@ -92,7 +126,7 @@ export function WizardContainer({ productId }: WizardContainerProps) {
         printAreas: values.printAreas,
         printAreaDefaults: values.printAreaDefaults,
         uploadConstraints: values.uploadConstraints,
-        customizationTemplateV1: values.customizationTemplateV1,
+        customizationTemplateV1: normalizedTemplate,
       };
 
       if (productId) {
@@ -110,7 +144,10 @@ export function WizardContainer({ productId }: WizardContainerProps) {
       navigate('/products');
     } catch (error: any) {
       console.error('Failed to save product:', error);
-      toast.error(error.response?.data?.message || 'Failed to save product');
+      const apiMessage = error.response?.data?.message
+        || error.response?.data?.error
+        || error.response?.data?.issues?.[0]?.message;
+      toast.error(apiMessage || 'Failed to save product');
     } finally {
       setIsSubmitting(false);
     }

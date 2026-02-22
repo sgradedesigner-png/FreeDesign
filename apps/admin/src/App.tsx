@@ -13,6 +13,8 @@ import EmailTestPage from './pages/EmailTestPage';
 import ProductionDashboardPage from './pages/ProductionDashboardPage';
 import ReprintQueuePage from './pages/ReprintQueuePage';
 import PricingRulesPage from './pages/PricingRulesPage';
+import PrintAreasPage from './pages/PrintAreasPage';
+import SizeTiersPage from './pages/SizeTiersPage';
 import UploadModerationPage from './pages/UploadModerationPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AdminLayout } from './components/layout/AdminLayout';
@@ -53,6 +55,8 @@ export default function App() {
         <Route path="/production" element={<ProductionDashboardPage />} />
         <Route path="/reprints" element={<ReprintQueuePage />} />
         <Route path="/pricing" element={<PricingRulesPage />} />
+        <Route path="/print-areas" element={<PrintAreasPage />} />
+        <Route path="/size-tiers" element={<SizeTiersPage />} />
         <Route path="/moderation" element={<UploadModerationPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/email-test" element={<EmailTestPage />} />

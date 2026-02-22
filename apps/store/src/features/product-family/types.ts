@@ -1,4 +1,5 @@
 import type { Product, ProductVariant } from '../../data/products';
+import type { ReactElement } from 'react';
 
 /**
  * Product Family Types
@@ -32,13 +33,13 @@ export interface ProductStrategy {
    * Render the main product information section (pricing, options, CTA)
    * This appears in the right column on desktop, below gallery on mobile
    */
-  renderProductInfo: (props: ProductStrategyProps) => JSX.Element;
+  renderProductInfo: (props: ProductStrategyProps) => ReactElement;
 
   /**
    * Optional: Render custom product tabs
    * If not provided, uses default tabs (Description, Specs, etc)
    */
-  renderTabs?: (props: ProductStrategyProps) => JSX.Element;
+  renderTabs?: (props: ProductStrategyProps) => ReactElement;
 
   /**
    * Optional: Customize the gallery behavior
@@ -50,7 +51,7 @@ export interface ProductStrategy {
    * Optional: Add custom conversion blocks (trust badges, urgency, etc)
    * Rendered below the main product info
    */
-  renderConversionBlocks?: (props: ProductStrategyProps) => JSX.Element | null;
+  renderConversionBlocks?: (props: ProductStrategyProps) => ReactElement | null;
 }
 
 /**

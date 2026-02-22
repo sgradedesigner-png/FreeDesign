@@ -1,7 +1,4 @@
 {
-  "scripts": {
-    "extract:garment-bounds": "node scripts/extract-garment-bounds.js"
-  },
   "devDependencies": {
     "@prisma/client": "^5.19.1",
     "@supabase/supabase-js": "^2.93.3",

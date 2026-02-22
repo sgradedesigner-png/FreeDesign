@@ -114,8 +114,9 @@ function pickViewsFromNamedPaths(entries: ViewImageEntry[]) {
 
   const matches = (entry: ViewImageEntry, pattern: RegExp) => {
     const raw = entry.path.split('?')[0];
-    const filename = entry.nameHint?.trim() || raw.split('/').pop() || raw;
-    return pattern.test(filename.toLowerCase());
+    const filename = (raw.split('/').pop() || raw).toLowerCase();
+    const hint = (entry.nameHint || '').trim().toLowerCase();
+    return pattern.test(filename) || (hint.length > 0 && pattern.test(hint));
   };
 
   const tryAssign = (view: LayoutViewKey, pattern: RegExp) => {

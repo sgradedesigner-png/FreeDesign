@@ -23,6 +23,16 @@ Recommended v1 production decision:
 
 ## 2) Current Codebase State (Deep Read)
 
+Status refresh (after latest changes in this repo):
+- Storefront placement engine is now template-only for geometry (`apps/store/src/hooks/usePlacementEngine.ts`).
+- Admin edit entry from product list/dashboard points to wizard edit (`/product-wizard/:id`).
+- Backend create/update now synchronizes `isCustomizable` when `printAreas` or `customizationTemplateV1` is provided.
+- Phase C integrity guards enforced in backend schema/routes (preset `printAreaId`, one default per view, active/enabled area validation).
+- Phase F backfill utility added: `backend/scripts/backfill-layout-template.ts` (`--dry-run`/`--apply`).
+- Phase E drift test scaffold added: `apps/store/tests/e2e/customization-parity-drift.spec.ts`.
+- Phase D telemetry + explicit strict fallback guard added in storefront (feature-flag driven).
+- Phase E parity tests expanded to include view-switch + resize drift checks.
+
 ## 2.1 Admin Wizard (authoring)
 
 - Print Configuration step UI + preset authoring:
@@ -77,7 +87,8 @@ Observed behavior:
 
 Observed behavior:
 - Template-first behavior exists (`layoutTemplate.presets` + `layoutTemplate.views`).
-- Legacy fallback still exists in `usePlacementEngine` (hardcoded overrides + placement loader) when template is absent.
+- `usePlacementEngine` no longer uses legacy hardcoded/placement-loader branches for geometry.
+- Runtime still keeps safe image-path fallback mapping from variant gallery when template view image path is missing (display fallback, not geometry fallback).
 - Quote and mockup depend on selected `printAreaId` and `printSizeTierId`.
 
 ---
@@ -109,7 +120,7 @@ Observed behavior:
 
 1. Step 4 `Size Tiers` UI implies product-level assignment, but data is global runtime.
 2. Missing master-data CRUD for `print_areas` and `print_size_tiers` in Admin.
-3. Some legacy fallback logic can produce mapping drift perception if templates are missing/incomplete.
+3. If template `views.*.imagePath` is incomplete, display may rely on variant gallery fallback mapping, which can still cause unexpected view-image mapping for poorly named assets.
 4. Empty-state UX in Step 4 does not provide actionable next step when master data is missing.
 
 ---
@@ -173,8 +184,8 @@ Goal: minimize drift and implicit fallback behavior.
 
 Changes:
 - Keep template-first rendering (already in place).
-- Restrict legacy fallback behind explicit conditions/feature flag for non-migrated products only.
-- Add debug telemetry when fallback is used (to identify un-migrated products).
+- Keep geometry strictly template-only (already in place).
+- Reduce/monitor remaining display fallback (variant-gallery view mapping) and add telemetry when that fallback is used.
 
 ## Phase E — Geometry Parity/Drift Test Suite
 
@@ -199,12 +210,12 @@ Goal: safe transition from legacy presets/hardcoded placement.
 
 Steps:
 - Backfill script:
-  - map legacy placement standards -> `customizationTemplateV1` presets.
-  - map known view image paths by filename convention (front/back/left/right).
+  - map missing template view image paths (`views.front/back/left/right.imagePath`) from existing variant media by naming convention.
+  - only generate template presets for legacy products that still do not have `customizationTemplateV1.presets`.
 - Feature flag rollout:
-  - `FF_CUSTOM_LAYOUT_TEMPLATE_V1` default OFF (already requested previously)
-  - turn ON per environment/product cohort
-- Monitor fallback usage + quote error rates.
+  - optional for endpoint/read-path rollout; not required for current geometry engine behavior (already template-only in store runtime)
+  - if used, turn ON per environment/product cohort
+- Monitor display-fallback usage + quote/mockup error rates.
 
 ---
 

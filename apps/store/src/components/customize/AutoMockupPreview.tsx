@@ -28,11 +28,11 @@ export default function AutoMockupPreview({
         </p>
       </div>
 
-      <div className="relative overflow-hidden rounded-lg border border-border bg-muted/40">
+      <div className="relative overflow-hidden rounded-lg border border-border bg-muted/40 dark:bg-black">
         <img
           src={imageSrc}
           alt="Auto generated mockup preview"
-          className="aspect-[4/3] w-full bg-background object-contain"
+          className="aspect-[4/3] w-full bg-background object-contain dark:bg-black"
         />
 
         {loading ? (
