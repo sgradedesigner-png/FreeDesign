@@ -62,3 +62,4 @@ yarn-error.log*
 /admin/
 /apps/admin/Blank Print Products/
 /ecommerce-platform/admin/
+OAuthGoogle.env
