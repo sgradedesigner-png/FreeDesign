@@ -58,7 +58,7 @@ export async function userGuard(req: FastifyRequest, reply: FastifyReply) {
     return; // ok
   } catch (err: any) {
     logger.error({ context: 'userGuard', error: err.message, details: err }, 'Authentication failed');
-    return reply.status(500).send({ error: 'Authentication failed', details: err.message });
+    return reply.status(401).send({ error: 'Authentication failed' });
   }
 }
 

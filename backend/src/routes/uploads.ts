@@ -11,6 +11,7 @@ import cloudinary, {
   isValidUploadFamily,
 } from '../lib/cloudinary';
 import { userGuard } from '../middleware/userGuard';
+import { settingsService } from '../services/settings.service';
 
 const SIGNED_UPLOAD_TTL_SEC = Number(process.env.CLOUDINARY_SIGNATURE_TTL_SEC || 300);
 
@@ -25,49 +26,6 @@ const CUSTOMIZATION_ALLOWED_MIME = new Set([
 const CUSTOMIZATION_MAX_BYTES = 20 * 1024 * 1024;
 const CUSTOMIZATION_MIN_RASTER_DIMENSION_PX = 800;
 
-// Phase 2: Upload family-specific constraints
-const UPLOAD_FAMILY_CONSTRAINTS: Record<
-  string,
-  {
-    allowedMimeTypes: Set<string>;
-    maxBytes: number;
-    minDpi?: number;
-    minWidthPx?: number;
-    minHeightPx?: number;
-  }
-> = {
-  gang_upload: {
-    allowedMimeTypes: new Set(['image/png', 'image/jpeg', 'image/jpg', 'image/pdf']),
-    maxBytes: 50 * 1024 * 1024, // 50MB
-    minDpi: 150,
-    minWidthPx: 1200,
-  },
-  uv_gang_upload: {
-    allowedMimeTypes: new Set(['image/png', 'image/jpeg', 'image/jpg', 'image/pdf']),
-    maxBytes: 50 * 1024 * 1024,
-    minDpi: 150,
-    minWidthPx: 1200,
-  },
-  by_size: {
-    allowedMimeTypes: new Set(['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml']),
-    maxBytes: 20 * 1024 * 1024, // 20MB
-    minWidthPx: 800,
-    minHeightPx: 800,
-  },
-  uv_by_size: {
-    allowedMimeTypes: new Set(['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml']),
-    maxBytes: 20 * 1024 * 1024,
-    minWidthPx: 800,
-    minHeightPx: 800,
-  },
-  blanks: {
-    allowedMimeTypes: new Set(['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml']),
-    maxBytes: 20 * 1024 * 1024,
-    minWidthPx: 800,
-    minHeightPx: 800,
-  },
-};
-
 const signSchema = z.object({
   purpose: z.literal('CUSTOMIZATION_DESIGN').default('CUSTOMIZATION_DESIGN'),
   filename: z.string().min(1).max(240),
@@ -78,12 +36,15 @@ const signSchema = z.object({
     .optional(), // Phase 2: upload family context
 });
 
-const completeSchema = z.object({
+const completeLegacySchema = z.object({
   intentId: z.string().uuid(),
   cloudinaryPublicId: z.string().optional(), // Phase 2: for new upload flow
-  uploadFamily: z
-    .enum(['gang_upload', 'uv_gang_upload', 'by_size', 'uv_by_size', 'blanks'])
-    .optional(), // Phase 2: carry family context from sign to complete
+});
+
+const completeV2Schema = z.object({
+  intentId: z.string().uuid(),
+  cloudinaryPublicId: z.string().optional(),
+  uploadFamily: z.enum(['gang_upload', 'uv_gang_upload', 'by_size', 'uv_by_size', 'blanks']),
 });
 
 function sanitizeFilename(filename: string): string {
@@ -215,7 +176,7 @@ export default async function uploadRoutes(app: FastifyInstance) {
         const userId = (request as any).user?.id as string | undefined;
         if (!userId) return reply.status(401).send({ error: 'Unauthorized' });
 
-        const body = completeSchema.parse(request.body);
+        const body = completeLegacySchema.parse(request.body);
 
         const intent = await prisma.uploadIntent.findFirst({
           where: {
@@ -431,17 +392,28 @@ export default async function uploadRoutes(app: FastifyInstance) {
           return reply.status(400).send({ error: 'Invalid upload family' });
         }
 
-        const constraints = UPLOAD_FAMILY_CONSTRAINTS[uploadFamily];
+        const [constraints, globalValidationEnabled] = await Promise.all([
+          settingsService.getUploadConstraints(uploadFamily),
+          settingsService.getGlobalValidationEnabled(),
+        ]);
         const contentType = body.contentType.trim().toLowerCase();
 
-        if (!constraints.allowedMimeTypes.has(contentType)) {
+        if (
+          globalValidationEnabled &&
+          constraints.enabled &&
+          !constraints.allowedMimeTypes.has(contentType)
+        ) {
           return reply.status(400).send({
             error: 'Unsupported file type for this upload family',
             allowedTypes: Array.from(constraints.allowedMimeTypes),
           });
         }
 
-        if (body.fileSizeBytes > constraints.maxBytes) {
+        if (
+          globalValidationEnabled &&
+          constraints.enabled &&
+          body.fileSizeBytes > constraints.maxBytes
+        ) {
           return reply.status(400).send({
             error: 'File exceeds size limit',
             maxBytes: constraints.maxBytes,
@@ -496,6 +468,8 @@ export default async function uploadRoutes(app: FastifyInstance) {
           uploadUrl,
           uploadFamily,
           constraints: {
+            enabled: constraints.enabled,
+            validationEnabled: globalValidationEnabled,
             maxBytes: constraints.maxBytes,
             minDpi: constraints.minDpi,
             minWidthPx: constraints.minWidthPx,
@@ -540,7 +514,7 @@ export default async function uploadRoutes(app: FastifyInstance) {
         const userId = (request as any).user?.id as string | undefined;
         if (!userId) return reply.status(401).send({ error: 'Unauthorized' });
 
-        const body = completeSchema.parse(request.body);
+        const body = completeV2Schema.parse(request.body);
 
         const intent = await prisma.uploadIntent.findFirst({
           where: {
@@ -580,8 +554,19 @@ export default async function uploadRoutes(app: FastifyInstance) {
           return reply.status(400).send({ error: 'Uploaded file exceeds size limit' });
         }
 
+        const expectedFamilyPrefix = `uploads/${body.uploadFamily}/`;
+        if (!intent.folder.startsWith(expectedFamilyPrefix)) {
+          return reply.status(400).send({ error: 'Upload family mismatch for this intent' });
+        }
+
         const thumbnailUrl = getThumbnailUrl(metadata.url, 200);
         const safeFilename = sanitizeFilename(intent.originalFilename) || `upload-${Date.now()}`;
+        const normalizedFamily = body.uploadFamily.toLowerCase();
+        const [globalValidationEnabled, familyValidationEnabled] = await Promise.all([
+          settingsService.getGlobalValidationEnabled(),
+          settingsService.getUploadConstraints(normalizedFamily).then((value) => value.enabled),
+        ]);
+        const shouldQueueValidation = globalValidationEnabled && familyValidationEnabled;
 
         // Create UploadAsset and validation job
         const { uploadAsset, validationJob } = await prisma.$transaction(async (tx) => {
@@ -613,40 +598,50 @@ export default async function uploadRoutes(app: FastifyInstance) {
               widthPx: metadata.width,
               heightPx: metadata.height,
               dpi: null, // Will be determined by validation worker
-              validationStatus: 'PENDING',
+              validationStatus: shouldQueueValidation ? 'PENDING' : 'PASSED',
               moderationStatus: 'PENDING_REVIEW',
-              uploadFamily: body.uploadFamily
-                ? (body.uploadFamily.toUpperCase() as any)
-                : null,
+              uploadFamily: body.uploadFamily.toUpperCase() as any,
               metadata: {
                 format: metadata.format,
                 resourceType: metadata.resourceType,
+                validationBypass: shouldQueueValidation
+                  ? null
+                  : {
+                    reason: 'upload_validation_disabled',
+                    globalValidationEnabled,
+                    familyValidationEnabled,
+                    timestamp: new Date().toISOString(),
+                  },
               },
             },
           });
 
-          const validationJob = await tx.uploadValidationJob.create({
-            data: {
-              uploadAssetId: uploadAsset.id,
-              status: 'PENDING',
-              retryCount: 0,
-              maxRetries: 3,
-              nextRunAt: new Date(), // Process immediately
-            },
-          });
-
-          await tx.uploadValidationEvent.create({
-            data: {
-              jobId: validationJob.id,
-              eventType: 'started',
-              message: 'Upload validation queued',
-              metadata: {
-                widthPx: metadata.width,
-                heightPx: metadata.height,
-                bytes: metadata.bytes,
+          const validationJob = shouldQueueValidation
+            ? await tx.uploadValidationJob.create({
+              data: {
+                uploadAssetId: uploadAsset.id,
+                status: 'PENDING',
+                retryCount: 0,
+                maxRetries: 3,
+                nextRunAt: new Date(), // Process immediately
               },
-            },
-          });
+            })
+            : null;
+
+          if (validationJob) {
+            await tx.uploadValidationEvent.create({
+              data: {
+                jobId: validationJob.id,
+                eventType: 'started',
+                message: 'Upload validation queued',
+                metadata: {
+                  widthPx: metadata.width,
+                  heightPx: metadata.height,
+                  bytes: metadata.bytes,
+                },
+              },
+            });
+          }
 
           return { uploadAsset, validationJob };
         });
@@ -659,7 +654,7 @@ export default async function uploadRoutes(app: FastifyInstance) {
             userIdHash: hashIdentifier(userId) ?? undefined,
             intentId: intent.id,
             uploadAssetId: uploadAsset.id,
-            validationJobId: validationJob.id,
+            validationJobId: validationJob?.id,
             bytes: metadata.bytes,
           },
           'Phase 2 upload completed and validation queued'
@@ -679,10 +674,12 @@ export default async function uploadRoutes(app: FastifyInstance) {
             moderationStatus: uploadAsset.moderationStatus,
             createdAt: uploadAsset.createdAt,
           },
-          validationJob: {
-            id: validationJob.id,
-            status: validationJob.status,
-          },
+          validationJob: validationJob
+            ? {
+              id: validationJob.id,
+              status: validationJob.status,
+            }
+            : null,
         });
       } catch (error: any) {
         if (error instanceof z.ZodError) {
@@ -746,4 +743,3 @@ export default async function uploadRoutes(app: FastifyInstance) {
     }
   );
 }
-

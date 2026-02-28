@@ -2,17 +2,9 @@ import type { CustomizationAsset } from '@prisma/client';
 import { getThumbnailUrl, uploadDesignAsset } from '../lib/cloudinary';
 import { prisma } from '../lib/prisma';
 import { BadRequestError } from '../utils/errors';
+import { settingsService } from './settings.service';
 
-const MAX_DESIGN_FILE_SIZE_BYTES = 20 * 1024 * 1024;
 const MIN_RASTER_DIMENSION_PX = 800;
-
-const allowedDesignMimeTypes = new Set([
-  'image/png',
-  'image/jpeg',
-  'image/jpg',
-  'image/webp',
-  'image/svg+xml',
-]);
 
 function sanitizeFilename(filename: string): string {
   return filename
@@ -25,18 +17,26 @@ function isSvg(mimeType: string): boolean {
   return mimeType.toLowerCase() === 'image/svg+xml';
 }
 
-function ensureAllowedFile(mimeType: string, size: number): void {
+async function ensureAllowedFile(mimeType: string, size: number): Promise<void> {
   const normalizedMimeType = mimeType.trim().toLowerCase();
-  if (!allowedDesignMimeTypes.has(normalizedMimeType)) {
-    throw new BadRequestError('Unsupported design file type');
-  }
+  const globalValidationEnabled = await settingsService.getGlobalValidationEnabled();
+  const constraints = await settingsService.getUploadConstraints('blanks');
 
   if (size <= 0) {
     throw new BadRequestError('Uploaded file is empty');
   }
 
-  if (size > MAX_DESIGN_FILE_SIZE_BYTES) {
-    throw new BadRequestError('Uploaded file exceeds 20MB size limit');
+  if (!globalValidationEnabled || !constraints.enabled) {
+    return;
+  }
+
+  if (!constraints.allowedMimeTypes.has(normalizedMimeType)) {
+    throw new BadRequestError('Unsupported design file type');
+  }
+
+  if (size > constraints.maxBytes) {
+    const maxMb = Math.round(constraints.maxBytes / (1024 * 1024));
+    throw new BadRequestError(`Uploaded file exceeds ${maxMb}MB size limit`);
   }
 }
 
@@ -47,7 +47,7 @@ export async function uploadCustomizationAsset(params: {
   mimeType: string;
 }): Promise<CustomizationAsset> {
   const { userId, buffer, filename, mimeType } = params;
-  ensureAllowedFile(mimeType, buffer.length);
+  await ensureAllowedFile(mimeType, buffer.length);
 
   const safeFilename = sanitizeFilename(filename) || `${Date.now()}-design`;
   const uploaded = await uploadDesignAsset(userId, buffer, safeFilename);

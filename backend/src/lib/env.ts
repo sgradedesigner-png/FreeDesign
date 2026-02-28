@@ -41,6 +41,8 @@ const envSchema = z.object({
   QPAY_PASSWORD: z.string().min(1, 'QPAY_PASSWORD is required'),
   QPAY_INVOICE_CODE: z.string().min(1, 'QPAY_INVOICE_CODE is required'),
   QPAY_CALLBACK_URL: z.string().url('QPAY_CALLBACK_URL must be a valid URL'),
+  QPAY_CALLBACK_ALLOWED_IPS: z.string().optional(),
+  QPAY_CALLBACK_SECRET: z.string().optional(),
 
   // Email (Resend)
   RESEND_API_KEY: z.string().startsWith('re_', 'RESEND_API_KEY must start with "re_"'),
@@ -143,4 +145,3 @@ export function validateEnv(): Env {
 }
 
 export const env = validateEnv();
-

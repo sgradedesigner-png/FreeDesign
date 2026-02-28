@@ -472,6 +472,19 @@ model PricingRule {
   @@map("pricing_rules")
 }
 
+model AppSetting {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     Json
+  category  String   @default("general")
+  updatedBy String?  @map("updated_by")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([category])
+  @@map("app_settings")
+}
+
 model UploadIntent {
   id                     String              @id @default(uuid())
   userId                 String              @map("user_id")
@@ -843,7 +856,6 @@ model ReprintRequest {
   @@index([status, createdAt(sort: Desc)])
   @@map("reprint_requests")
 }
-
 
 
 

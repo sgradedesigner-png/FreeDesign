@@ -1,5 +1,6 @@
 // backend/src/routes/payment.ts
 import { FastifyInstance } from 'fastify';
+import crypto from 'node:crypto';
 import { prisma } from '../lib/prisma';
 import { userGuard } from '../middleware/userGuard';
 import { qpayService } from '../services/qpay.service';
@@ -21,6 +22,39 @@ function toFiniteNumber(value: unknown): number | undefined {
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
+function getHeaderString(value: string | string[] | undefined): string | undefined {
+  if (typeof value === 'string') return value;
+  if (Array.isArray(value)) return value[0];
+  return undefined;
+}
+
+function safeCompareHex(expectedHex: string, actualHex: string): boolean {
+  const expectedBuffer = Buffer.from(expectedHex, 'hex');
+  const actualBuffer = Buffer.from(actualHex, 'hex');
+  if (expectedBuffer.length !== actualBuffer.length) return false;
+  return crypto.timingSafeEqual(expectedBuffer, actualBuffer);
+}
+
+function resolveRequestIps(request: any): string[] {
+  const ips = new Set<string>();
+  if (typeof request.ip === 'string' && request.ip.trim()) {
+    ips.add(request.ip.trim());
+  }
+  const forwardedFor = getHeaderString(request.headers['x-forwarded-for']);
+  if (forwardedFor) {
+    forwardedFor
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .forEach((ip) => ips.add(ip));
+  }
+  const realIp = getHeaderString(request.headers['x-real-ip']);
+  if (realIp?.trim()) {
+    ips.add(realIp.trim());
+  }
+  return Array.from(ips);
+}
+
 export default async function paymentRoutes(fastify: FastifyInstance) {
   /**
    * QPay payment callback webhook
@@ -36,6 +70,11 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
   }, async (request, reply) => {
     const body = ((request.body ?? {}) as Record<string, unknown>);
     const query = ((request.query ?? {}) as Record<string, unknown>);
+    const callbackSecret = process.env.QPAY_CALLBACK_SECRET?.trim();
+    const callbackAllowlist = (process.env.QPAY_CALLBACK_ALLOWED_IPS ?? '')
+      .split(',')
+      .map((ip) => ip.trim())
+      .filter(Boolean);
 
     const paymentId = getFirstString(
       body.payment_id,
@@ -60,6 +99,37 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
 
     if (!paymentId) {
       return reply.code(400).send({ error: 'payment_id is required' });
+    }
+
+    if (callbackAllowlist.length > 0) {
+      const requestIps = resolveRequestIps(request as any);
+      const isAllowed = requestIps.some((ip) => callbackAllowlist.includes(ip));
+      if (!isAllowed) {
+        fastify.log.warn({ requestIps }, 'Blocked callback from non-allowlisted IP');
+        return reply.code(403).send({ error: 'Forbidden callback source' });
+      }
+    }
+
+    if (callbackSecret) {
+      const signature = getHeaderString(request.headers['x-qpay-signature'])?.trim().toLowerCase();
+      if (!signature || !/^[a-f0-9]{64}$/.test(signature)) {
+        return reply.code(401).send({ error: 'Invalid callback signature' });
+      }
+
+      const payload = JSON.stringify({
+        paymentId,
+        invoiceId: invoiceId ?? null,
+        orderId: orderId ?? null,
+      });
+      const expectedSignature = crypto
+        .createHmac('sha256', callbackSecret)
+        .update(payload)
+        .digest('hex');
+
+      if (!safeCompareHex(expectedSignature, signature)) {
+        fastify.log.warn({ paymentId }, 'Rejected callback with invalid signature');
+        return reply.code(401).send({ error: 'Invalid callback signature' });
+      }
     }
 
     fastify.log.info({ paymentId, invoiceId, orderId }, 'QPay callback received');
@@ -155,6 +225,34 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
       // 6. Verify payment against QPay API with Circuit Breaker (outside transaction)
       // At this point, result.order is guaranteed to be defined (isDuplicate=false)
       const paymentData = await qpayCircuitBreaker.getPayment(paymentId);
+
+      // 6a. SECURITY: Strict invoice binding — prevent payment replay attacks
+      const qpayInvoiceRef = getFirstString(
+        (paymentData as any)?.invoice_id,
+        (paymentData as any)?.sender_invoice_no,
+        (paymentData as any)?.rows?.[0]?.sender_invoice_no,
+        (paymentData as any)?.rows?.[0]?.invoice_id
+      );
+
+      if (qpayInvoiceRef && result.order!.qpayInvoiceId
+        && qpayInvoiceRef !== result.order!.qpayInvoiceId) {
+        fastify.log.error(
+          { paymentId, orderId: result.order!.id, expected: result.order!.qpayInvoiceId, got: qpayInvoiceRef },
+          'SECURITY: Invoice mismatch — possible payment replay attack'
+        );
+
+        await prisma.paymentWebhookLog.update({
+          where: { id: result.webhookLogId },
+          data: {
+            status: 'failed',
+            orderId: result.order!.id,
+            error: `Invoice mismatch: expected=${result.order!.qpayInvoiceId}, got=${qpayInvoiceRef}`,
+            processedAt: new Date()
+          }
+        });
+
+        return reply.code(400).send({ error: 'Invoice mismatch' });
+      }
 
       const externalStatus = getFirstString(
         (paymentData as any)?.payment_status,
@@ -323,6 +421,17 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
         if (paymentCheck.count > 0 && paymentCheck.rows[0].payment_status === 'PAID') {
           const payment = paymentCheck.rows[0];
 
+          // SECURITY: Strict invoice binding — verify payment belongs to this order
+          const verifyInvoiceRef = (payment as any).sender_invoice_no || (payment as any).invoice_id;
+          if (verifyInvoiceRef && order.qpayInvoiceId
+            && verifyInvoiceRef !== order.qpayInvoiceId) {
+            fastify.log.error(
+              { orderId, expected: order.qpayInvoiceId, got: verifyInvoiceRef },
+              'SECURITY: Invoice mismatch in manual verification'
+            );
+            return reply.code(400).send({ error: 'Invoice mismatch' });
+          }
+
           // Use transaction to prevent race condition with webhook
           const result = await prisma.$transaction(async (tx) => {
             // Re-check order status inside transaction
@@ -394,4 +503,3 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
     }
   );
 }
-

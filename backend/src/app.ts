@@ -34,6 +34,7 @@ import { adminPrintAreaRoutes } from './routes/admin/print-areas'; // Product wi
 import { adminSizeTierRoutes } from './routes/admin/size-tiers'; // Product wizard
 import { adminLayoutTemplateRoutes } from './routes/admin/layout-template'; // BLANKS layout authoring
 import { adminReprintRoutes } from './routes/admin/reprints'; // P3-05: Reprint queue
+import { adminSettingsRoutes } from './routes/admin/settings';
 import { publicProductRoutes } from './routes/products';
 import collectionsRoutes from './routes/collections';
 import pricingPublicRoutes from './routes/pricing-public';
@@ -112,19 +113,22 @@ app.register(swagger, {
   },
 });
 
-app.register(swaggerUi, {
-  routePrefix: '/docs',
-  uiConfig: {
-    docExpansion: 'list',
-    deepLinking: true,
-    displayRequestDuration: true,
-    filter: true,
-    showExtensions: true,
-    showCommonExtensions: true,
-  },
-  staticCSP: true,
-  transformStaticCSP: (header) => header,
-});
+// Only expose Swagger UI in development (LOW-001 security fix)
+if (isDevelopment) {
+  app.register(swaggerUi, {
+    routePrefix: '/docs',
+    uiConfig: {
+      docExpansion: 'list',
+      deepLinking: true,
+      displayRequestDuration: true,
+      filter: true,
+      showExtensions: true,
+      showCommonExtensions: true,
+    },
+    staticCSP: true,
+    transformStaticCSP: (header) => header,
+  });
+}
 
 // 1) Plugins
 const defaultAllowedOrigins = [
@@ -352,6 +356,7 @@ app.get('/csrf-token', {
 
 // Health check endpoint - detailed health status
 app.get('/health/details', {
+  preHandler: [adminGuard],
   schema: {
     description: 'Ð¡ÐµÑ€Ð²ÐµÑ€Ð¸Ð¹Ð½ ÑÑ€Ò¯Ò¯Ð» Ð¼ÑÐ½Ð´Ð¸Ð¹Ð½ Ð´ÑÐ»Ð³ÑÑ€ÑÐ½Ð³Ò¯Ð¹ ÑÑ‚Ð°Ñ‚ÑƒÑ',
     tags: ['Health'],
@@ -453,6 +458,7 @@ app.get('/ready', {
 
 // Metrics endpoint - for monitoring systems
 app.get('/metrics', {
+  preHandler: [adminGuard],
   schema: {
     description: 'Ð¡ÐµÑ€Ð²ÐµÑ€Ð¸Ð¹Ð½ Ð´ÑÐ»Ð³ÑÑ€ÑÐ½Ð³Ò¯Ð¹ Ð¼ÐµÑ‚Ñ€Ð¸Ðº Ð¼ÑÐ´ÑÑÐ»ÑÐ» (Ñ…ÑÐ½Ð°Ð»Ñ‚, ÑˆÐ¸Ð½Ð¶Ð¸Ð»Ð³ÑÑÐ½Ð´)',
     tags: ['Health'],
@@ -520,6 +526,7 @@ app.get('/metrics', {
 
 // Circuit Breaker Status endpoint - monitor QPay circuit breakers
 app.get('/circuit-breakers', {
+  preHandler: [adminGuard],
   schema: {
     description: 'QPay Circuit Breaker-Ð¸Ð¹Ð½ ÑÑ‚Ð°Ñ‚ÑƒÑ Ñ…ÑÐ½Ð°Ñ…',
     tags: ['Health'],
@@ -583,6 +590,7 @@ app.register(adminUploadsRoutes, { prefix: '/api/admin/uploads' }); // P2-07: Up
 app.register(adminPrintAreaRoutes, { prefix: '/api/admin/print-areas' }); // Product wizard
 app.register(adminSizeTierRoutes, { prefix: '/api/admin/size-tiers' }); // Product wizard
 app.register(adminLayoutTemplateRoutes, { prefix: '/api/admin/products' }); // BLANKS layout template
+app.register(adminSettingsRoutes, { prefix: '/api/admin' }); // App settings (upload validation)
 app.register(builderRoutes, { prefix: '/api/builder/projects' }); // P3-02: Builder API
 app.register(adminReprintRoutes); // P3-05: Reprint queue
 app.register(testEmailRoutes);
@@ -639,9 +647,9 @@ const start = async () => {
 
     // Start builder preview worker (Phase 3 P3-02)
     startBuilderPreviewWorker({
-      enabled:        env.WORKER_BUILDER_PREVIEW_ENABLED,
+      enabled: env.WORKER_BUILDER_PREVIEW_ENABLED,
       pollIntervalMs: env.WORKER_BUILDER_PREVIEW_POLL_INTERVAL_MS,
-      batchSize:      env.WORKER_BUILDER_PREVIEW_BATCH_SIZE,
+      batchSize: env.WORKER_BUILDER_PREVIEW_BATCH_SIZE,
       maxConcurrency: env.WORKER_BUILDER_PREVIEW_MAX_CONCURRENCY,
     });
   } catch (err) {

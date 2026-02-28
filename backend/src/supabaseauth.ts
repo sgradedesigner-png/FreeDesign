@@ -76,7 +76,7 @@ export async function adminGuard(req: FastifyRequest, reply: FastifyReply) {
     return; // ok
   } catch (err: any) {
     logger.error({ context: 'adminGuard', error: err.message, details: err }, 'Authentication failed');
-    return reply.status(401).send({ message: 'Authentication failed', error: err.message });
+    return reply.status(401).send({ message: 'Authentication failed' });
   }
 }
 

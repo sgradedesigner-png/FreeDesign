@@ -6,6 +6,7 @@
 import { logger } from '../lib/logger';
 import { getUploadAssetMetadata } from '../lib/cloudinary';
 import { ProductFamily } from '@prisma/client';
+import { settingsService, type UploadFamilyKey } from './settings.service';
 
 export type ValidationConstraints = {
   allowedMimeTypes: Set<string>;
@@ -22,43 +23,9 @@ export type ValidationResult = {
   metadata?: Record<string, any>;
 };
 
-/**
- * Upload family validation constraints
- * Matches the constraints defined in uploads.ts
- * Uses ProductFamily enum values (uppercase with underscores)
- */
-export const UPLOAD_FAMILY_CONSTRAINTS: Record<string, ValidationConstraints> = {
-  GANG_UPLOAD: {
-    allowedMimeTypes: new Set(['image/png', 'image/jpeg', 'image/jpg', 'application/pdf']),
-    maxBytes: 50 * 1024 * 1024, // 50MB
-    minDpi: 150,
-    minWidthPx: 1200,
-  },
-  UV_GANG_UPLOAD: {
-    allowedMimeTypes: new Set(['image/png', 'image/jpeg', 'image/jpg', 'application/pdf']),
-    maxBytes: 50 * 1024 * 1024, // 50MB
-    minDpi: 150,
-    minWidthPx: 1200,
-  },
-  BY_SIZE: {
-    allowedMimeTypes: new Set(['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml']),
-    maxBytes: 20 * 1024 * 1024, // 20MB
-    minWidthPx: 800,
-    minHeightPx: 800,
-  },
-  UV_BY_SIZE: {
-    allowedMimeTypes: new Set(['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml']),
-    maxBytes: 20 * 1024 * 1024, // 20MB
-    minWidthPx: 800,
-    minHeightPx: 800,
-  },
-  BLANKS: {
-    allowedMimeTypes: new Set(['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml']),
-    maxBytes: 20 * 1024 * 1024, // 20MB
-    minWidthPx: 800,
-    minHeightPx: 800,
-  },
-};
+function normalizeFamily(family: ProductFamily): UploadFamilyKey {
+  return family.toLowerCase() as UploadFamilyKey;
+}
 
 /**
  * Validate an upload asset against its family constraints
@@ -85,12 +52,29 @@ export async function validateUploadAsset(params: {
       };
     }
 
-    const constraints = UPLOAD_FAMILY_CONSTRAINTS[uploadFamily];
-    if (!constraints) {
+    const globalValidationEnabled = await settingsService.getGlobalValidationEnabled();
+    if (!globalValidationEnabled) {
       return {
-        passed: false,
-        errorCode: 'INVALID_UPLOAD_FAMILY',
-        errorMessage: `Unknown upload family: ${uploadFamily}`,
+        passed: true,
+        metadata: {
+          validatedAt: new Date().toISOString(),
+          skipped: true,
+          reason: 'global_validation_disabled',
+          uploadFamily,
+        },
+      };
+    }
+
+    const constraints = await settingsService.getUploadConstraints(normalizeFamily(uploadFamily));
+    if (!constraints.enabled) {
+      return {
+        passed: true,
+        metadata: {
+          validatedAt: new Date().toISOString(),
+          skipped: true,
+          reason: 'family_validation_disabled',
+          uploadFamily,
+        },
       };
     }
 

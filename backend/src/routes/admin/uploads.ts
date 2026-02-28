@@ -173,7 +173,7 @@ export const adminUploadsRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post('/:id/moderate', async (request, reply) => {
     const { id } = request.params as { id: string };
     const body = moderationActionSchema.parse(request.body);
-    const actorId = (request as any).user?.id;
+    const actorId = (request as any).user?.sub ?? (request as any).user?.id;
 
     if (!actorId) {
       throw new ValidationError('Actor ID required');

@@ -15,6 +15,7 @@ import {
   Mail,
   ShieldCheck,
   Printer,
+  Upload,
   X,
 } from 'lucide-react';
 
@@ -27,6 +28,7 @@ const menuItems = [
   { path: '/production', icon: Factory, labelKey: 'nav.production' },
   { path: '/reprints', icon: Printer, labelKey: 'nav.reprints' },
   { path: '/moderation', icon: ShieldCheck, labelKey: 'nav.moderation' },
+  { path: '/upload-settings', icon: Upload, labelKey: 'nav.uploadSettings' },
   { path: '/pricing', icon: BadgeDollarSign, labelKey: 'nav.pricing' },
   { path: '/print-areas', icon: Crop, labelKey: 'nav.printAreas' },
   { path: '/size-tiers', icon: Ruler, labelKey: 'nav.sizeTiers' },

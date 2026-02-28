@@ -16,6 +16,7 @@ import PricingRulesPage from './pages/PricingRulesPage';
 import PrintAreasPage from './pages/PrintAreasPage';
 import SizeTiersPage from './pages/SizeTiersPage';
 import UploadModerationPage from './pages/UploadModerationPage';
+import UploadValidationSettingsPage from './pages/UploadValidationSettingsPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AdminLayout } from './components/layout/AdminLayout';
 import { useAuth } from './auth/AuthContext';
@@ -58,6 +59,7 @@ export default function App() {
         <Route path="/print-areas" element={<PrintAreasPage />} />
         <Route path="/size-tiers" element={<SizeTiersPage />} />
         <Route path="/moderation" element={<UploadModerationPage />} />
+        <Route path="/upload-settings" element={<UploadValidationSettingsPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/email-test" element={<EmailTestPage />} />
         {/* More routes will be added here */}

@@ -2,6 +2,44 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
+const uploadValidationSeedSettings: Array<{
+  key: string;
+  value: unknown;
+  category: string;
+}> = [
+  { key: 'upload.validation.enabled', value: true, category: 'upload_validation' },
+
+  { key: 'upload.gang_upload.enabled', value: true, category: 'upload_validation' },
+  { key: 'upload.gang_upload.maxBytes', value: 50 * 1024 * 1024, category: 'upload_validation' },
+  { key: 'upload.gang_upload.minDpi', value: 150, category: 'upload_validation' },
+  { key: 'upload.gang_upload.minWidthPx', value: 1200, category: 'upload_validation' },
+  { key: 'upload.gang_upload.allowedTypes', value: ['image/png', 'image/jpeg', 'image/jpg', 'application/pdf'], category: 'upload_validation' },
+
+  { key: 'upload.uv_gang_upload.enabled', value: true, category: 'upload_validation' },
+  { key: 'upload.uv_gang_upload.maxBytes', value: 50 * 1024 * 1024, category: 'upload_validation' },
+  { key: 'upload.uv_gang_upload.minDpi', value: 150, category: 'upload_validation' },
+  { key: 'upload.uv_gang_upload.minWidthPx', value: 1200, category: 'upload_validation' },
+  { key: 'upload.uv_gang_upload.allowedTypes', value: ['image/png', 'image/jpeg', 'image/jpg', 'application/pdf'], category: 'upload_validation' },
+
+  { key: 'upload.by_size.enabled', value: true, category: 'upload_validation' },
+  { key: 'upload.by_size.maxBytes', value: 20 * 1024 * 1024, category: 'upload_validation' },
+  { key: 'upload.by_size.minWidthPx', value: 800, category: 'upload_validation' },
+  { key: 'upload.by_size.minHeightPx', value: 800, category: 'upload_validation' },
+  { key: 'upload.by_size.allowedTypes', value: ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml'], category: 'upload_validation' },
+
+  { key: 'upload.uv_by_size.enabled', value: true, category: 'upload_validation' },
+  { key: 'upload.uv_by_size.maxBytes', value: 20 * 1024 * 1024, category: 'upload_validation' },
+  { key: 'upload.uv_by_size.minWidthPx', value: 800, category: 'upload_validation' },
+  { key: 'upload.uv_by_size.minHeightPx', value: 800, category: 'upload_validation' },
+  { key: 'upload.uv_by_size.allowedTypes', value: ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml'], category: 'upload_validation' },
+
+  { key: 'upload.blanks.enabled', value: true, category: 'upload_validation' },
+  { key: 'upload.blanks.maxBytes', value: 20 * 1024 * 1024, category: 'upload_validation' },
+  { key: 'upload.blanks.minWidthPx', value: 800, category: 'upload_validation' },
+  { key: 'upload.blanks.minHeightPx', value: 800, category: 'upload_validation' },
+  { key: 'upload.blanks.allowedTypes', value: ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml'], category: 'upload_validation' },
+];
+
 async function main() {
   // Note: Supabase auth handles passwords, not Prisma.
   // The user must be created in Supabase Auth first with email: admin@ecommerce.com.
@@ -242,10 +280,22 @@ async function main() {
     ],
   });
 
+  for (const setting of uploadValidationSeedSettings) {
+    await (prisma as any).appSetting.upsert({
+      where: { key: setting.key },
+      update: {
+        value: setting.value,
+        category: setting.category,
+      },
+      create: setting,
+    });
+  }
+
   console.log(`Admin profile seeded: ${profile.email}`);
   console.log(`Print areas seeded: ${printAreas.length}`);
   console.log(`Print size tiers seeded: ${printSizeTiers.length}`);
   console.log(`Pricing rules seeded: ${pricingRuleNames.length}`);
+  console.log(`Upload validation settings seeded: ${uploadValidationSeedSettings.length}`);
 }
 
 main()
