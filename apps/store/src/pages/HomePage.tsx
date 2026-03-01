@@ -293,19 +293,19 @@ export default function HomePage() {
       <section className="relative max-w-7xl mx-auto px-6 py-20 overflow-hidden">
         <div className="relative z-10 rounded-3xl bg-gradient-to-br from-emerald-500 via-cyan-500 to-purple-500 p-12 md:p-16 text-center">
           <h2 className="text-3xl md:text-5xl font-heading font-extrabold text-white mb-6">
-            {language === 'mn' ? 'Таны хайж байсан бараа энд байна' : 'Ready to Find Your Perfect Product?'}
+            {language === 'mn' ? 'Таны хайж байсан DTF Printing энд байна' : 'Ready for Premium DTF Printing?'}
           </h2>
           <p className="text-white/90 text-lg mb-8 max-w-2xl mx-auto">
             {language === 'mn'
-              ? 'Шилдэг Солонгос брэндүүдийн хамгийн сүүлийн үеийн бүтээгдэхүүнүүдийг нэг газраас олоорой.'
-              : 'Explore our full collection of premium Korean products and find exactly what you need.'}
+              ? 'DTF хэвлэлийн шилдэг шийдлүүдийг нэг дороос захиалж, брэндээ дараагийн түвшинд гаргаарай.'
+              : 'Order high-quality DTF printing solutions in one place and bring your brand to the next level.'}
           </p>
 
           <Link
             to="/products"
             className="inline-flex items-center gap-2 px-10 py-5 bg-white text-slate-900 rounded-full font-bold text-lg shadow-2xl hover:shadow-3xl hover:scale-105 transition-all duration-300"
           >
-            {language === 'mn' ? 'Бүтээгдэхүүн үзэх' : 'Browse Catalog'}
+            {language === 'mn' ? 'DTF бүтээгдэхүүн үзэх' : 'Browse DTF Catalog'}
             <ArrowRight size={20} />
           </Link>
         </div>
