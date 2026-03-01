@@ -6,6 +6,7 @@ import { mockupPreviewSchema, priceQuoteSchema } from '../schemas/customization.
 import { uploadCustomizationAsset } from '../services/asset.service';
 import { buildCustomizationMockupPreviewUrl } from '../services/mockup.service';
 import { calculatePriceQuote } from '../services/pricing.service';
+import { settingsService } from '../services/settings.service';
 import { AppError, BadRequestError } from '../utils/errors';
 import { validateData } from '../utils/validation';
 import { z } from 'zod';
@@ -15,6 +16,16 @@ const customizationOptionsQuerySchema = z.object({
 });
 
 export default async function customizationRoutes(app: FastifyInstance) {
+  app.get('/api/customization/ui-settings', async (_request, reply) => {
+    try {
+      const sizeFinderEnabled = await settingsService.getSizeFinderEnabled();
+      return reply.send({ sizeFinderEnabled });
+    } catch (error) {
+      logger.error({ error }, 'Failed to load customization UI settings');
+      return reply.code(500).send({ error: 'Failed to load customization UI settings' });
+    }
+  });
+
   app.get('/api/customization/options', async (request, reply) => {
     const validation = validateData(customizationOptionsQuerySchema, request.query, reply);
     if (!validation.success) {
@@ -32,6 +43,7 @@ export default async function customizationRoutes(app: FastifyInstance) {
             select: {
               id: true,
               isCustomizable: true,
+              productFamily: true,
               metadata: true,
               printAreas: {
                 select: {
@@ -134,10 +146,17 @@ export default async function customizationRoutes(app: FastifyInstance) {
           isDefault: false,
         }));
 
+      const mockupPreviewEnabled = await settingsService.getMockupPreviewEnabled(
+        String(variant.product.productFamily)
+      );
+      const showPlacementCoordinates = await settingsService.getPlacementCoordinatesEnabled();
+
       return reply.send({
         variantId: variant.id,
         productId: variant.product.id,
         isCustomizable: variant.product.isCustomizable,
+        mockupPreviewEnabled,
+        showPlacementCoordinates,
         layoutTemplate: (variant.product.metadata && typeof variant.product.metadata === 'object')
           ? ((variant.product.metadata as Record<string, unknown>).customizationTemplateV1 ?? null)
           : null,

@@ -91,6 +91,7 @@ export default function ProductInfo({ product, onVariantChange }: ProductInfoPro
   const [selectedSize, setSelectedSize] = useState(selectedVariant.sizes?.[0] ?? '');
   const [quantity, setQuantity] = useState(1);
   const [isSizeFinderOpen, setIsSizeFinderOpen] = useState(false);
+  const [sizeFinderEnabled, setSizeFinderEnabled] = useState(true);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const [recommendedSelection, setRecommendedSelection] = useState<{
@@ -151,6 +152,30 @@ export default function ProductInfo({ product, onVariantChange }: ProductInfoPro
   useEffect(() => {
     setIsDescriptionExpanded(false);
   }, [product.id]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadUiSettings = async () => {
+      try {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/customization/ui-settings`);
+        if (!response.ok) return;
+
+        const payload = (await response.json()) as { sizeFinderEnabled?: boolean };
+        if (isMounted) {
+          setSizeFinderEnabled(payload.sizeFinderEnabled !== false);
+        }
+      } catch {
+        // Fallback: keep enabled by default when settings endpoint is unavailable.
+      }
+    };
+
+    void loadUiSettings();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleQuantityDecrease = () => {
     if (quantity > 1) setQuantity(quantity - 1);
@@ -387,15 +412,17 @@ export default function ProductInfo({ product, onVariantChange }: ProductInfoPro
           <div role="group" aria-labelledby="size-label">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <label id="size-label" className="text-sm font-bold text-foreground">Хэмжээ</label>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsSizeFinderOpen(true)}
-                className="text-xs font-semibold"
-              >
-                📏 Миний хэмжээг ол
-              </Button>
+              {sizeFinderEnabled ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsSizeFinderOpen(true)}
+                  className="text-xs font-semibold"
+                >
+                  📏 Миний хэмжээг ол
+                </Button>
+              ) : null}
             </div>
             {recommendedSelection && (
               <div className="mt-2 flex flex-wrap items-center gap-2">

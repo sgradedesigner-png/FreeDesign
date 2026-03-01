@@ -364,7 +364,11 @@ function CheckoutPage() {
 
     } catch (error: any) {
       logger.error('Order creation error:', error)
-      const errorMsg = error.message || (language === 'en' ? 'Failed to create order' : 'Захиалга үүсгэхэд алдаа гарлаа')
+      const rawErrorMsg = error.message || (language === 'en' ? 'Failed to create order' : 'Захиалга үүсгэхэд алдаа гарлаа')
+      const looksLikeMojibake = /Ð|Ñ|Ò|â|Ã/.test(rawErrorMsg)
+      const errorMsg = looksLikeMojibake
+        ? (language === 'en' ? 'Failed to create order' : 'Захиалга үүсгэхэд алдаа гарлаа')
+        : rawErrorMsg
       setCheckoutError(errorMsg)
       toast.error(errorMsg)
     } finally {

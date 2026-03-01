@@ -17,6 +17,7 @@ export async function adminStatsRoutes(app: FastifyInstance) {
       categoryDistribution,
       recentProducts,
       inventoryValue,
+      revenueTrend,
     ] = await Promise.all([
       // Total products count
       prisma.product.count(),
@@ -81,6 +82,26 @@ export async function adminStatsRoutes(app: FastifyInstance) {
         `;
         return Number(rawResult[0]?.total || 0);
       }),
+
+      // Last 7 days paid revenue trend (including today)
+      prisma.$queryRaw<Array<{ date: string; revenue: number }>>`
+        WITH days AS (
+          SELECT generate_series(
+            (CURRENT_DATE - INTERVAL '6 days')::date,
+            CURRENT_DATE::date,
+            INTERVAL '1 day'
+          )::date AS day
+        )
+        SELECT
+          to_char(days.day, 'Mon DD') AS date,
+          COALESCE(SUM(o.total), 0)::double precision AS revenue
+        FROM days
+        LEFT JOIN orders o
+          ON DATE(COALESCE(o."paymentDate", o."createdAt")) = days.day
+         AND o."paymentStatus" = 'PAID'
+        GROUP BY days.day
+        ORDER BY days.day
+      `,
     ]);
 
     logger.info({ productsCount, categoriesCount, inventoryValue }, '[Stats] Statistics fetched successfully');
@@ -89,6 +110,7 @@ export async function adminStatsRoutes(app: FastifyInstance) {
       productsCount,
       categoriesCount,
       totalRevenue: inventoryValue,
+      revenueTrend,
       categoryDistribution,
       recentProducts,
     };

@@ -153,6 +153,16 @@ export const settingsService = {
     return toBoolean(values.get('upload.validation.enabled'), true);
   },
 
+  async getPlacementCoordinatesEnabled(): Promise<boolean> {
+    const values = await loadCategorySettings('upload_validation');
+    return toBoolean(values.get('upload.debug.showPlacementCoordinates'), true);
+  },
+
+  async getSizeFinderEnabled(): Promise<boolean> {
+    const values = await loadCategorySettings('upload_validation');
+    return toBoolean(values.get('upload.ui.sizeFinderEnabled'), true);
+  },
+
   async getUploadConstraints(familyInput: string): Promise<UploadConstraints> {
     const family = normalizeUploadFamily(familyInput);
     if (!family) {
@@ -203,6 +213,13 @@ export const settingsService = {
     return row as { key: string; value: unknown; category: string };
   },
 
+  async getMockupPreviewEnabled(familyInput: string): Promise<boolean> {
+    const family = normalizeUploadFamily(familyInput);
+    if (!family) return true; // default: show preview
+    const values = await loadCategorySettings('upload_validation');
+    return toBoolean(values.get(buildUploadKey(family, 'mockupPreviewEnabled')), true);
+  },
+
   async updateSettingsBatch(
     items: Array<{ key: string; value: unknown }>,
     updatedBy?: string
@@ -240,4 +257,3 @@ export const settingsService = {
     return updated;
   },
 };
-

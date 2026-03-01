@@ -68,6 +68,8 @@ interface Props {
   onReady?: (payload: KonvaCanvasReadyPayload) => void;
   /** Emits loaded garment image natural dimensions for active view */
   onImageMetaChange?: (meta: { naturalWidth: number; naturalHeight: number }) => void;
+  /** Show ghost rect coordinate/size debug labels (TL/TR/BL/BR, W/H) */
+  showGhostCoordinates?: boolean;
   /** Layer 2 design objects */
   children?: ReactNode;
 }
@@ -86,6 +88,7 @@ export default function KonvaCustomizeCanvas({
   snapCenter = null,
   onReady,
   onImageMetaChange,
+  showGhostCoordinates = true,
   children,
 }: Props) {
   const stageRef = useRef<Konva.Stage>(null);
@@ -267,57 +270,61 @@ export default function KonvaCustomizeCanvas({
                 }}
               />
 
-              {/* Corner coordinates */}
-              <Text
-                x={ghostRect.x + 4}
-                y={ghostRect.y + 4}
-                text={`TL (${Math.round(ghostRect.x)}, ${Math.round(ghostRect.y)})`}
-                fontSize={10}
-                fill="#facc15"
-                listening={false}
-              />
-              <Text
-                x={ghostRect.x + ghostRect.width - 92}
-                y={ghostRect.y + 4}
-                text={`TR (${Math.round(ghostRect.x + ghostRect.width)}, ${Math.round(ghostRect.y)})`}
-                fontSize={10}
-                fill="#facc15"
-                listening={false}
-              />
-              <Text
-                x={ghostRect.x + 4}
-                y={ghostRect.y + ghostRect.height - 14}
-                text={`BL (${Math.round(ghostRect.x)}, ${Math.round(ghostRect.y + ghostRect.height)})`}
-                fontSize={10}
-                fill="#facc15"
-                listening={false}
-              />
-              <Text
-                x={ghostRect.x + ghostRect.width - 100}
-                y={ghostRect.y + ghostRect.height - 14}
-                text={`BR (${Math.round(ghostRect.x + ghostRect.width)}, ${Math.round(ghostRect.y + ghostRect.height)})`}
-                fontSize={10}
-                fill="#facc15"
-                listening={false}
-              />
+              {showGhostCoordinates && (
+                <>
+                  {/* Corner coordinates */}
+                  <Text
+                    x={ghostRect.x + 4}
+                    y={ghostRect.y + 4}
+                    text={`TL (${Math.round(ghostRect.x)}, ${Math.round(ghostRect.y)})`}
+                    fontSize={10}
+                    fill="#facc15"
+                    listening={false}
+                  />
+                  <Text
+                    x={ghostRect.x + ghostRect.width - 92}
+                    y={ghostRect.y + 4}
+                    text={`TR (${Math.round(ghostRect.x + ghostRect.width)}, ${Math.round(ghostRect.y)})`}
+                    fontSize={10}
+                    fill="#facc15"
+                    listening={false}
+                  />
+                  <Text
+                    x={ghostRect.x + 4}
+                    y={ghostRect.y + ghostRect.height - 14}
+                    text={`BL (${Math.round(ghostRect.x)}, ${Math.round(ghostRect.y + ghostRect.height)})`}
+                    fontSize={10}
+                    fill="#facc15"
+                    listening={false}
+                  />
+                  <Text
+                    x={ghostRect.x + ghostRect.width - 100}
+                    y={ghostRect.y + ghostRect.height - 14}
+                    text={`BR (${Math.round(ghostRect.x + ghostRect.width)}, ${Math.round(ghostRect.y + ghostRect.height)})`}
+                    fontSize={10}
+                    fill="#facc15"
+                    listening={false}
+                  />
 
-              {/* Width/height readout */}
-              <Text
-                x={ghostRect.x + ghostRect.width / 2 - 48}
-                y={Math.max(0, ghostRect.y - 14)}
-                text={`W: ${Math.round(ghostRect.width)}px`}
-                fontSize={10}
-                fill="#0e7490"
-                listening={false}
-              />
-              <Text
-                x={ghostRect.x + ghostRect.width + 6}
-                y={ghostRect.y + ghostRect.height / 2 - 6}
-                text={`H: ${Math.round(ghostRect.height)}px`}
-                fontSize={10}
-                fill="#0e7490"
-                listening={false}
-              />
+                  {/* Width/height readout */}
+                  <Text
+                    x={ghostRect.x + ghostRect.width / 2 - 48}
+                    y={Math.max(0, ghostRect.y - 14)}
+                    text={`W: ${Math.round(ghostRect.width)}px`}
+                    fontSize={10}
+                    fill="#0e7490"
+                    listening={false}
+                  />
+                  <Text
+                    x={ghostRect.x + ghostRect.width + 6}
+                    y={ghostRect.y + ghostRect.height / 2 - 6}
+                    text={`H: ${Math.round(ghostRect.height)}px`}
+                    fontSize={10}
+                    fill="#0e7490"
+                    listening={false}
+                  />
+                </>
+              )}
 
               {ghostRectEditable && (
                 <>

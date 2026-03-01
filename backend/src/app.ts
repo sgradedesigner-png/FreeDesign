@@ -195,7 +195,7 @@ app.register(rateLimit, {
 
     return {
       error: 'Rate limit exceeded',
-      message: `Ð¥ÑÑ‚ Ð¾Ð»Ð¾Ð½ Ñ…Ò¯ÑÑÐ»Ñ‚ Ð¸Ð»Ð³ÑÑÑÑÐ½ Ð±Ð°Ð¹Ð½Ð°. ${context.after} ÑÐµÐºÑƒÐ½Ð´Ñ‹Ð½ Ð´Ð°Ñ€Ð°Ð° Ð´Ð°Ñ…Ð¸Ð½ Ð¾Ñ€Ð¾Ð»Ð´Ð¾Ð½Ð¾ ÑƒÑƒ.`,
+      message: `Too many requests. Please try again after ${context.after} seconds.`,
       retryAfter: context.after,
       statusCode: 429
     };
@@ -285,18 +285,18 @@ app.addHook('onSend', async (request, reply) => {
 // 2) Public routes
 app.get('/', {
   schema: {
-    description: 'API Ð°Ð½Ñ…Ð½Ñ‹ Ñ…ÑƒÑƒÐ´Ð°Ñ - Ð¡Ñ‚Ð°Ñ‚ÑƒÑ ÑˆÐ°Ð»Ð³Ð°Ñ…',
+    description: 'API root endpoint for basic status check',
     tags: ['Health'],
     response: {
       200: {
         type: 'object',
         properties: {
-          message: { type: 'string', example: 'eCommerce API is running correctly! ðŸš€' }
+          message: { type: 'string', example: 'eCommerce API is running correctly!' }
         }
       }
     }
   }
-}, async () => ({ message: 'eCommerce API is running correctly! ðŸš€' }));
+}, async () => ({ message: 'eCommerce API is running correctly!' }));
 
 app.get('/live', {
   schema: {
@@ -338,7 +338,7 @@ app.get('/health', {
 // CSRF token endpoint - Frontend can fetch this token before making state-changing requests
 app.get('/csrf-token', {
   schema: {
-    description: 'CSRF Ñ‚Ð¾ÐºÐµÐ½ Ð°Ð²Ð°Ñ… (Ð¡ÑƒÑƒÑ€ÑŒÐ»ÑƒÑƒÐ»ÑÐ°Ð½ cookie-Ð´ Ñ…Ð°Ð´Ð³Ð°Ð»Ð½Ð°)',
+    description: 'Get CSRF token (stored in signed cookie)',
     tags: ['Health'],
     response: {
       200: {

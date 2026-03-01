@@ -1,18 +1,60 @@
-<svg width="260" height="80" viewBox="0 -8 260 80" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="grad" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#34d399"/>
-      <stop offset="100%" stop-color="#059669"/>
-    </linearGradient>
-  </defs>
-  <!-- Bag icon -->
-  <rect x="0" y="0" width="64" height="64" rx="16" fill="url(#grad)"/>
-  <path d="M16 24 C16 14, 48 14, 48 24" stroke="#a7f3d0" stroke-width="4" fill="none" stroke-linecap="round"/>
-  <text x="32" y="36" text-anchor="middle" dominant-baseline="middle"
-        font-family="Inter, Arial, sans-serif" font-size="24" font-weight="700"
-        fill="white">KG</text>
-  <!-- Text -->
-  <text x="80" y="40" font-family="Inter, Arial, sans-serif"
-        font-size="28" font-weight="600" fill="#e5e7eb">Goods</text>
-  <line x1="80" y1="52" x2="180" y2="52" stroke="#10b981" stroke-width="4" stroke-linecap="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="320" viewBox="0 0 1200 320" fill="none" role="img" aria-label="FreeDesign DTF Printing (theme aware)">
+  <style>
+    :root { --base: #1B1F2A; --muted: rgba(27,31,42,0.12); }
+    @media (prefers-color-scheme: dark) {
+      :root { --base: #F5F7FF; --muted: rgba(245,247,255,0.14); }
+    }
+    .baseFill { fill: var(--base); }
+    .baseStroke { stroke: var(--base); }
+    .mutedStroke { stroke: var(--base); opacity: 0.12; }
+    @media (prefers-color-scheme: dark) {
+      .mutedStroke { opacity: 0.16; }
+      .subtitle { opacity: 0.82; }
+    }
+    .subtitle { fill: var(--base); opacity: 0.72; }
+  </style>
+
+  <!-- Mark -->
+  <g transform="translate(70,60)">
+    <!-- Ink droplet -->
+    <path class="baseFill" d="M90 12C90 12 140 74 140 120C140 152.137 114.137 178 82 178C49.863 178 24 152.137 24 120C24 74 74 12 74 12C78.4 6.6 85.6 6.6 90 12Z"/>
+    <!-- Print film (rounded square frame) -->
+    <rect class="baseStroke" x="0" y="0" width="180" height="200" rx="36" stroke-width="14"/>
+    <!-- Gradient strip (DTF vibe) -->
+    <defs>
+      <linearGradient id="g" x1="26" y1="160" x2="154" y2="60" gradientUnits="userSpaceOnUse">
+        <stop offset="0" stop-color="#00D4FF"/>
+        <stop offset="0.33" stop-color="#7C5CFF"/>
+        <stop offset="0.66" stop-color="#FF3D81"/>
+        <stop offset="1" stop-color="#FFB800"/>
+      </linearGradient>
+      <linearGradient id="g2" x1="6" y1="118" x2="170" y2="118" gradientUnits="userSpaceOnUse">
+        <stop offset="0" stop-color="#00D4FF"/>
+        <stop offset="0.33" stop-color="#7C5CFF"/>
+        <stop offset="0.66" stop-color="#FF3D81"/>
+        <stop offset="1" stop-color="#FFB800"/>
+      </linearGradient>
+    </defs>
+    <path d="M40 160C60 132 88 118 112 108C136 98 150 80 150 60" stroke="url(#g)" stroke-width="16" stroke-linecap="round"/>
+    <circle cx="50" cy="156" r="10" fill="#00D4FF"/>
+  </g>
+
+  <!-- Wordmark -->
+  <g transform="translate(300,92)">
+    <text x="0" y="90"
+          font-family="Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif"
+          font-size="96" font-weight="800" letter-spacing="-1.5" class="baseFill">
+      FreeDesign
+    </text>
+
+    <!-- Accent underline -->
+    <path class="mutedStroke" d="M6 118H420" stroke-width="10" stroke-linecap="round"/>
+    <path d="M6 118H170" stroke="url(#g2)" stroke-width="10" stroke-linecap="round"/>
+
+    <text x="0" y="160"
+          font-family="Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif"
+          font-size="34" font-weight="600" letter-spacing="2.5" class="subtitle">
+      DTF PRINTING
+    </text>
+  </g>
 </svg>

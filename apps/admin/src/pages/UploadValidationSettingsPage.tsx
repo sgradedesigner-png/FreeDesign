@@ -23,6 +23,7 @@ type SettingsResponse = {
 
 type FamilyFormState = {
   enabled: boolean;
+  mockupPreviewEnabled: boolean;
   maxBytes: number;
   minDpi: number;
   minWidthPx: number;
@@ -32,6 +33,8 @@ type FamilyFormState = {
 
 type UploadValidationFormState = {
   globalEnabled: boolean;
+  showPlacementCoordinates: boolean;
+  sizeFinderEnabled: boolean;
   families: Record<UploadFamily, FamilyFormState>;
 };
 
@@ -41,72 +44,77 @@ const FAMILY_DEFS: Array<{
   defaultValues: FamilyFormState;
   mimeOptions: string[];
 }> = [
-  {
-    key: 'gang_upload',
-    title: 'Gang Upload',
-    defaultValues: {
-      enabled: true,
-      maxBytes: 50 * 1024 * 1024,
-      minDpi: 150,
-      minWidthPx: 1200,
-      minHeightPx: 0,
-      allowedTypes: ['image/png', 'image/jpeg', 'image/jpg', 'application/pdf'],
+    {
+      key: 'gang_upload',
+      title: 'Gang Upload',
+      defaultValues: {
+        enabled: true,
+        mockupPreviewEnabled: true,
+        maxBytes: 50 * 1024 * 1024,
+        minDpi: 150,
+        minWidthPx: 1200,
+        minHeightPx: 0,
+        allowedTypes: ['image/png', 'image/jpeg', 'image/jpg', 'application/pdf'],
+      },
+      mimeOptions: ['image/png', 'image/jpeg', 'image/jpg', 'application/pdf'],
     },
-    mimeOptions: ['image/png', 'image/jpeg', 'image/jpg', 'application/pdf'],
-  },
-  {
-    key: 'uv_gang_upload',
-    title: 'UV Gang Upload',
-    defaultValues: {
-      enabled: true,
-      maxBytes: 50 * 1024 * 1024,
-      minDpi: 150,
-      minWidthPx: 1200,
-      minHeightPx: 0,
-      allowedTypes: ['image/png', 'image/jpeg', 'image/jpg', 'application/pdf'],
+    {
+      key: 'uv_gang_upload',
+      title: 'UV Gang Upload',
+      defaultValues: {
+        enabled: true,
+        mockupPreviewEnabled: true,
+        maxBytes: 50 * 1024 * 1024,
+        minDpi: 150,
+        minWidthPx: 1200,
+        minHeightPx: 0,
+        allowedTypes: ['image/png', 'image/jpeg', 'image/jpg', 'application/pdf'],
+      },
+      mimeOptions: ['image/png', 'image/jpeg', 'image/jpg', 'application/pdf'],
     },
-    mimeOptions: ['image/png', 'image/jpeg', 'image/jpg', 'application/pdf'],
-  },
-  {
-    key: 'by_size',
-    title: 'By Size',
-    defaultValues: {
-      enabled: true,
-      maxBytes: 20 * 1024 * 1024,
-      minDpi: 0,
-      minWidthPx: 800,
-      minHeightPx: 800,
-      allowedTypes: ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml'],
+    {
+      key: 'by_size',
+      title: 'By Size',
+      defaultValues: {
+        enabled: true,
+        mockupPreviewEnabled: true,
+        maxBytes: 20 * 1024 * 1024,
+        minDpi: 0,
+        minWidthPx: 800,
+        minHeightPx: 800,
+        allowedTypes: ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml'],
+      },
+      mimeOptions: ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml'],
     },
-    mimeOptions: ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml'],
-  },
-  {
-    key: 'uv_by_size',
-    title: 'UV By Size',
-    defaultValues: {
-      enabled: true,
-      maxBytes: 20 * 1024 * 1024,
-      minDpi: 0,
-      minWidthPx: 800,
-      minHeightPx: 800,
-      allowedTypes: ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml'],
+    {
+      key: 'uv_by_size',
+      title: 'UV By Size',
+      defaultValues: {
+        enabled: true,
+        mockupPreviewEnabled: true,
+        maxBytes: 20 * 1024 * 1024,
+        minDpi: 0,
+        minWidthPx: 800,
+        minHeightPx: 800,
+        allowedTypes: ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml'],
+      },
+      mimeOptions: ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml'],
     },
-    mimeOptions: ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml'],
-  },
-  {
-    key: 'blanks',
-    title: 'Blanks',
-    defaultValues: {
-      enabled: true,
-      maxBytes: 20 * 1024 * 1024,
-      minDpi: 0,
-      minWidthPx: 800,
-      minHeightPx: 800,
-      allowedTypes: ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml'],
+    {
+      key: 'blanks',
+      title: 'Blanks',
+      defaultValues: {
+        enabled: true,
+        mockupPreviewEnabled: true,
+        maxBytes: 20 * 1024 * 1024,
+        minDpi: 0,
+        minWidthPx: 800,
+        minHeightPx: 800,
+        allowedTypes: ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml'],
+      },
+      mimeOptions: ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml'],
     },
-    mimeOptions: ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml'],
-  },
-];
+  ];
 
 function toBoolean(value: unknown, fallback: boolean): boolean {
   if (typeof value === 'boolean') return value;
@@ -143,6 +151,7 @@ function buildInitialState(settings: SettingsResponse['settings']): UploadValida
     const { key, defaultValues } = familyDef;
     families[key] = {
       enabled: toBoolean(map.get(`upload.${key}.enabled`), defaultValues.enabled),
+      mockupPreviewEnabled: toBoolean(map.get(`upload.${key}.mockupPreviewEnabled`), defaultValues.mockupPreviewEnabled),
       maxBytes: toNumber(map.get(`upload.${key}.maxBytes`), defaultValues.maxBytes),
       minDpi: toNumber(map.get(`upload.${key}.minDpi`), defaultValues.minDpi),
       minWidthPx: toNumber(map.get(`upload.${key}.minWidthPx`), defaultValues.minWidthPx),
@@ -153,6 +162,8 @@ function buildInitialState(settings: SettingsResponse['settings']): UploadValida
 
   return {
     globalEnabled: toBoolean(map.get('upload.validation.enabled'), true),
+    showPlacementCoordinates: toBoolean(map.get('upload.debug.showPlacementCoordinates'), true),
+    sizeFinderEnabled: toBoolean(map.get('upload.ui.sizeFinderEnabled'), true),
     families,
   };
 }
@@ -232,12 +243,15 @@ export default function UploadValidationSettingsPage() {
 
     const settings: Array<{ key: string; value: unknown }> = [
       { key: 'upload.validation.enabled', value: effectiveState.globalEnabled },
+      { key: 'upload.debug.showPlacementCoordinates', value: effectiveState.showPlacementCoordinates },
+      { key: 'upload.ui.sizeFinderEnabled', value: effectiveState.sizeFinderEnabled },
     ];
 
     for (const familyDef of FAMILY_DEFS) {
       const family = familyDef.key;
       const data = effectiveState.families[family];
       settings.push({ key: `upload.${family}.enabled`, value: data.enabled });
+      settings.push({ key: `upload.${family}.mockupPreviewEnabled`, value: data.mockupPreviewEnabled });
       settings.push({ key: `upload.${family}.maxBytes`, value: Math.max(1, Math.floor(data.maxBytes)) });
       settings.push({ key: `upload.${family}.minDpi`, value: Math.max(0, Math.floor(data.minDpi)) });
       settings.push({ key: `upload.${family}.minWidthPx`, value: Math.max(0, Math.floor(data.minWidthPx)) });
@@ -295,6 +309,30 @@ export default function UploadValidationSettingsPage() {
             />
             <Label>Enable upload validation globally</Label>
           </div>
+          <div className="mt-4 flex items-center gap-3">
+            <Checkbox
+              checked={effectiveState.showPlacementCoordinates}
+              onCheckedChange={(checked) =>
+                setFormState({
+                  ...effectiveState,
+                  showPlacementCoordinates: Boolean(checked),
+                })
+              }
+            />
+            <Label>{language === 'en' ? 'Show placement coordinates in Store' : 'Store дээр байрлалын координат харуулах'}</Label>
+          </div>
+          <div className="mt-4 flex items-center gap-3">
+            <Checkbox
+              checked={effectiveState.sizeFinderEnabled}
+              onCheckedChange={(checked) =>
+                setFormState({
+                  ...effectiveState,
+                  sizeFinderEnabled: Boolean(checked),
+                })
+              }
+            />
+            <Label>{language === 'en' ? 'Enable "Find my size" in Store PDP' : 'Store PDP дээр "Миний хэмжээг ол" харуулах'}</Label>
+          </div>
         </CardContent>
       </Card>
 
@@ -314,6 +352,19 @@ export default function UploadValidationSettingsPage() {
                   onCheckedChange={(checked) => setFamilyField(familyDef.key, 'enabled', Boolean(checked))}
                 />
                 <Label>Enabled</Label>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Checkbox
+                  checked={familyState.mockupPreviewEnabled}
+                  onCheckedChange={(checked) => setFamilyField(familyDef.key, 'mockupPreviewEnabled', Boolean(checked))}
+                />
+                <Label>{language === 'en' ? 'Mockup Preview' : 'Mockup Preview харуулах'}</Label>
+                <span className="text-xs text-muted-foreground">
+                  {language === 'en'
+                    ? 'Show server-rendered preview to customers'
+                    : 'Хэрэглэгчид хэвлэлтийн preview харуулах'}
+                </span>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -386,4 +437,3 @@ export default function UploadValidationSettingsPage() {
     </div>
   );
 }
-

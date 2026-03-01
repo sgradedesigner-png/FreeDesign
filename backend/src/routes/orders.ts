@@ -476,12 +476,12 @@ export default async function orderRoutes(fastify: FastifyInstance) {
 
         // For circuit open, throw PaymentServiceError
         if (isCircuitOpen) {
-          throw new PaymentServiceError('Ð¢Ó©Ð»Ð±Ó©Ñ€Ð¸Ð¹Ð½ ÑÐ¸ÑÑ‚ÐµÐ¼ Ñ‚Ò¯Ñ€ Ð°ÑˆÐ¸Ð³Ð»Ð°Ñ… Ð±Ð¾Ð»Ð¾Ð¼Ð¶Ð³Ò¯Ð¹ Ð±Ð°Ð¹Ð½Ð°. Ð¢Ð° Ð´Ð°Ñ€Ð°Ð° Ð´Ð°Ñ…Ð¸Ð½ Ð¾Ñ€Ð¾Ð»Ð´Ð¾Ð½Ð¾ ÑƒÑƒ.');
+          throw new PaymentServiceError('Төлбөрийн систем түр ажиллах боломжгүй байна. Та дараа дахин оролдоно уу.');
         }
 
         // For timeout, throw ServiceUnavailableError
         if (isTimeout) {
-          throw new ServiceUnavailableError('Ð¢Ó©Ð»Ð±Ó©Ñ€Ð¸Ð¹Ð½ ÑÐ¸ÑÑ‚ÐµÐ¼ Ñ…Ð°Ñ€Ð¸Ñƒ Ó©Ð³Ó©Ñ… Ñ…ÑƒÐ³Ð°Ñ†Ð°Ð° Ñ…ÑÑ‚ÑÑ€ÑÑÐ½. Ð¢Ð° Ð´Ð°Ñ€Ð°Ð° Ð´Ð°Ñ…Ð¸Ð½ Ð¾Ñ€Ð¾Ð»Ð´Ð¾Ð½Ð¾ ÑƒÑƒ.');
+          throw new ServiceUnavailableError('Төлбөрийн системийн хариу өгөх хугацаа хэтэрсэн. Та дараа дахин оролдоно уу.');
         }
 
         // Other errors
@@ -578,7 +578,7 @@ export default async function orderRoutes(fastify: FastifyInstance) {
       if (error.message && error.message.includes('timeout')) {
         return reply.code(408).send({
           error: 'Order creation timeout',
-          details: 'Ð—Ð°Ñ…Ð¸Ð°Ð»Ð³Ð° Ò¯Ò¯ÑÐ³ÑÑ… Ñ…ÑƒÐ³Ð°Ñ†Ð°Ð° Ñ…ÑÑ‚ÑÑ€ÑÑÐ½. Ð”Ð°Ñ…Ð¸Ð½ Ð¾Ñ€Ð¾Ð»Ð´Ð¾Ð½Ð¾ ÑƒÑƒ.'
+          details: 'Захиалга үүсгэх хугацаа хэтэрсэн. Дахин оролдоно уу.'
         });
       }
 
@@ -586,7 +586,7 @@ export default async function orderRoutes(fastify: FastifyInstance) {
       if (error.code === 'P1001' || error.code === 'P1002') {
         return reply.code(503).send({
           error: 'Database connection error',
-          details: 'Ó¨Ð³Ó©Ð³Ð´Ð»Ð¸Ð¹Ð½ ÑÐ°Ð½Ð´ Ñ…Ð¾Ð»Ð±Ð¾Ð³Ð´Ð¾Ð¶ Ñ‡Ð°Ð´ÑÐ°Ð½Ð³Ò¯Ð¹. Ð¢Ò¯Ñ€ Ñ…Ò¯Ð»ÑÑÐ³ÑÑÐ´ Ð´Ð°Ñ…Ð¸Ð½ Ð¾Ñ€Ð¾Ð»Ð´Ð¾Ð½Ð¾ ÑƒÑƒ.'
+          details: 'Өгөгдлийн сантай холбогдож чадсангүй. Түр хүлээгээд дахин оролдоно уу.'
         });
       }
 
@@ -705,7 +705,7 @@ export default async function orderRoutes(fastify: FastifyInstance) {
     });
 
     if (!order) {
-      throw new NotFoundError('Ð—Ð°Ñ…Ð¸Ð°Ð»Ð³Ð° Ð¾Ð»Ð´ÑÐ¾Ð½Ð³Ò¯Ð¹');
+      throw new NotFoundError('Order not found');
     }
 
     // Check and update if expired

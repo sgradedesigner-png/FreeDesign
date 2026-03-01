@@ -49,6 +49,8 @@ type CustomizationOptionsResponse = {
   variantId: string;
   productId: string;
   isCustomizable: boolean;
+  mockupPreviewEnabled?: boolean;
+  showPlacementCoordinates?: boolean;
   layoutTemplate?: {
     version: 1;
     views?: Partial<Record<ViewName, {
@@ -133,6 +135,8 @@ export default function CustomizePage() {
   const [sizeTiers, setSizeTiers] = useState<PrintSizeTierOption[]>([]);
   const [addOnOptions, setAddOnOptions] = useState<AddOnOption[]>([]);
   const [layoutTemplate, setLayoutTemplate] = useState<CustomizationOptionsResponse['layoutTemplate'] | undefined>(undefined);
+  const [mockupPreviewEnabled, setMockupPreviewEnabled] = useState(true);
+  const [showPlacementCoordinates, setShowPlacementCoordinates] = useState(true);
 
   const [selectedAreaIds, setSelectedAreaIds] = useState<string[]>([]);
   const [selectedSizeTierByArea, setSelectedSizeTierByArea] = useState<Record<string, string>>({});
@@ -630,6 +634,8 @@ export default function CustomizePage() {
         if (!res.ok) throw new Error(data?.error || t('Уншиж чадсангүй', 'Failed to load options'));
         const payload = data as CustomizationOptionsResponse;
         setIsCustomizable(Boolean(payload.isCustomizable));
+        setMockupPreviewEnabled(payload.mockupPreviewEnabled !== false);
+        setShowPlacementCoordinates(payload.showPlacementCoordinates !== false);
         setLayoutTemplate(payload.layoutTemplate ?? null);
         setPrintAreas(payload.printAreas ?? []);
         setSizeTiers(payload.printSizeTiers ?? []);
@@ -662,6 +668,8 @@ export default function CustomizePage() {
           return next;
         });
       } catch (err: any) {
+        setMockupPreviewEnabled(true);
+        setShowPlacementCoordinates(true);
         setLayoutTemplate(null);
         setOptionsError(err?.message || t('Алдаа гарлаа', 'Failed to load options'));
       } finally {
@@ -723,7 +731,7 @@ export default function CustomizePage() {
 
   // ── Mockup preview effect ──────────────────────────────────────────────────
   useEffect(() => {
-    if (!asset?.id || !selectedVariant?.id || !activeAreaId || !isCustomizable) {
+    if (!asset?.id || !selectedVariant?.id || !activeAreaId || !isCustomizable || !mockupPreviewEnabled) {
       setMockupPreviewLoading(false);
       setMockupPreviewError(null);
       setMockupPreviewUrl(null);
@@ -767,7 +775,7 @@ export default function CustomizePage() {
       })();
     }, 350);
     return () => { cancelled = true; window.clearTimeout(timer); controller.abort(); };
-  }, [asset?.id, selectedVariant?.id, activeAreaId, activeSizeTierId, activePlacement.offsetX, activePlacement.offsetY, activePlacement.rotation, activePlacement.scale, isCustomizable, activeView, viewImages, activePresetRectNorm, viewImageNaturalSize]);
+  }, [asset?.id, selectedVariant?.id, activeAreaId, activeSizeTierId, activePlacement.offsetX, activePlacement.offsetY, activePlacement.rotation, activePlacement.scale, isCustomizable, mockupPreviewEnabled, activeView, viewImages, activePresetRectNorm, viewImageNaturalSize]);
 
   // ── Auto-quote when selections complete ───────────────────────────────────
   const canRequestQuote =
@@ -1076,6 +1084,7 @@ export default function CustomizePage() {
                         ghostRect={designAttrs ? null : ghostRect}
                         ghostRectEditable={!designAttrs && Boolean(ghostRect)}
                         onGhostRectChange={setEditableGhostRect}
+                        showGhostCoordinates={showPlacementCoordinates}
                         isOutsideSafeArea={isOutsideSafeArea}
                       >
                         {designImage && designAttrs && naturalDesignSize && (
@@ -1130,6 +1139,13 @@ export default function CustomizePage() {
                 </div>
               )}
 
+              {mockupPreviewLoading && (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  {t('Mockup бэлтгэж байна...', 'Generating mockup preview...')}
+                </div>
+              )}
+
               {isOutsideSafeArea && (
                 <p className="text-xs font-medium text-red-600 dark:text-red-400">
                   {t('Дизайн хэвлэх талбайгаас гарч байна — дотогш зөөнө үү', 'Design extends outside the print area — move it inward')}
@@ -1146,7 +1162,7 @@ export default function CustomizePage() {
               )}
             </div>
 
-            {(mockupPreviewUrl || mockupPreviewLoading) && (
+            {mockupPreviewUrl && (
               <div className="mt-4 overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
                 <div className="border-b border-border px-4 py-3">
                   <h2 className="text-sm font-semibold text-foreground">{t('Урьдчилан харах', 'Preview')}</h2>

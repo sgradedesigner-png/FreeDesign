@@ -26,31 +26,38 @@ const batchBodySchema = z.object({
 
 const UPDATE_VALIDATION_KEYS = new Set([
   'upload.validation.enabled',
+  'upload.debug.showPlacementCoordinates',
+  'upload.ui.sizeFinderEnabled',
   'upload.gang_upload.enabled',
+  'upload.gang_upload.mockupPreviewEnabled',
   'upload.gang_upload.maxBytes',
   'upload.gang_upload.minDpi',
   'upload.gang_upload.minWidthPx',
   'upload.gang_upload.minHeightPx',
   'upload.gang_upload.allowedTypes',
   'upload.uv_gang_upload.enabled',
+  'upload.uv_gang_upload.mockupPreviewEnabled',
   'upload.uv_gang_upload.maxBytes',
   'upload.uv_gang_upload.minDpi',
   'upload.uv_gang_upload.minWidthPx',
   'upload.uv_gang_upload.minHeightPx',
   'upload.uv_gang_upload.allowedTypes',
   'upload.by_size.enabled',
+  'upload.by_size.mockupPreviewEnabled',
   'upload.by_size.maxBytes',
   'upload.by_size.minDpi',
   'upload.by_size.minWidthPx',
   'upload.by_size.minHeightPx',
   'upload.by_size.allowedTypes',
   'upload.uv_by_size.enabled',
+  'upload.uv_by_size.mockupPreviewEnabled',
   'upload.uv_by_size.maxBytes',
   'upload.uv_by_size.minDpi',
   'upload.uv_by_size.minWidthPx',
   'upload.uv_by_size.minHeightPx',
   'upload.uv_by_size.allowedTypes',
   'upload.blanks.enabled',
+  'upload.blanks.mockupPreviewEnabled',
   'upload.blanks.maxBytes',
   'upload.blanks.minDpi',
   'upload.blanks.minWidthPx',
@@ -95,4 +102,3 @@ export const adminSettingsRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.send({ settings: updated });
   });
 };
-
