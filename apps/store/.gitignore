@@ -27,6 +27,10 @@ build/
 .vite/
 *.tsbuildinfo
 
+# TypeScript build artifacts (prevent stale .js from shadowing .tsx)
+src/**/*.js
+src/**/*.jsx
+
 ############################
 # CACHE / TEMP
 ############################

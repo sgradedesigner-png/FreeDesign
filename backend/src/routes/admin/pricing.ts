@@ -303,4 +303,100 @@ export default async function adminPricingRoutes(app: FastifyInstance) {
       return reply.code(500).send({ error: 'Failed to deactivate pricing rule' });
     }
   });
+
+  // POST /admin/pricing/preview - Calculate pricing preview for product wizard
+  app.post('/admin/pricing/preview', {
+    preHandler: [adminGuard],
+  }, async (request, reply) => {
+    const schema = z.object({
+      sizeTierId: z.string().uuid(),
+      printAreaIds: z.array(z.string().uuid()),
+      quantity: z.number().int().min(1),
+      rushOrder: z.boolean(),
+    });
+
+    const validation = validateData(schema, request.body, reply);
+    if (!validation.success) return;
+
+    try {
+      const { sizeTierId, printAreaIds, quantity, rushOrder } = validation.data;
+
+      // Fetch print fee for the size tier
+      const printFee = await prisma.pricingRule.findFirst({
+        where: {
+          ruleType: 'PRINT_FEE',
+          printSizeTierId: sizeTierId,
+          isActive: true,
+        },
+        include: {
+          printSizeTier: true,
+        },
+      });
+
+      if (!printFee) {
+        return reply.code(404).send({ error: 'Print fee not found for this size tier' });
+      }
+
+      // Fetch extra side fee
+      const extraSideFee = await prisma.pricingRule.findFirst({
+        where: {
+          ruleType: 'EXTRA_SIDE',
+          isActive: true,
+        },
+      });
+
+      // Fetch rush fee
+      const rushFeeRule = await prisma.pricingRule.findFirst({
+        where: {
+          ruleType: 'RUSH_FEE',
+          isActive: true,
+        },
+      });
+
+      // Fetch quantity discount
+      const quantityDiscount = await prisma.pricingRule.findFirst({
+        where: {
+          ruleType: 'QUANTITY_DISCOUNT',
+          minQuantity: { lte: quantity },
+          OR: [
+            { maxQuantity: { gte: quantity } },
+            { maxQuantity: null },
+          ],
+          isActive: true,
+        },
+        orderBy: {
+          minQuantity: 'desc',
+        },
+      });
+
+      // Calculate totals
+      const baseFee = Number(printFee.price);
+      const extraSides = Math.max(0, printAreaIds.length - 1);
+      const extraSideFeeTotal = extraSides * Number(extraSideFee?.price || 0);
+      const rushFeeTotal = rushOrder ? Number(rushFeeRule?.price || 0) : 0;
+
+      const subtotal = (baseFee + extraSideFeeTotal) * quantity;
+      const discountPercent = quantityDiscount?.discountPercent || 0;
+      const discountAmount = (subtotal * discountPercent) / 100;
+      const total = subtotal - discountAmount + rushFeeTotal;
+
+      return reply.send({
+        sizeTierName: printFee.printSizeTier?.label || printFee.printSizeTier?.name || 'Unknown',
+        baseFee,
+        extraSideFee: Number(extraSideFee?.price || 0),
+        extraSides,
+        extraSideFeeTotal,
+        rushFee: Number(rushFeeRule?.price || 0),
+        rushFeeTotal,
+        quantity,
+        subtotal,
+        discountPercent,
+        discountAmount,
+        total,
+      });
+    } catch (error) {
+      logger.error({ error }, 'Failed to calculate pricing preview');
+      return reply.code(500).send({ error: 'Failed to calculate pricing preview' });
+    }
+  });
 }

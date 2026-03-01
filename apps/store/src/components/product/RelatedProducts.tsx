@@ -30,7 +30,7 @@ export default function RelatedProducts({ currentSlug }: { currentSlug?: string 
   return (
     <div className="mt-20">
       <h2 className="text-2xl font-heading font-bold mb-8 text-foreground">
-        Ð¢Ð°Ð½Ð´ Ñ‚Ð°Ð°Ð»Ð°Ð³Ð´Ð°Ð¶ Ð¼Ð°Ð³Ð°Ð´Ð³Ò¯Ð¹
+        Танд таалагдаж магадгүй
       </h2>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
@@ -62,12 +62,12 @@ export default function RelatedProducts({ currentSlug }: { currentSlug?: string 
 
                 {product.originalPrice && (
                   <span className="absolute top-2 right-2 bg-destructive text-white text-[10px] font-bold px-2 py-1 rounded">
-                    Ð¥Ð¯ÐœÐ”Ð ÐÐ›
+                    ХЯМДРАЛ
                   </span>
                 )}
                 {product.is_new && (
                   <span className="absolute top-2 left-2 bg-success text-white text-[10px] font-bold px-2 py-1 rounded">
-                    Ð¨Ð˜ÐÐ­
+                    ШИНЭ
                   </span>
                 )}
               </div>
@@ -77,7 +77,7 @@ export default function RelatedProducts({ currentSlug }: { currentSlug?: string 
                   {product.name}
                 </h3>
                 <div className="flex items-center gap-1 mt-1">
-                  <div className="flex text-yellow-400 text-xs">â˜…â˜…â˜…â˜…â˜†</div>
+                  <div className="flex text-yellow-400 text-xs">★★★★☆</div>
                 </div>
                 <div className="mt-2 flex items-center gap-2">
                   <span className="font-bold text-primary">${product.price}</span>

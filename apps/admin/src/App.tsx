@@ -4,15 +4,23 @@ import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import ProductsPage from './pages/ProductsPage';
 import ProductFormPage from './pages/ProductFormPage';
+import ProductWizardPage from './pages/ProductWizardPage';
 import CategoriesPage from './pages/CategoriesPage';
+import CollectionsPage from './pages/CollectionsPage';
 import OrdersPage from './pages/OrdersPage';
 import SettingsPage from './pages/SettingsPage';
 import EmailTestPage from './pages/EmailTestPage';
 import ProductionDashboardPage from './pages/ProductionDashboardPage';
+import ReprintQueuePage from './pages/ReprintQueuePage';
 import PricingRulesPage from './pages/PricingRulesPage';
+import PrintAreasPage from './pages/PrintAreasPage';
+import SizeTiersPage from './pages/SizeTiersPage';
+import UploadModerationPage from './pages/UploadModerationPage';
+import UploadValidationSettingsPage from './pages/UploadValidationSettingsPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AdminLayout } from './components/layout/AdminLayout';
 import { useAuth } from './auth/AuthContext';
+
 
 // ✅ Conditional redirect for 404 based on auth status
 function NotFoundRedirect() {
@@ -35,12 +43,23 @@ export default function App() {
       >
         <Route path="/" element={<DashboardPage />} />
         <Route path="/products" element={<ProductsPage />} />
-        <Route path="/products/new" element={<ProductFormPage />} />
-        <Route path="/products/:id" element={<ProductFormPage />} />
+        {/* Wizard routes */}
+        <Route path="/product-wizard" element={<ProductWizardPage />} />
+        <Route path="/product-wizard/:id" element={<ProductWizardPage />} />
+        <Route path="/products/new-legacy" element={<ProductFormPage />} />
+        <Route path="/products/new" element={<ProductWizardPage />} />
+        {/* Keep canonical product edit on wizard */}
+        <Route path="/products/:id" element={<ProductWizardPage />} />
         <Route path="/categories" element={<CategoriesPage />} />
+        <Route path="/collections" element={<CollectionsPage />} />
         <Route path="/orders" element={<OrdersPage />} />
         <Route path="/production" element={<ProductionDashboardPage />} />
+        <Route path="/reprints" element={<ReprintQueuePage />} />
         <Route path="/pricing" element={<PricingRulesPage />} />
+        <Route path="/print-areas" element={<PrintAreasPage />} />
+        <Route path="/size-tiers" element={<SizeTiersPage />} />
+        <Route path="/moderation" element={<UploadModerationPage />} />
+        <Route path="/upload-settings" element={<UploadValidationSettingsPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/email-test" element={<EmailTestPage />} />
         {/* More routes will be added here */}

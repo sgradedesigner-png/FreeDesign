@@ -23,7 +23,7 @@ import {
   LogOut,
 } from 'lucide-react';
 
-const icons = {
+const icons: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
   ShoppingBagIcon: ShoppingBag,
   SparklesIcon: Sparkles,
   RectangleStackIcon: Layers,
@@ -45,9 +45,9 @@ const icons = {
   HeartIcon: Heart,
   UserCircleIcon: CircleUser,
   ArrowRightOnRectangleIcon: LogOut,
-} as const;
+};
 
-export type IconName = keyof typeof icons;
+export type IconName = string;
 
 type IconProps = {
   name: IconName;

@@ -164,6 +164,31 @@ LOG_LEVEL=info  # Options: debug, info, warn, error
 CORS_ORIGIN=https://ecommerce-final-project.pages.dev,https://korean-goods.com,https://www.korean-goods.com,https://admin.korean-goods.com
 ```
 
+### 14. Phase 0 DTF Upload & Cart Foundation (Required)
+
+```bash
+# Cloudinary Upload Security
+CLOUDINARY_CLOUD_NAME=your-cloud-name
+CLOUDINARY_API_KEY=your-api-key
+CLOUDINARY_API_SECRET=your-api-secret
+CLOUDINARY_SIGNATURE_TTL_SEC=300  # 5 minutes (must be 30-3600)
+UPLOAD_MAX_MB=25  # Maximum upload size (must be 1-512)
+UPLOAD_ALLOWED_MIME=image/jpeg,image/jpg,image/png,image/webp,application/pdf
+
+# Phase 0 Feature Flags (Backend)
+FF_DTF_NAV_V1=false  # DTF navigation structure (staged rollout)
+FF_CART_DB_V1=false  # Database-backed cart (vs localStorage)
+FF_UPLOAD_ASYNC_VALIDATION_V1=false  # Async upload validation
+FF_BUILDER_MVP_V1=false  # Gang builder MVP features
+```
+
+**Validation notes:**
+- `CLOUDINARY_SIGNATURE_TTL_SEC` must be between 30-3600 seconds
+- `UPLOAD_MAX_MB` must be between 1-512 MB
+- `UPLOAD_ALLOWED_MIME` must be a non-empty comma-separated list of MIME types
+- Feature flags are boolean strings ('true' or 'false')
+- **CRITICAL:** Never expose `CLOUDINARY_API_SECRET` in frontend (VITE_) variables
+
 ---
 
 ## Deployment Steps
@@ -445,9 +470,12 @@ Before deploying to production:
 - [ ] QPay credentials are production values (not sandbox)
 - [ ] `QPAY_CALLBACK_URL` uses HTTPS Railway domain
 - [ ] Resend API key is production key
-- [ ] R2 credentials are for production bucket
+- [ ] Cloudinary credentials configured (CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET)
+- [ ] Upload constraints configured (`CLOUDINARY_SIGNATURE_TTL_SEC`, `UPLOAD_MAX_MB`, `UPLOAD_ALLOWED_MIME`)
+- [ ] Phase 0 feature flags set (`FF_DTF_NAV_V1`, `FF_CART_DB_V1`, etc.)
 - [ ] CORS origins include Cloudflare Pages domains
 - [ ] All environment variables are set in Railway (not hardcoded)
+- [ ] **CRITICAL:** `CLOUDINARY_API_SECRET` never exposed in frontend (no VITE_ prefix)
 
 ---
 
@@ -476,6 +504,7 @@ If deployment fails, Railway provides one-click rollback:
 NODE_ENV=production
 DATABASE_URL=postgresql://...
 SUPABASE_URL=https://...
+SUPABASE_ANON_KEY=...
 SUPABASE_JWT_SECRET=...
 COOKIE_SECRET=...  # Generate with: openssl rand -base64 32
 QPAY_USERNAME=...
@@ -484,11 +513,16 @@ QPAY_INVOICE_CODE=...
 QPAY_CALLBACK_URL=https://your-app.railway.app/api/payment/callback
 RESEND_API_KEY=re_...
 FROM_EMAIL=noreply@yourdomain.com
-R2_ACCOUNT_ID=...
-R2_ACCESS_KEY_ID=...
-R2_SECRET_ACCESS_KEY=...
-R2_BUCKET_NAME=...
-R2_PUBLIC_BASE_URL=https://...
+CLOUDINARY_CLOUD_NAME=...
+CLOUDINARY_API_KEY=...
+CLOUDINARY_API_SECRET=...
+CLOUDINARY_SIGNATURE_TTL_SEC=300
+UPLOAD_MAX_MB=25
+UPLOAD_ALLOWED_MIME=image/jpeg,image/jpg,image/png,image/webp,application/pdf
+FF_DTF_NAV_V1=false
+FF_CART_DB_V1=false
+FF_UPLOAD_ASYNC_VALIDATION_V1=false
+FF_BUILDER_MVP_V1=false
 SENTRY_DSN=https://d459cc9dc45c15ec8154a3dcca8d4b17@o4510859559305216.ingest.de.sentry.io/4510859937972304
 
 # Health Check URLs
@@ -505,23 +539,3 @@ https://sentry.io/organizations/your-org/projects/backend/
 **Questions?** Check Railway logs first, then review the troubleshooting section above.
 
 
----
-
-## Phase 0 DTF Env Contract Additions
-
-Add these backend variables in Railway Variables:
-
-- CLOUDINARY_SIGNATURE_TTL_SEC=300
-- UPLOAD_MAX_MB=25
-- UPLOAD_ALLOWED_MIME=image/jpeg,image/jpg,image/png,image/webp,application/pdf
-- FF_DTF_NAV_V1=false
-- FF_CART_DB_V1=false
-- FF_UPLOAD_ASYNC_VALIDATION_V1=false
-- FF_BUILDER_MVP_V1=false
-
-Validation notes:
-- CLOUDINARY_SIGNATURE_TTL_SEC must be 30..3600 seconds.
-- UPLOAD_MAX_MB must be 1..512.
-- UPLOAD_ALLOWED_MIME must be a non-empty comma-separated list.
-
-Do not put backend secrets in Cloudflare Pages VITE_ variables.

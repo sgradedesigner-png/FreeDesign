@@ -1,6 +1,7 @@
-﻿import { useMemo, useState, useEffect, useRef } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { imageUrl } from "@/lib/imageUrl";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { orderGalleryByViews } from "@/lib/viewImageOrdering";
 
 type ProductGalleryProps = {
   // Accepts R2 keys (products/uuid/web/main.webp) or full URLs.
@@ -9,13 +10,19 @@ type ProductGalleryProps = {
 };
 
 export default function ProductGallery({ images, name }: ProductGalleryProps) {
-  // Normalize each image to a usable URL via imageUrl helper.
-  const resolvedImages = useMemo(
-    () => (images ?? []).map((img) => imageUrl(img)).filter(Boolean),
+  const orderedImages = useMemo(
+    () => orderGalleryByViews(images ?? [], ["front", "back", "left", "right"]),
     [images]
   );
 
+  // Normalize each image to a usable URL via imageUrl helper.
+  const resolvedImages = useMemo(
+    () => orderedImages.map((img) => imageUrl(img)).filter(Boolean),
+    [orderedImages]
+  );
+
   const [activeImage, setActiveImage] = useState<string>(resolvedImages[0] ?? "");
+  const [activeIsPortrait, setActiveIsPortrait] = useState(false);
   const [isZooming, setIsZooming] = useState(false);
   const [isOverNavButtons, setIsOverNavButtons] = useState(false);
   const [supportsHover, setSupportsHover] = useState(false);
@@ -27,6 +34,30 @@ export default function ProductGallery({ images, name }: ProductGalleryProps) {
   useEffect(() => {
     setActiveImage(resolvedImages[0] ?? "");
   }, [resolvedImages]);
+
+  // Detect active image orientation so portrait views (left/right) do not get clipped.
+  useEffect(() => {
+    if (!activeImage) {
+      setActiveIsPortrait(false);
+      return;
+    }
+
+    let cancelled = false;
+    const img = new Image();
+    img.onload = () => {
+      if (cancelled) return;
+      setActiveIsPortrait(img.naturalHeight > img.naturalWidth);
+    };
+    img.onerror = () => {
+      if (cancelled) return;
+      setActiveIsPortrait(false);
+    };
+    img.src = activeImage;
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeImage]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -128,13 +159,17 @@ export default function ProductGallery({ images, name }: ProductGalleryProps) {
       <div className="flex-1 relative">
         <div
           ref={imageRef}
-          className="relative group bg-muted rounded-2xl overflow-hidden aspect-[4/5] md:aspect-[4/5] lg:aspect-[3/4] max-h-[70vh]"
+          className="relative group bg-muted rounded-2xl overflow-hidden aspect-[4/5] md:aspect-[4/5] lg:aspect-[17/20] max-h-[70vh]"
           onMouseMove={handleMouseMove}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
           style={{ cursor: isZooming && !isOverNavButtons ? 'crosshair' : 'default' }}
         >
-          <img src={activeImage} alt={name} className="w-full h-full object-cover object-top p-0 sm:p-4" />
+          <img
+            src={activeImage}
+            alt={name}
+            className={`w-full h-full p-0 sm:p-4 ${activeIsPortrait ? 'object-contain' : 'object-cover object-top'}`}
+          />
 
           {/* Lens overlay - shows which area is being magnified */}
           {supportsHover && isZooming && !isOverNavButtons && (
@@ -219,4 +254,5 @@ export default function ProductGallery({ images, name }: ProductGalleryProps) {
     </div>
   );
 }
+
 

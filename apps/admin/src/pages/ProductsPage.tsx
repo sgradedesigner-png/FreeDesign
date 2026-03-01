@@ -30,9 +30,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Edit, Plus, Search, Trash2, Download, Filter, ArrowUpDown } from 'lucide-react';
+import { Edit, Plus, Search, Trash2, Download, ArrowUpDown } from 'lucide-react';
 import { useDebounce } from '@/hooks/useDebounce';
-import AddProductSkuDialog from '@/components/AddProductSkuDialog';
 
 type Category = {
   id: string;
@@ -106,7 +105,7 @@ export default function ProductsPage() {
   });
   const [bulkDeleteDialog, setBulkDeleteDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [skuDialogOpen, setSkuDialogOpen] = useState(false);
+  const [updatingStatusIds, setUpdatingStatusIds] = useState<Set<string>>(new Set());
 
   const debouncedSearch = useDebounce(search, 500);
 
@@ -155,6 +154,25 @@ export default function ProductsPage() {
 
   const resolvePublished = (product: Product) =>
     Boolean(product.is_published ?? product.isPublished ?? false);
+
+  const handleStatusChange = async (product: Product, nextPublished: boolean) => {
+    const currentPublished = resolvePublished(product);
+    if (currentPublished === nextPublished) return;
+
+    setUpdatingStatusIds((prev) => new Set(prev).add(product.id));
+    try {
+      await api.put(`/admin/products/${product.id}`, { is_published: nextPublished });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+    } catch (error) {
+      logger.error('Failed to update product status:', error);
+    } finally {
+      setUpdatingStatusIds((prev) => {
+        const next = new Set(prev);
+        next.delete(product.id);
+        return next;
+      });
+    }
+  };
 
   // Prefetch next page
   useEffect(() => {
@@ -298,10 +316,6 @@ export default function ProductsPage() {
           <Button variant="outline" onClick={exportToCSV} disabled={products.length === 0} className="w-full sm:w-auto">
             <Download className="w-4 h-4 mr-2" />
             Export CSV
-          </Button>
-          <Button variant="outline" onClick={() => setSkuDialogOpen(true)} className="w-full sm:w-auto">
-            <Plus className="w-4 h-4 mr-2" />
-            Add Product SKU
           </Button>
           <Button onClick={() => navigate('/products/new')} className="w-full sm:w-auto">
             <Plus className="w-4 h-4 mr-2" />
@@ -476,9 +490,19 @@ export default function ProductsPage() {
                     <Badge variant="secondary">{product.category.name}</Badge>
                   </TableCell>
                   <TableCell className="hidden md:table-cell">
-                    <Badge variant={resolvePublished(product) ? 'default' : 'secondary'}>
-                      {resolvePublished(product) ? 'Published' : 'Draft'}
-                    </Badge>
+                    <Select
+                      value={resolvePublished(product) ? 'published' : 'draft'}
+                      onValueChange={(value) => handleStatusChange(product, value === 'published')}
+                      disabled={updatingStatusIds.has(product.id)}
+                    >
+                      <SelectTrigger className="h-8 w-[140px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="draft">Draft</SelectItem>
+                        <SelectItem value="published">Published</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </TableCell>
                   <TableCell className="hidden md:table-cell font-medium">
                     ${parseFloat(String(product.variants[0]?.price ?? 0)).toFixed(2)}
@@ -494,7 +518,7 @@ export default function ProductsPage() {
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8"
-                        onClick={() => navigate(`/products/${product.id}`)}
+                        onClick={() => navigate(`/product-wizard/${product.id}`)}
                       >
                         <Edit className="w-4 h-4" />
                       </Button>
@@ -618,8 +642,6 @@ export default function ProductsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      <AddProductSkuDialog open={skuDialogOpen} onOpenChange={setSkuDialogOpen} />
     </div>
   );
 }

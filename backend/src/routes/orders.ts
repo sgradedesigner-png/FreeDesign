@@ -1,4 +1,4 @@
-import { logger } from '../lib/logger';
+﻿import { logger, hashIdentifier } from '../lib/logger';
 // backend/src/routes/orders.ts
 import { FastifyInstance } from 'fastify';
 import { userGuard } from '../middleware/userGuard';
@@ -11,6 +11,7 @@ import { validateData } from '../utils/validation';
 import { NotFoundError, ServiceUnavailableError, BadRequestError, PaymentServiceError } from '../utils/errors';
 import { emailService } from '../services/email.service';
 import { ensureCustomizationAssetsOwnedByUser } from '../services/asset.service';
+import { saveVersion, getProject } from '../services/builder.service';
 
 /**
  * Mask email address for privacy in logs (GDPR compliance)
@@ -92,12 +93,15 @@ export default async function orderRoutes(fastify: FastifyInstance) {
     }
   }, async (request, reply) => {
     const userId = (request as any).user.id;
+    const requestId = request.id;
+    const userIdHash = hashIdentifier(userId) ?? undefined;
     const callbackUrl = process.env.QPAY_CALLBACK_URL || '';
     const isMockMode = process.env.QPAY_MOCK_MODE === 'true';
 
     try {
       // Log request body for debugging
-      logger.info({ body: request.body }, '[Order Creation] Request body');
+      // Intentionally avoid logging raw request bodies (may contain PII).
+      logger.info({ requestId, userIdHash }, '[Order Creation] Request received');
 
       // Validate request body with Zod
       const validation = validateData(createOrderSchema, request.body, reply);
@@ -144,7 +148,7 @@ export default async function orderRoutes(fastify: FastifyInstance) {
         );
         await ensureCustomizationAssetsOwnedByUser(userId, uniqueAssetIds);
 
-        const uniqueVariantIds = Array.from(new Set(items.map((item) => item.id)));
+        const uniqueVariantIds = Array.from(new Set(items.map((item) => item.variantId)));
         const variants = await prisma.productVariant.findMany({
           where: { id: { in: uniqueVariantIds } },
           select: {
@@ -168,7 +172,7 @@ export default async function orderRoutes(fastify: FastifyInstance) {
 
         for (const customization of pendingCustomizations) {
           const item = items[customization.orderItemIndex];
-          const variant = item ? variantMap.get(item.id) : undefined;
+          const variant = item ? variantMap.get(item.variantId) : undefined;
 
           if (!variant) {
             throw new BadRequestError('Customization references an invalid order item');
@@ -233,6 +237,30 @@ export default async function orderRoutes(fastify: FastifyInstance) {
         }
       }
 
+      // P3-04: Freeze builder project versions before entering transaction
+      // Calls saveVersion for each unique builderProjectId; maps projectId → versionId
+      const builderVersionMap = new Map<string, string>();
+      const builderProjectIds = Array.from(
+        new Set(items.flatMap((item: any) => item.builderProjectId ? [item.builderProjectId] : []))
+      );
+      if (builderProjectIds.length > 0) {
+        await Promise.all(
+          builderProjectIds.map(async (projectId: string) => {
+            // Validate ownership
+            const project = await getProject(projectId, userId);
+            if (!project) {
+              throw new BadRequestError(`Builder project ${projectId} not found or does not belong to you`);
+            }
+            // Save immutable version snapshot
+            const version = await saveVersion(projectId, userId);
+            if (version) {
+              builderVersionMap.set(projectId, version.id);
+            }
+          })
+        );
+        logger.info({ orderId: 'pending', count: builderProjectIds.length }, '[Order Create] Builder versions frozen');
+      }
+
       // Use transaction to prevent race condition when user double-clicks checkout
       const { order, oldPendingOrders } = await prisma.$transaction(async (tx) => {
         // 1. Find existing pending orders INSIDE transaction
@@ -250,7 +278,7 @@ export default async function orderRoutes(fastify: FastifyInstance) {
           }
         });
 
-        logger.info({ userId, foundPending: existingPending.length }, '[QPay Cleanup] Found pending orders');
+        logger.info({ userIdHash, foundPending: existingPending.length, requestId }, '[QPay Cleanup] Found pending orders');
 
         // 2. Mark old orders as CANCELLING to prevent race condition
         // This blocks other concurrent requests from seeing these orders as PENDING
@@ -267,7 +295,7 @@ export default async function orderRoutes(fastify: FastifyInstance) {
             }
           });
 
-          logger.info({ userId, count: existingPending.length }, '[QPay Cleanup] Marked as CANCELLING');
+          logger.info({ userIdHash, count: existingPending.length, requestId }, '[QPay Cleanup] Marked as CANCELLING');
         }
 
         // 3. Create new order INSIDE transaction (prevents duplicate creation)
@@ -280,13 +308,77 @@ export default async function orderRoutes(fastify: FastifyInstance) {
             paymentStatus: 'UNPAID',
             paymentMethod: 'QPAY',
             shippingAddress: shippingAddress ? JSON.stringify(shippingAddress) : null,
-            items: items,
+            items: items as any, // DEPRECATED: Kept for backward compatibility
             rushFee: rushOrder && rushFee > 0 ? rushFee : null,
             addOnFees: addOnFees > 0 ? addOnFees : null,
           }
         });
 
-        logger.info({ orderId: newOrder.id, userId }, '[Order Create] New order created');
+        logger.info({ orderId: newOrder.id, userIdHash, requestId }, '[Order Create] New order created');
+
+        // Phase 1: Dual-write to normalized order_items table
+        if (Array.isArray(items) && items.length > 0) {
+          const orderItemsData = items.map((item: any) => ({
+            orderId: newOrder.id,
+            variantId: item.variantId,
+            quantity: item.quantity || 1,
+            unitPrice: item.price || item.variantPrice || 0,
+            selectedOptions: item.selectedOptions || item.optionPayload || null,
+            productId: item.productId || null,
+            productName: item.productName || null,
+            variantName: item.variantName || null,
+            variantSku: item.variantSku || item.sku || null,
+            // P3-04: Attach frozen version snapshot id (null for non-builder items)
+            builderProjectVersionId: item.builderProjectId
+              ? (builderVersionMap.get(item.builderProjectId) ?? null)
+              : null,
+          }));
+
+          await tx.orderItem.createMany({
+            data: orderItemsData
+          });
+
+          logger.info(
+            { orderId: newOrder.id, itemCount: orderItemsData.length },
+            '[Order Create] Normalized order items created'
+          );
+
+          // Phase 2: Link upload assets to order items
+          // Extract upload asset IDs from cart items with upload references
+          const itemsWithUploads = items
+            .map((item: any, index: number) => ({
+              index,
+              uploadAssetId: item.optionPayload?.uploadAssetId || item.selectedOptions?.uploadAssetId,
+            }))
+            .filter((item) => item.uploadAssetId);
+
+          if (itemsWithUploads.length > 0) {
+            // Fetch created order items with their IDs
+            const createdOrderItems = await tx.orderItem.findMany({
+              where: { orderId: newOrder.id },
+              orderBy: { createdAt: 'asc' }, // Preserve order
+              select: { id: true },
+            });
+
+            // Create order_item_uploads entries
+            const uploadLinksData = itemsWithUploads.map((item) => ({
+              orderItemId: createdOrderItems[item.index]?.id,
+              uploadAssetId: item.uploadAssetId,
+              sortOrder: 0, // Single upload per order item for now
+            })).filter((link) => link.orderItemId); // Filter out any missing order items
+
+            if (uploadLinksData.length > 0) {
+              await tx.orderItemUpload.createMany({
+                data: uploadLinksData,
+              });
+
+              logger.info(
+                { orderId: newOrder.id, uploadLinkCount: uploadLinksData.length },
+                '[Order Create] Upload assets linked to order items'
+              );
+            }
+          }
+        }
 
         if (pendingCustomizations.length > 0) {
           await tx.orderItemCustomization.createMany({
@@ -384,12 +476,12 @@ export default async function orderRoutes(fastify: FastifyInstance) {
 
         // For circuit open, throw PaymentServiceError
         if (isCircuitOpen) {
-          throw new PaymentServiceError('Төлбөрийн систем түр ашиглах боломжгүй байна. Та дараа дахин оролдоно уу.');
+          throw new PaymentServiceError('Төлбөрийн систем түр ажиллах боломжгүй байна. Та дараа дахин оролдоно уу.');
         }
 
         // For timeout, throw ServiceUnavailableError
         if (isTimeout) {
-          throw new ServiceUnavailableError('Төлбөрийн систем хариу өгөх хугацаа хэтэрсэн. Та дараа дахин оролдоно уу.');
+          throw new ServiceUnavailableError('Төлбөрийн системийн хариу өгөх хугацаа хэтэрсэн. Та дараа дахин оролдоно уу.');
         }
 
         // Other errors
@@ -414,7 +506,7 @@ export default async function orderRoutes(fastify: FastifyInstance) {
         },
       });
 
-      logger.info({ orderId: order.id, userId }, 'Order created with QPay invoice');
+      logger.info({ orderId: order.id, userIdHash, requestId }, 'Order created with QPay invoice');
 
       // 7. Send order confirmation email in BACKGROUND (Phase 2)
       // This prevents blocking the response while sending email
@@ -427,12 +519,11 @@ export default async function orderRoutes(fastify: FastifyInstance) {
           });
 
           if (!profile?.email) {
-            logger.warn({ userId }, '[Email] No email found for user, skipping confirmation email');
+            logger.warn({ userIdHash, requestId }, '[Email] No email found for user, skipping confirmation email');
             return;
           }
 
-          const isProduction = process.env.NODE_ENV === 'production';
-          const logEmail = isProduction ? maskEmail(profile.email) : profile.email;
+          const logEmail = maskEmail(profile.email);
           logger.info({ email: logEmail, orderId: updatedOrder.id }, '[Email] Sending order confirmation');
 
           const emailResult = await emailService.sendOrderConfirmation(profile.email, {
@@ -462,6 +553,14 @@ export default async function orderRoutes(fastify: FastifyInstance) {
       });
 
       // 4. Return order with payment info
+      logger.info({
+        event: 'order_created',
+        requestId,
+        userIdHash,
+        orderId: updatedOrder.id,
+        total: Number(updatedOrder.total),
+        itemCount: Array.isArray(updatedOrder.items) ? updatedOrder.items.length : undefined,
+      }, '[Order] order_created');
       return reply.code(201).send({
         order: updatedOrder,
         payment: {
@@ -487,7 +586,7 @@ export default async function orderRoutes(fastify: FastifyInstance) {
       if (error.code === 'P1001' || error.code === 'P1002') {
         return reply.code(503).send({
           error: 'Database connection error',
-          details: 'Өгөгдлийн санд холбогдож чадсангүй. Түр хүлээгээд дахин оролдоно уу.'
+          details: 'Өгөгдлийн сантай холбогдож чадсангүй. Түр хүлээгээд дахин оролдоно уу.'
         });
       }
 
@@ -510,10 +609,29 @@ export default async function orderRoutes(fastify: FastifyInstance) {
   }, async (request, reply) => {
     const userId = (request as any).user.id;
 
-    // No N+1 problem: items are stored as JSON in the Order model
+    // Fetch orders with normalized order items (Phase 1: dual-read)
     let orders = await prisma.order.findMany({
       where: { userId },
       include: {
+        orderItems: {
+          include: {
+            variant: {
+              select: {
+                id: true,
+                name: true,
+                sku: true,
+                imagePath: true,
+                product: {
+                  select: {
+                    id: true,
+                    title: true,
+                    slug: true
+                  }
+                }
+              }
+            }
+          }
+        },
         customizations: {
           include: {
             printArea: true,
@@ -523,6 +641,30 @@ export default async function orderRoutes(fastify: FastifyInstance) {
         }
       },
       orderBy: { createdAt: 'desc' }
+    });
+
+    // Phase 1: Normalize order items - prefer orderItems over JSON items
+    orders = orders.map(order => {
+      if (order.orderItems && order.orderItems.length > 0) {
+        // Use normalized items
+        return {
+          ...order,
+          items: order.orderItems.map(item => ({
+            productId: item.productId || item.variant.product.id,
+            productName: item.productName || item.variant.product.title,
+            productSlug: item.variant.product.slug,
+            variantId: item.variantId,
+            variantName: item.variantName || item.variant.name,
+            variantSku: item.variantSku || item.variant.sku,
+            variantImage: item.variant.imagePath,
+            quantity: item.quantity,
+            price: Number(item.unitPrice),
+            selectedOptions: item.selectedOptions
+          }))
+        };
+      }
+      // Fallback to JSON items for legacy orders
+      return order;
     });
 
     // Check and update expired orders automatically
@@ -563,7 +705,7 @@ export default async function orderRoutes(fastify: FastifyInstance) {
     });
 
     if (!order) {
-      throw new NotFoundError('Захиалга олдсонгүй');
+      throw new NotFoundError('Order not found');
     }
 
     // Check and update if expired
@@ -642,3 +784,4 @@ export default async function orderRoutes(fastify: FastifyInstance) {
     }
   });
 }
+

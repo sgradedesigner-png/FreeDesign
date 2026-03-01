@@ -119,10 +119,10 @@ function CategoryPreviewImage({ src, alt, imageClassName, noImageLabel, layered 
 function PromoCard({ category, language, large = false, desktopHeroLayered = false, className = '' }: PromoCardProps) {
   const visual = getCategoryVisual(category);
   const previewSrc = getCategoryPreviewSrc(category);
-  const label = language === 'mn' ? 'ÐÐ½Ð³Ð¸Ð»Ð°Ð»' : 'Category';
-  const cta = language === 'mn' ? 'Ð”ÑÐ»Ð³Ò¯Ò¯Ñ€ Ñ€Ò¯Ò¯' : 'Shop now';
-  const itemLabel = language === 'mn' ? 'Ð±Ð°Ñ€Ð°Ð°' : 'items';
-  const noImageLabel = language === 'mn' ? 'Ð—ÑƒÑ€Ð°Ð³Ð³Ò¯Ð¹' : 'No image';
+  const label = language === 'mn' ? 'Ангилал' : 'Category';
+  const cta = language === 'mn' ? 'Дэлгүүр рүү' : 'Shop now';
+  const itemLabel = language === 'mn' ? 'бараа' : 'items';
+  const noImageLabel = language === 'mn' ? 'Зураггүй' : 'No image';
   const useHeroLayers = large && desktopHeroLayered;
   const imageContainerClass = useHeroLayers
     ? 'relative mt-4 w-full aspect-[16/9] flex-1 min-h-[220px]'
@@ -183,10 +183,10 @@ export default function HomeCategoryShowcase({ categories, language }: HomeCateg
     <section className="max-w-7xl mx-auto px-6 py-20">
       <div className="mb-12 text-center">
         <h2 className="mb-4 text-3xl font-heading font-bold text-foreground md:text-4xl">
-          {language === 'mn' ? 'ÐÐ½Ð³Ð¸Ð»Ð°Ð»' : 'Shop by Category'}
+          {language === 'mn' ? 'Ангилал' : 'Shop by Category'}
         </h2>
         <p className="text-muted-foreground">
-          {language === 'mn' ? 'Ó¨Ó©Ñ€Ñ‚ Ñ‚Ð°Ð°Ð»Ð°Ð³Ð´ÑÐ°Ð½ Ð°Ð½Ð³Ð¸Ð»Ð»Ð°Ð° ÑÐ¾Ð½Ð³Ð¾Ð½Ð¾ ÑƒÑƒ' : 'Find what you love faster'}
+          {language === 'mn' ? 'Өөрт таалагдсан ангиллаа сонгоно уу' : 'Find what you love faster'}
         </p>
       </div>
 
@@ -248,7 +248,7 @@ export default function HomeCategoryShowcase({ categories, language }: HomeCateg
           to="/products"
           className="inline-flex items-center gap-2 font-semibold text-primary transition-colors hover:text-primary/80"
         >
-          {language === 'mn' ? 'Ð‘Ò¯Ð³Ð´Ð¸Ð¹Ð³ Ñ…Ð°Ñ€Ð°Ñ…' : 'View All Categories'}
+          {language === 'mn' ? 'Бүгдийг харах' : 'View All Categories'}
           <ArrowRight size={18} />
         </Link>
       </div>

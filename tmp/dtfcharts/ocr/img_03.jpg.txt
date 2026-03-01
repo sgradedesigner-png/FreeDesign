@@ -1,0 +1,26 @@
+0.99	Sweatshirt Placement Guide
+0.99	These are some suggested sizes and placements for your Sweatshirts designs.
+0.99	Front Centered Design Placement & Size
+0.99	3-3.5" from the collar, for any size shirt(except Zip-Up)
+0.94	·Adult 11"x11"
+0.96	· Youth (med/lg) 10.5" x 10.5"
+0.94	·Youth (small) 8.5" x 8.5"
+0.95	·Toddler 5.5"x 5.5"
+0.98	Left Chest Design Placement & Size
+0.99	5.5-8"downfromtheshoulder'sleftseamand4-6"overfromthecenter
+0.95	·Adult 3.5"x3.5"
+0.93	· Youth (med/lg) 3.5" x 3.5"
+0.96	·Youth (small) 3.5" x 3.5"
+0.96	·Toddler 2.5"x 2.5"
+0.98	Back Center Design Placement & Size
+0.99	2-3" from bottom of neck's edging; Zip-Up/hooded: 4-4.5"
+0.95	·Adult: 14"x11.25"
+0.96	· Youth (med/lg) 13.5" x 11.75"
+0.96	·Youth (small) 11.5"x 9.75"
+0.94	·Toddler 8.5"x6.75"
+0.99	Sleeve Design Placement & Size
+0.97	Find center of sleeve,place design against center seam
+0.94	·Adult 2"x 11.5"
+0.96	·Youth (med/lg): 2"x 11"
+0.94	·Youth (small): 2" x 10"
+0.89	·Toddler: 1" x 8"

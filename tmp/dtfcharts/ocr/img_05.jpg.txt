@@ -1,0 +1,20 @@
+0.99	Basketball Jersey Placement Guide
+0.99	These are some suggested sizes and placements for your basketball jersey designs. You
+0.98	should always verify with your local league for specific measurements and placements.
+0.99	Front Number Design Size
+0.96	·Adult 4"
+0.92	·Youth 3"
+0.97	Back Name Design Size
+0.99	TEAMNAME/LOGO
+0.95	·Adult 3"
+0.93	·Youth 2"
+1.00	Back Number Design Size
+0.96	·Adult 8"
+0.92	·Youth 6"
+0.98	Shorts Number Design Size
+0.96	·Adult 4"
+0.92	·Youth 3"
+0.96	REMEMBER:The NFHSregulates that only singleor
+0.96	double digitsbetween 0-5canbe used onbasketball
+0.96	courts.Keep this in mind when ordering pre-cut
+0.95	numbers,you need 6-9 but will need extra 0-5.

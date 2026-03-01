@@ -1,0 +1,154 @@
+{
+  "basketball_jersey_front": {
+    "imageFile": "BasketBall Jersey Front.png",
+    "imgPx": { "w": 1536, "h": 1024 },
+    "boxPx": { "x1": 492, "y1": 39, "x2": 1044, "y2": 985 },
+    "safeFrame": { "x1": 519.65, "y1": 86.35, "x2": 1017.35, "y2": 938.65 },
+    "center": { "x": 768.5, "y": 512.5 },
+    "garmentWidthCm": 30.5
+  },
+  "basketball_jersey_back": {
+    "imageFile": "BasketBall Jersey Back.png",
+    "imgPx": { "w": 1536, "h": 1024 },
+    "boxPx": { "x1": 495, "y1": 38, "x2": 1042, "y2": 987 },
+    "safeFrame": { "x1": 522.4, "y1": 85.5, "x2": 1015.6, "y2": 940.5 },
+    "center": { "x": 769, "y": 513 },
+    "garmentWidthCm": 30.5
+  },
+  "hoodie_front": {
+    "imageFile": "Hoodie Front.png",
+    "imgPx": { "w": 1536, "h": 1024 },
+    "boxPx": { "x1": 405, "y1": 74, "x2": 1132, "y2": 969 },
+    "safeFrame": { "x1": 441.4, "y1": 118.8, "x2": 1096.6, "y2": 925.2 },
+    "center": { "x": 769, "y": 522 },
+    "garmentWidthCm": 30.5
+  },
+  "hoodie_back": {
+    "imageFile": "Hoodie Back.png",
+    "imgPx": { "w": 1536, "h": 1024 },
+    "boxPx": { "x1": 410, "y1": 76, "x2": 1132, "y2": 957 },
+    "safeFrame": { "x1": 446.15, "y1": 120.1, "x2": 1096.85, "y2": 913.9 },
+    "center": { "x": 771.5, "y": 517 },
+    "garmentWidthCm": 30.5
+  },
+  "hoodie_left": {
+    "imageFile": "Hoode Left.png",
+    "imgPx": { "w": 1024, "h": 1536 },
+    "boxPx": { "x1": 285, "y1": 221, "x2": 752, "y2": 1286 },
+    "safeFrame": { "x1": 308.4, "y1": 274.3, "x2": 729.6, "y2": 1233.7 },
+    "center": { "x": 519, "y": 754 },
+    "garmentWidthCm": 25.0
+  },
+  "hoodie_right": {
+    "imageFile": "Hoodie Right.png",
+    "imgPx": { "w": 1024, "h": 1536 },
+    "boxPx": { "x1": 259, "y1": 197, "x2": 747, "y2": 1290 },
+    "safeFrame": { "x1": 283.45, "y1": 251.7, "x2": 723.55, "y2": 1236.3 },
+    "center": { "x": 503.5, "y": 744 },
+    "garmentWidthCm": 25.0
+  },
+  "polo_front": {
+    "imageFile": "Polo Front.png",
+    "imgPx": { "w": 1536, "h": 1024 },
+    "boxPx": { "x1": 365, "y1": 57, "x2": 1170, "y2": 966 },
+    "safeFrame": { "x1": 405.3, "y1": 102.5, "x2": 1130.7, "y2": 921.5 },
+    "center": { "x": 768, "y": 512 },
+    "garmentWidthCm": 30.5
+  },
+  "polo_back": {
+    "imageFile": "Polo Back.png",
+    "imgPx": { "w": 1536, "h": 1024 },
+    "boxPx": { "x1": 361, "y1": 50, "x2": 1174, "y2": 981 },
+    "safeFrame": { "x1": 401.7, "y1": 96.6, "x2": 1134.3, "y2": 935.4 },
+    "center": { "x": 768, "y": 516 },
+    "garmentWidthCm": 30.5
+  },
+  "polo_left": {
+    "imageFile": "Polo Left.png",
+    "imgPx": { "w": 1024, "h": 1536 },
+    "boxPx": { "x1": 131, "y1": 176, "x2": 852, "y2": 1398 },
+    "safeFrame": { "x1": 167.1, "y1": 237.15, "x2": 816.9, "y2": 1337.85 },
+    "center": { "x": 492, "y": 787.5 },
+    "garmentWidthCm": 25.0
+  },
+  "polo_right": {
+    "imageFile": "Polo Right.png",
+    "imgPx": { "w": 1024, "h": 1536 },
+    "boxPx": { "x1": 288, "y1": 208, "x2": 744, "y2": 1321 },
+    "safeFrame": { "x1": 310.85, "y1": 263.7, "x2": 722.15, "y2": 1266.3 },
+    "center": { "x": 516.5, "y": 765 },
+    "garmentWidthCm": 25.0
+  },
+  "soccer_jersey_front": {
+    "imageFile": "Soccer Jersey Front.png",
+    "imgPx": { "w": 1536, "h": 1024 },
+    "boxPx": { "x1": 376, "y1": 45, "x2": 1161, "y2": 983 },
+    "safeFrame": { "x1": 415.3, "y1": 91.95, "x2": 1122.7, "y2": 937.05 },
+    "center": { "x": 769, "y": 514.5 },
+    "garmentWidthCm": 30.5
+  },
+  "soccer_jersey_back": {
+    "imageFile": "Soccer Jersey Back.png",
+    "imgPx": { "w": 1536, "h": 1024 },
+    "boxPx": { "x1": 370, "y1": 40, "x2": 1167, "y2": 987 },
+    "safeFrame": { "x1": 409.9, "y1": 87.4, "x2": 1128.1, "y2": 940.6 },
+    "center": { "x": 769, "y": 514 },
+    "garmentWidthCm": 30.5
+  },
+  "sweatshirt_front": {
+    "imageFile": "Sweatshirt Front.png",
+    "imgPx": { "w": 1536, "h": 1024 },
+    "boxPx": { "x1": 347, "y1": 65, "x2": 1185, "y2": 953 },
+    "safeFrame": { "x1": 388.95, "y1": 109.45, "x2": 1144.05, "y2": 909.55 },
+    "center": { "x": 766.5, "y": 509.5 },
+    "garmentWidthCm": 30.5
+  },
+  "sweatshirt_back": {
+    "imageFile": "Sweatshirt Back.png",
+    "imgPx": { "w": 1536, "h": 1024 },
+    "boxPx": { "x1": 349, "y1": 64, "x2": 1186, "y2": 952 },
+    "safeFrame": { "x1": 390.9, "y1": 108.45, "x2": 1145.1, "y2": 908.55 },
+    "center": { "x": 768, "y": 508.5 },
+    "garmentWidthCm": 30.5
+  },
+  "sweatshirt_left": {
+    "imageFile": "Sweatshirt Left.png",
+    "imgPx": { "w": 1024, "h": 1536 },
+    "boxPx": { "x1": 293, "y1": 209, "x2": 750, "y2": 1312 },
+    "safeFrame": { "x1": 315.9, "y1": 264.2, "x2": 728.1, "y2": 1257.8 },
+    "center": { "x": 522, "y": 761 },
+    "garmentWidthCm": 25.0
+  },
+  "sweatshirt_right": {
+    "imageFile": "Sweatshirt Right.png",
+    "imgPx": { "w": 1024, "h": 1536 },
+    "boxPx": { "x1": 282, "y1": 206, "x2": 751, "y2": 1303 },
+    "safeFrame": { "x1": 305.5, "y1": 260.9, "x2": 728.5, "y2": 1249.1 },
+    "center": { "x": 517, "y": 755 },
+    "garmentWidthCm": 25.0
+  },
+  "tanktop_front": {
+    "imageFile": "TankTop Front.png",
+    "imgPx": { "w": 1536, "h": 1024 },
+    "boxPx": { "x1": 509, "y1": 40, "x2": 1028, "y2": 986 },
+    "safeFrame": { "x1": 535, "y1": 87.35, "x2": 1003, "y2": 939.65 },
+    "center": { "x": 769, "y": 513.5 },
+    "garmentWidthCm": 30.5
+  },
+  "tanktop_back": {
+    "imageFile": "TankTop Back.png",
+    "imgPx": { "w": 1536, "h": 1024 },
+    "boxPx": { "x1": 490, "y1": 37, "x2": 1045, "y2": 987 },
+    "safeFrame": { "x1": 517.8, "y1": 84.55, "x2": 1018.2, "y2": 940.45 },
+    "center": { "x": 768, "y": 512.5 },
+    "garmentWidthCm": 30.5
+  },
+  "tote_bag_front": {
+    "imageFile": "Tote Bag.png",
+    "imgPx": { "w": 1536, "h": 1024 },
+    "boxPx": { "x1": 464, "y1": 30, "x2": 1069, "y2": 987 },
+    "safeFrame": { "x1": 494.3, "y1": 77.9, "x2": 1039.7, "y2": 940.1 },
+    "center": { "x": 767, "y": 509 },
+    "garmentWidthCm": 30.5
+  }
+}

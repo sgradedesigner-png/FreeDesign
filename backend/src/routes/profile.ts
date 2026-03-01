@@ -1,4 +1,4 @@
-import { logger } from '../lib/logger';
+﻿import { logger, hashIdentifier } from '../lib/logger';
 // backend/src/routes/profile.ts
 import { FastifyInstance } from 'fastify';
 import { userGuard } from '../middleware/userGuard';
@@ -27,7 +27,7 @@ export default async function profileRoutes(fastify: FastifyInstance) {
           }
         });
 
-        logger.info(`✅ Profile created for user: ${userId}`);
+        logger.info({ userIdHash: hashIdentifier(userId) ?? undefined, requestId: request.id }, '[Profile] Created');
       }
 
       return reply.send({ profile });
@@ -68,7 +68,7 @@ export default async function profileRoutes(fastify: FastifyInstance) {
         }
       });
 
-      logger.info(`✅ Profile updated for user: ${userId}`);
+      logger.info({ userIdHash: hashIdentifier(userId) ?? undefined, requestId: request.id }, '[Profile] Updated');
 
       return reply.send({ profile });
     } catch (error: any) {
@@ -77,3 +77,4 @@ export default async function profileRoutes(fastify: FastifyInstance) {
     }
   });
 }
+

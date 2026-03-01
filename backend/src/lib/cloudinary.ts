@@ -25,6 +25,15 @@ cloudinary.config({
   secure: true,
 });
 
+function detectViewToken(filename: string): 'front' | 'back' | 'left' | 'right' | null {
+  const name = filename.toLowerCase();
+  if (/(^|[^a-z])(front|frt)([^a-z]|$)/i.test(name)) return 'front';
+  if (/(^|[^a-z])back([^a-z]|$)/i.test(name)) return 'back';
+  if (/(^|[^a-z])(leftsleeve|left_sleeve|left-sleeve|leftside|left_side|left-side|left|ls)([^a-z]|$)/i.test(name)) return 'left';
+  if (/(^|[^a-z])(rightsleeve|right_sleeve|right-sleeve|rightside|right_side|right-side|right|rs)([^a-z]|$)/i.test(name)) return 'right';
+  return null;
+}
+
 export async function uploadProductImage(
   productId: string,
   buffer: Buffer,
@@ -32,10 +41,12 @@ export async function uploadProductImage(
   contentType: string
 ): Promise<string> {
   return new Promise((resolve, reject) => {
+    const baseName = filename.replace(/\.[^.]+$/, '');
+    const viewToken = detectViewToken(filename);
     const uploadStream = cloudinary.uploader.upload_stream(
       {
         folder: `products/${productId}`,
-        public_id: `${Date.now()}-${filename.replace(/\.[^.]+$/, '')}`,
+        public_id: `${Date.now()}-${viewToken ? `${viewToken}-` : ''}${baseName}`,
         resource_type: 'image',
         transformation: [{ quality: 'auto', fetch_format: 'auto' }],
       },
@@ -192,6 +203,91 @@ export function generateSignedUploadParams(
 export function extractPublicId(url: string): string {
   const match = url.match(/\/upload\/(?:v\d+\/)?(.+?)(?:\.\w+)?$/);
   return match?.[1] ?? url;
+}
+
+// ============================================
+// Phase 2: Upload Lifecycle Functions
+// ============================================
+
+type UploadFamily = 'gang_upload' | 'uv_gang_upload' | 'by_size' | 'uv_by_size' | 'blanks';
+
+/**
+ * Generate signed upload parameters for Phase 2 upload flows
+ * Includes family context for validation constraints
+ */
+export function generateUploadSignature(params: {
+  userId: string;
+  uploadFamily: UploadFamily;
+  fileName: string;
+  maxFileSizeBytes?: number;
+}): {
+  timestamp: number;
+  signature: string;
+  apiKey: string;
+  cloudName: string;
+  folder: string;
+  publicId: string;
+  uploadPreset?: string;
+} {
+  const { userId, uploadFamily, fileName } = params;
+  const timestamp = Math.round(Date.now() / 1000);
+  const folder = `uploads/${uploadFamily}/${userId}`;
+  const publicId = `${timestamp}-${fileName.replace(/\.[^.]+$/, '')}`;
+
+  const paramsToSign: Record<string, string | number> = {
+    timestamp,
+    folder,
+    public_id: publicId,
+  };
+
+  const signature = cloudinary.utils.api_sign_request(paramsToSign, CLOUDINARY_API_SECRET);
+
+  return {
+    timestamp,
+    signature,
+    apiKey: CLOUDINARY_API_KEY,
+    cloudName: CLOUDINARY_CLOUD_NAME,
+    folder,
+    publicId,
+  };
+}
+
+/**
+ * Retrieve upload asset metadata from Cloudinary
+ */
+export async function getUploadAssetMetadata(publicId: string): Promise<{
+  url: string;
+  width: number;
+  height: number;
+  format: string;
+  bytes: number;
+  resourceType: string;
+}> {
+  try {
+    const result = await cloudinary.api.resource(publicId, {
+      resource_type: 'image',
+    });
+
+    return {
+      url: result.secure_url,
+      width: result.width,
+      height: result.height,
+      format: result.format,
+      bytes: result.bytes,
+      resourceType: result.resource_type,
+    };
+  } catch (error) {
+    logger.error({ error, publicId }, 'Failed to retrieve upload metadata from Cloudinary');
+    throw error;
+  }
+}
+
+/**
+ * Validate upload family against supported types
+ */
+export function isValidUploadFamily(family: string): family is UploadFamily {
+  const validFamilies: UploadFamily[] = ['gang_upload', 'uv_gang_upload', 'by_size', 'uv_by_size', 'blanks'];
+  return validFamilies.includes(family as UploadFamily);
 }
 
 export default cloudinary;

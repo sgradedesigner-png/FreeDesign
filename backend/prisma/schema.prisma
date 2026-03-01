@@ -38,12 +38,73 @@ enum ProductionStatus {
   DONE
 }
 
+enum ProductFamily {
+  BY_SIZE
+  GANG_UPLOAD
+  GANG_BUILDER
+  BLANKS
+  UV_BY_SIZE
+  UV_GANG_UPLOAD
+  UV_GANG_BUILDER
+}
 
 enum CartStatus {
   ACTIVE
   CHECKED_OUT
   ABANDONED
 }
+
+
+
+enum UploadIntentPurpose {
+  CUSTOMIZATION_DESIGN
+}
+
+enum ValidationStatus {
+  PENDING
+  PROCESSING
+  PASSED
+  FAILED
+  DEAD_LETTER
+}
+
+enum ModerationStatus {
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+  FLAGGED
+}
+
+enum BuilderProjectStatus {
+  DRAFT
+  READY
+  ARCHIVED
+}
+
+enum BuilderPreviewJobStatus {
+  PENDING
+  PROCESSING
+  COMPLETE
+  FAILED
+}
+
+// P3-05: Admin Ops enums
+enum SlaTier {
+  STANDARD
+  RUSH
+  CRITICAL
+}
+
+enum ReprintStatus {
+  REQUESTED
+  APPROVED
+  IN_QUEUE
+  PRINTING
+  DONE
+  REJECTED
+  CANCELLED
+}
+
 model Profile {
   id        String   @id // = auth.users.id
   role      Role     @default(CUSTOMER)
@@ -54,57 +115,106 @@ model Profile {
   phone     String? // User phone number
   address   String? // JSON string for multiple addresses
 
-    carts  Cart[]
+  // Relations
+  orders Order[] // User's orders
+  carts  Cart[]
 
   @@index([email])
   @@map("profiles")
 }
 
+model Category {
+  id        String    @id @default(uuid())
+  name      String
+  slug      String    @unique
+  products  Product[]
+  createdAt DateTime  @default(now())
+
+  @@index([slug])
+  @@map("categories")
+}
+
+// Phase 1: Collections for merchandising and navigation
+model Collection {
+  id          String              @id @default(uuid())
+  slug        String              @unique
+  name        String
+  description String?
+  isActive    Boolean             @default(true) @map("is_active")
+  sortOrder   Int                 @default(0) @map("sort_order")
+  metadata    Json                @default(dbgenerated("'{}'::jsonb"))
+  createdAt   DateTime            @default(now()) @map("created_at")
+  updatedAt   DateTime            @default(now()) @updatedAt @map("updated_at")
+  products    CollectionProduct[]
+
+  @@index([slug])
+  @@index([isActive, sortOrder])
+  @@map("collections")
+}
+
+model CollectionProduct {
+  id           String     @id @default(uuid())
+  collectionId String     @map("collection_id")
+  productId    String     @map("product_id")
+  sortOrder    Int        @default(0) @map("sort_order")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  product      Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([collectionId, productId])
+  @@index([collectionId])
+  @@index([productId])
+  @@index([collectionId, sortOrder])
+  @@map("collection_products")
+}
 
 model Cart {
   id          String     @id @default(uuid())
-  userId      String?    @map(""user_id"")
-  guestCartId String?    @map(""guest_cart_id"")
+  userId      String?    @map("user_id")
+  guestCartId String?    @map("guest_cart_id")
   status      CartStatus @default(ACTIVE)
-  createdAt   DateTime   @default(now()) @map(""created_at"")
-  updatedAt   DateTime   @updatedAt @map(""updated_at"")
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
 
-  user  Profile?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user  Profile?  @relation(fields: [userId], references: [id], onDelete: SetNull)
   items CartItem[]
 
   @@index([userId, status])
   @@index([guestCartId, status])
-  @@map(""carts"")
+  @@map("carts")
 }
 
 model CartItem {
-  id                   String   @id @default(uuid())
-  cartId               String   @map(""cart_id"")
-  cart                 Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
-  cartKey              String   @map(""cart_key"")
-  quantity             Int      @default(1)
-  productId            String   @map(""product_id"")
-  productName          String   @map(""product_name"")
-  productSlug          String   @map(""product_slug"")
-  productCategory      String   @map(""product_category"")
-  variantId            String   @map(""variant_id"")
-  variantName          String   @map(""variant_name"")
-  variantPrice         Decimal  @map(""variant_price"")
-  variantOriginalPrice Decimal? @map(""variant_original_price"")
-  variantImage         String   @map(""variant_image"")
-  variantSku           String   @map(""variant_sku"")
+  id                   String            @id @default(uuid())
+  cartId               String            @map("cart_id")
+  cart                 Cart              @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  cartKey              String            @map("cart_key")
+  quantity             Int               @default(1)
+  productId            String            @map("product_id")
+  productName          String            @map("product_name")
+  productSlug          String            @map("product_slug")
+  productCategory      String            @map("product_category")
+  variantId            String            @map("variant_id")
+  variantName          String            @map("variant_name")
+  variantPrice         Decimal           @map("variant_price")
+  variantOriginalPrice Decimal?          @map("variant_original_price")
+  variantImage         String            @map("variant_image")
+  variantSku           String            @map("variant_sku")
   size                 String?
-  isCustomized         Boolean  @default(false) @map(""is_customized"")
-  optionPayload        Json     @default(dbgenerated(""'{}'::jsonb"")) @map(""option_payload"")
-  createdAt            DateTime @default(now()) @map(""created_at"")
-  updatedAt            DateTime @updatedAt @map(""updated_at"")
+  isCustomized         Boolean           @default(false) @map("is_customized")
+  optionPayload        Json              @default(dbgenerated("'{}'::jsonb")) @map("option_payload")
+  // P3-04: Builder project reference (nullable — only set for GANG_BUILDER items)
+  builderProjectId     String?           @map("builder_project_id")
+  builderProject       GangSheetProject? @relation(fields: [builderProjectId], references: [id], onDelete: SetNull)
+  createdAt            DateTime          @default(now()) @map("created_at")
+  updatedAt            DateTime          @updatedAt @map("updated_at")
 
   @@unique([cartId, cartKey])
   @@index([cartId, updatedAt(sort: Desc)])
   @@index([variantId])
-  @@map(""cart_items"")
+  @@index([builderProjectId])
+  @@map("cart_items")
 }
-
 model Product {
   id              String             @id @default(uuid())
   title           String
@@ -124,11 +234,14 @@ model Product {
   category        Category           @relation(fields: [categoryId], references: [id])
   variants        ProductVariant[] // Product variants
   printAreas      ProductPrintArea[]
+  collections     CollectionProduct[] // Phase 1: Collection memberships
+  builderProjects GangSheetProject[]  // Phase 3: Builder projects
   rating          Float              @default(0)
   reviews         Int                @default(0)
   features        String[]           @default([])
   benefits        String[]           @default([])
   productDetails  String[]           @default([])
+  metadata        Json               @default(dbgenerated("'{}'::jsonb")) // Product metadata (upload constraints, etc.)
   createdAt       DateTime           @default(now())
   updatedAt       DateTime           @updatedAt
 
@@ -147,21 +260,23 @@ model Product {
 }
 
 model ProductVariant {
-  id            String   @id @default(uuid())
+  id            String              @id @default(uuid())
   productId     String
-  product       Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  name          String // Variant name (e.g., "Black/Red", "Ocean Blue")
-  sku           String   @unique // Unique SKU for this variant
-  price         Decimal // Variant-specific price
-  originalPrice Decimal? // Original price if on sale
-  sizes         String[] @default([]) // Available sizes for this variant
-  imagePath     String // Main thumbnail image
-  galleryPaths  String[] @default([]) // Additional gallery images
-  stock         Int      @default(0) // Variant stock
-  isAvailable   Boolean  @default(true) // Availability flag
-  sortOrder     Int      @default(0) // Display order
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  product       Product             @relation(fields: [productId], references: [id], onDelete: Cascade)
+  name          String              // Variant name (e.g., "Black/Red", "Ocean Blue")
+  sku           String              @unique // Unique SKU for this variant
+  price         Decimal             // Variant-specific price (base or starting price)
+  originalPrice Decimal?            // Original price if on sale
+  sizes         String[]            @default([]) // Available sizes for this variant
+  imagePath     String              // Main thumbnail image
+  galleryPaths  String[]            @default([]) // Additional gallery images
+  stock         Int                 @default(0) // Variant stock
+  isAvailable   Boolean             @default(true) // Availability flag
+  sortOrder     Int                 @default(0) // Display order
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  priceTiers    VariantPriceTier[]  // Phase 1: Quantity-based pricing tiers
+  orderItems    OrderItem[]         // Phase 1: Normalized order items
 
   // Single column indexes
   @@index([productId])
@@ -170,6 +285,23 @@ model ProductVariant {
   // Composite index for variant loading (Phase 3.3 - Performance Optimization)
   @@index([productId, sortOrder]) // NEW: Fast variant loading in correct order
   @@map("product_variants")
+}
+
+// Phase 1: Variant Price Tiers for quantity-based pricing
+model VariantPriceTier {
+  id          String         @id @default(uuid())
+  variantId   String         @map("variant_id")
+  variant     ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  minQuantity Int            @map("min_quantity") // Minimum quantity for this tier (e.g., 1, 11, 51)
+  maxQuantity Int?           @map("max_quantity") // Maximum quantity for this tier (null = unlimited)
+  unitPrice   Decimal        @map("unit_price") // Price per unit at this tier
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @default(now()) @updatedAt @map("updated_at")
+
+  @@unique([variantId, minQuantity], name: "unique_tier_range")
+  @@index([variantId])
+  @@index([variantId, minQuantity])
+  @@map("variant_price_tiers")
 }
 
 model Order {
@@ -181,7 +313,8 @@ model Order {
   isCustomOrder    Boolean          @default(false)
   rushFee          Decimal?
   addOnFees        Decimal?
-  items            Json // Order items (snapshot)
+  items            Json // Order items (snapshot) - DEPRECATED: Use orderItems relation
+  orderItems       OrderItem[] // Normalized order items (Phase 1)
   shippingAddress  String? // JSON string with shipping details
 
   // QPay Payment Fields
@@ -206,6 +339,10 @@ model Order {
   expiredEmailSent             Boolean   @default(false) // Order expired email sent
   expiredEmailSentAt           DateTime? // When expired email was sent
 
+  // P3-05: Admin Ops — SLA and hold
+  slaDueAt  DateTime? @map("sla_due_at")  // SLA deadline (nullable = no SLA set)
+  isOnHold  Boolean   @default(false) @map("is_on_hold")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -213,6 +350,9 @@ model Order {
   user             Profile                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   customizations   OrderItemCustomization[]
   productionEvents ProductionStatusEvent[]
+  slaEvents        OrderSlaEvent[]          // P3-05
+  holds            OrderHold[]              // P3-05
+  reprintRequests  ReprintRequest[]         // P3-05
 
   @@index([userId])
   @@index([status])
@@ -223,7 +363,42 @@ model Order {
   @@index([paymentStatus])
   @@index([qpayInvoiceExpiresAt])
   @@index([expiredAt])
+  @@index([slaDueAt, productionStatus])
   @@map("orders")
+}
+
+// Phase 1: Normalized order items (dual-write migration from orders.items JSON)
+model OrderItem {
+  id              String                    @id @default(uuid())
+  orderId         String
+  order           Order                     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  variantId       String
+  variant         ProductVariant            @relation(fields: [variantId], references: [id], onDelete: Restrict)
+  quantity        Int
+  unitPrice       Decimal // Price per unit at time of order
+  selectedOptions Json? // Size, color, finishing, etc (flexible per product family)
+
+  // Product snapshot for historical reference
+  productId       String?
+  productName     String?
+  variantName     String?
+  variantSku      String?
+
+  // P3-04: Immutable builder version reference (frozen at checkout time)
+  builderProjectVersionId String?                   @map("builder_project_version_id")
+  builderProjectVersion   GangSheetProjectVersion?  @relation(fields: [builderProjectVersionId], references: [id], onDelete: SetNull)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  uploads         OrderItemUpload[] // Phase 2: Upload lifecycle
+
+  @@index([orderId])
+  @@index([variantId])
+  @@index([createdAt])
+  @@index([builderProjectVersionId])
+  @@map("order_items")
 }
 
 model PrintArea {
@@ -295,6 +470,38 @@ model PricingRule {
   @@index([printSizeTierId])
   @@index([printAreaId])
   @@map("pricing_rules")
+}
+
+model AppSetting {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     Json
+  category  String   @default("general")
+  updatedBy String?  @map("updated_by")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([category])
+  @@map("app_settings")
+}
+
+model UploadIntent {
+  id                     String              @id @default(uuid())
+  userId                 String              @map("user_id")
+  purpose                UploadIntentPurpose
+  folder                 String
+  publicId               String              @map("public_id")
+  contentType            String              @map("content_type")
+  originalFilename       String              @map("original_filename")
+  requestedFileSizeBytes Int                 @map("requested_file_size_bytes")
+  maxBytes               Int                 @map("max_bytes")
+  expiresAt              DateTime            @map("expires_at")
+  usedAt                 DateTime?           @map("used_at")
+  createdAt              DateTime            @default(now()) @map("created_at")
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([expiresAt])
+  @@map("upload_intents")
 }
 
 model CustomizationAsset {
@@ -371,6 +578,288 @@ model PaymentWebhookLog {
   @@index([status])
   @@map("payment_webhook_logs")
 }
+
+// ============================================
+// Phase 2: Upload Lifecycle Models
+// ============================================
+
+model UploadAsset {
+  id                 String                   @id @default(uuid())
+  ownerId            String                   @map("owner_id") // User who uploaded
+  cloudinaryPublicId String                   @map("cloudinary_public_id")
+  cloudinaryUrl      String                   @map("cloudinary_url")
+  thumbnailUrl       String?                  @map("thumbnail_url")
+  fileName           String                   @map("file_name")
+  mimeType           String                   @map("mime_type")
+  fileSizeBytes      Int                      @map("file_size_bytes")
+  widthPx            Int?                     @map("width_px")
+  heightPx           Int?                     @map("height_px")
+  dpi                Int?
+
+  // Lifecycle status
+  validationStatus   ValidationStatus         @default(PENDING) @map("validation_status")
+  moderationStatus   ModerationStatus         @default(PENDING_REVIEW) @map("moderation_status")
+
+  // Metadata
+  uploadFamily       ProductFamily?           @map("upload_family") // Context: gang_upload, uv_gang_upload, etc.
+  metadata           Json?                    // Additional upload-specific data
+
+  createdAt          DateTime                 @default(now()) @map("created_at")
+  updatedAt          DateTime                 @updatedAt @map("updated_at")
+
+  // Relations
+  cartItemUploads    CartItemUpload[]
+  orderItemUploads   OrderItemUpload[]
+  validationJobs     UploadValidationJob[]
+  moderationActions  UploadModerationAction[]
+
+  @@index([ownerId, createdAt(sort: Desc)])
+  @@index([validationStatus, createdAt(sort: Desc)])
+  @@index([moderationStatus, createdAt(sort: Desc)])
+  @@index([uploadFamily])
+  @@map("upload_assets")
+}
+
+model CartItemUpload {
+  id            String      @id @default(uuid())
+  cartId        String      @map("cart_id")
+  cartKey       String      @map("cart_key") // Composite key with cart
+  uploadAssetId String      @map("upload_asset_id")
+  uploadAsset   UploadAsset @relation(fields: [uploadAssetId], references: [id], onDelete: Restrict)
+  sortOrder     Int         @default(0) @map("sort_order") // For multiple uploads per item
+  createdAt     DateTime    @default(now()) @map("created_at")
+
+  @@unique([cartId, cartKey, uploadAssetId])
+  @@index([cartId, cartKey])
+  @@index([uploadAssetId])
+  @@map("cart_item_uploads")
+}
+
+model OrderItemUpload {
+  id            String      @id @default(uuid())
+  orderItemId   String      @map("order_item_id")
+  orderItem     OrderItem   @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  uploadAssetId String      @map("upload_asset_id")
+  uploadAsset   UploadAsset @relation(fields: [uploadAssetId], references: [id], onDelete: Restrict)
+  sortOrder     Int         @default(0) @map("sort_order")
+  createdAt     DateTime    @default(now()) @map("created_at")
+
+  @@unique([orderItemId, uploadAssetId])
+  @@index([orderItemId])
+  @@index([uploadAssetId])
+  @@map("order_item_uploads")
+}
+
+model UploadValidationJob {
+  id            String           @id @default(uuid())
+  uploadAssetId String           @map("upload_asset_id")
+  uploadAsset   UploadAsset      @relation(fields: [uploadAssetId], references: [id], onDelete: Cascade)
+  status        ValidationStatus @default(PENDING)
+  retryCount    Int              @default(0) @map("retry_count")
+  maxRetries    Int              @default(3) @map("max_retries")
+  nextRunAt     DateTime?        @map("next_run_at")
+  lastError     String?          @map("last_error") @db.Text
+  createdAt     DateTime         @default(now()) @map("created_at")
+  updatedAt     DateTime         @updatedAt @map("updated_at")
+
+  // Relations
+  events        UploadValidationEvent[]
+
+  @@index([status, nextRunAt])
+  @@index([uploadAssetId])
+  @@index([createdAt(sort: Desc)])
+  @@map("upload_validation_jobs")
+}
+
+model UploadValidationEvent {
+  id        String              @id @default(uuid())
+  jobId     String              @map("job_id")
+  job       UploadValidationJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  eventType String              @map("event_type") // 'started', 'passed', 'failed', 'retry'
+  message   String?             @db.Text
+  errorCode String?             @map("error_code") // Machine-readable error code
+  metadata  Json?               // Validation details (dimensions, DPI, etc.)
+  createdAt DateTime            @default(now()) @map("created_at")
+
+  @@index([jobId, createdAt(sort: Desc)])
+  @@index([eventType])
+  @@map("upload_validation_events")
+}
+
+// ============================================
+// Phase 3: Gang Sheet Builder Models
+// ============================================
+
+model GangSheetProject {
+  id             String               @id @default(uuid())
+  ownerId        String               @map("owner_id")
+  productId      String               @map("product_id")
+  product        Product              @relation(fields: [productId], references: [id], onDelete: Restrict)
+  title          String               @default("Untitled Project")
+  status         BuilderProjectStatus @default(DRAFT)
+  canvasWidthCm  Float                @map("canvas_width_cm")
+  canvasHeightCm Float                @map("canvas_height_cm")
+  metadata       Json                 @default(dbgenerated("'{}'::jsonb"))
+  createdAt      DateTime             @default(now()) @map("created_at")
+  updatedAt      DateTime             @updatedAt @map("updated_at")
+
+  items       GangSheetProjectItem[]
+  versions    GangSheetProjectVersion[]
+  previewJobs BuilderPreviewJob[]
+  cartItems   CartItem[]               // P3-04: cart items referencing this project
+
+  @@index([ownerId, updatedAt(sort: Desc)])
+  @@index([status, updatedAt(sort: Desc)])
+  @@index([productId])
+  @@map("gang_sheet_projects")
+}
+
+model GangSheetProjectItem {
+  id        String           @id @default(uuid())
+  projectId String           @map("project_id")
+  project   GangSheetProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  assetUrl  String           @map("asset_url")    // Cloudinary URL of the placed image
+  xCm       Float            @map("x_cm")         // X position on canvas (cm)
+  yCm       Float            @map("y_cm")         // Y position on canvas (cm)
+  widthCm   Float            @map("width_cm")     // Width on canvas (cm)
+  heightCm  Float            @map("height_cm")    // Height on canvas (cm)
+  rotation  Float            @default(0)          // Rotation in degrees
+  zIndex    Int              @map("z_index")      // Stacking order (deterministic ordering)
+  flipH     Boolean          @default(false) @map("flip_h")
+  flipV     Boolean          @default(false) @map("flip_v")
+  metadata  Json             @default(dbgenerated("'{}'::jsonb"))
+  createdAt DateTime         @default(now()) @map("created_at")
+  updatedAt DateTime         @updatedAt @map("updated_at")
+
+  @@index([projectId, zIndex])
+  @@index([projectId])
+  @@map("gang_sheet_project_items")
+}
+
+model GangSheetProjectVersion {
+  id            String           @id @default(uuid())
+  projectId     String           @map("project_id")
+  project       GangSheetProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  versionNumber Int              @map("version_number")
+  itemsSnapshot Json             @map("items_snapshot") // Full item array snapshot for rollback
+  metadata      Json             @default(dbgenerated("'{}'::jsonb"))
+  createdAt     DateTime         @default(now()) @map("created_at")
+
+  orderItems    OrderItem[]    // P3-04: order items frozen to this version
+
+  @@unique([projectId, versionNumber])
+  @@index([projectId, versionNumber(sort: Desc)])
+  @@map("gang_sheet_project_versions")
+}
+
+// Phase 3 P3-02: Builder preview job queue
+model BuilderPreviewJob {
+  id         String                  @id @default(uuid())
+  projectId  String                  @map("project_id")
+  project    GangSheetProject        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  status     BuilderPreviewJobStatus @default(PENDING)
+  retryCount Int                     @default(0) @map("retry_count")
+  maxRetries Int                     @default(3) @map("max_retries")
+  nextRunAt  DateTime?               @map("next_run_at")
+  lastError  String?                 @map("last_error") @db.Text
+  createdAt  DateTime                @default(now()) @map("created_at")
+  updatedAt  DateTime                @updatedAt @map("updated_at")
+
+  assets BuilderPreviewAsset[]
+
+  @@index([projectId, status])
+  @@index([status, nextRunAt])
+  @@map("builder_preview_jobs")
+}
+
+model BuilderPreviewAsset {
+  id            String            @id @default(uuid())
+  jobId         String            @map("job_id")
+  job           BuilderPreviewJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  projectId     String            @map("project_id")
+  cloudinaryUrl String?           @map("cloudinary_url")
+  widthPx       Int?              @map("width_px")
+  heightPx      Int?              @map("height_px")
+  fileSizeBytes Int?              @map("file_size_bytes")
+  metadata      Json              @default(dbgenerated("'{}'::jsonb"))
+  createdAt     DateTime          @default(now()) @map("created_at")
+
+  @@index([projectId])
+  @@index([jobId])
+  @@map("builder_preview_assets")
+}
+
+model UploadModerationAction {
+  id              String           @id @default(uuid())
+  uploadAssetId   String           @map("upload_asset_id")
+  uploadAsset     UploadAsset      @relation(fields: [uploadAssetId], references: [id], onDelete: Cascade)
+  actorId         String           @map("actor_id") // Admin user ID
+  action          String           // 'approve', 'reject', 'override', 'flag'
+  reason          String?          @db.Text
+  previousStatus  ModerationStatus @map("previous_status")
+  newStatus       ModerationStatus @map("new_status")
+  metadata        Json?            // Additional action context
+  createdAt       DateTime         @default(now()) @map("created_at")
+
+  @@index([uploadAssetId, createdAt(sort: Desc)])
+  @@index([actorId])
+  @@index([action])
+  @@map("upload_moderation_actions")
+}
+
+// ── P3-05: Admin Ops models ──────────────────────────────────────────────────
+
+model OrderSlaEvent {
+  id        String   @id @default(uuid())
+  orderId   String   @map("order_id")
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  slaDueAt  DateTime @map("sla_due_at")
+  slaTier   SlaTier  @default(STANDARD) @map("sla_tier")
+  notes     String?
+  setBy     String   @map("set_by")   // admin user id
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([orderId, createdAt(sort: Desc)])
+  @@index([slaDueAt, slaTier])
+  @@map("order_sla_events")
+}
+
+model OrderHold {
+  id          String    @id @default(uuid())
+  orderId     String    @map("order_id")
+  order       Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  reason      String
+  heldBy      String    @map("held_by")     // admin user id
+  releasedBy  String?   @map("released_by") // admin user id
+  releasedAt  DateTime? @map("released_at")
+  notes       String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@index([orderId, createdAt(sort: Desc)])
+  @@map("order_holds")
+}
+
+model ReprintRequest {
+  id          String        @id @default(uuid())
+  orderId     String        @map("order_id")
+  order       Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  status      ReprintStatus @default(REQUESTED)
+  reason      String
+  notes       String?
+  requestedBy String        @map("requested_by") // admin user id
+  approvedBy  String?       @map("approved_by")  // admin user id
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+
+  @@index([orderId, createdAt(sort: Desc)])
+  @@index([status, createdAt(sort: Desc)])
+  @@map("reprint_requests")
+}
+
+
+
+
 
 
 

@@ -11,7 +11,10 @@ BEGIN
       ('products'),
       ('product_variants'),
       ('orders'),
-      ('customization_assets')
+      ('customization_assets'),
+      ('carts'),
+      ('cart_items'),
+      ('upload_intents')
   ) AS target(table_name)
   LEFT JOIN pg_class c
     ON c.relname = target.table_name
@@ -29,5 +32,7 @@ END $$;
 SELECT schemaname, tablename, policyname, cmd, roles
 FROM pg_policies
 WHERE schemaname = 'public'
-  AND tablename IN ('categories', 'products', 'product_variants', 'orders', 'customization_assets')
+  AND tablename IN ('categories', 'products', 'product_variants', 'orders', 'customization_assets', 'carts', 'cart_items', 'upload_intents')
 ORDER BY tablename, policyname;
+
+

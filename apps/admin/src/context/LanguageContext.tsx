@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
+import type { ReactNode } from 'react';
 
 type Language = 'en' | 'mn';
 
@@ -17,10 +18,16 @@ const translations: Record<Language, Record<string, string>> = {
     'nav.dashboard': 'Dashboard',
     'nav.products': 'Products',
     'nav.categories': 'Categories',
+    'nav.collections': 'Collections',
     'nav.orders': 'Orders',
     'nav.production': 'Production',
+    'nav.moderation': 'Upload Moderation',
+    'nav.uploadSettings': 'Upload Settings',
     'nav.pricing': 'Pricing Rules',
+    'nav.printAreas': 'Print Areas',
+    'nav.sizeTiers': 'Size Tiers',
     'nav.emailTest': 'Email Test',
+    'nav.reprints': 'Reprint Queue',
     'nav.settings': 'Settings',
     'nav.logout': 'Logout',
 
@@ -80,10 +87,16 @@ const translations: Record<Language, Record<string, string>> = {
     'nav.dashboard': 'Хянах самбар',
     'nav.products': 'Бүтээгдэхүүн',
     'nav.categories': 'Ангилал',
+    'nav.collections': 'Цуглуулга',
     'nav.orders': 'Захиалга',
     'nav.production': 'Үйлдвэрлэл',
+    'nav.moderation': 'Upload хянах',
+    'nav.uploadSettings': 'Upload тохиргоо',
     'nav.pricing': 'Үнийн дүрэм',
+    'nav.printAreas': 'Хэвлэх талбай',
+    'nav.sizeTiers': 'Хэмжээний шатлал',
     'nav.emailTest': 'Email тест',
+    'nav.reprints': 'Дахин хэвлэх дараалал',
     'nav.settings': 'Тохиргоо',
     'nav.logout': 'Гарах',
 

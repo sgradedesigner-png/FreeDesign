@@ -96,7 +96,7 @@ export function initSentry(): void {
       normalizeDepth: 10,
 
       // Before sending events, you can modify or filter them
-      beforeSend(event, hint) {
+      beforeSend(event, _hint) {
         // Don't send events in development (unless explicitly enabled)
         if (!enabled) {
           return null;
@@ -119,7 +119,7 @@ export function initSentry(): void {
       },
 
       // Before breadcrumbs are sent
-      beforeBreadcrumb(breadcrumb, hint) {
+      beforeBreadcrumb(breadcrumb, _hint) {
         // Don't log console breadcrumbs in production (too noisy)
         if (environment === 'production' && breadcrumb.category === 'console') {
           return null;

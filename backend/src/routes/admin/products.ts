@@ -8,6 +8,10 @@ import { prisma } from '../../lib/prisma';
 import { productsCache } from '../../lib/cache';
 import { deleteFolder } from '../../lib/cloudinary';
 import { importRemoteImageToCloudinary, isCloudinaryUrl, isHttpUrl } from '../../lib/remote-image-import';
+import {
+  collectTemplatePrintAreaIds,
+  customizationTemplateV1Schema,
+} from '../../schemas/layout-template.schema';
 
 // price Decimal-Ð´ Ð·Ð¾Ñ€Ð¸ÑƒÐ»Ð¶ number/string Ð°Ð»ÑŒ Ð°Ð»Ð¸Ð½Ñ‹Ð³ Ð·Ó©Ð²ÑˆÓ©Ó©Ñ€Ð½Ó©
 const priceSchema = z.union([
@@ -128,6 +132,19 @@ async function normalizeVariantMediaForCloudinary(
   return normalized;
 }
 
+async function assertActivePrintAreas(areaIds: string[]) {
+  if (areaIds.length === 0) return;
+  const count = await prisma.printArea.count({
+    where: {
+      id: { in: areaIds },
+      isActive: true,
+    },
+  });
+  if (count !== areaIds.length) {
+    throw new Error('One or more print areas are invalid/inactive');
+  }
+}
+
 export async function adminProductRoutes(app: FastifyInstance) {
   // ðŸ” Admin guard â€” Ð±Ò¯Ñ… product route-Ð´
   app.addHook('preHandler', adminGuard);
@@ -153,6 +170,17 @@ export async function adminProductRoutes(app: FastifyInstance) {
       benefits: z.array(z.string()).optional().default([]),
       productDetails: z.array(z.string()).optional().default([]),
       variants: z.array(variantSchema).min(1, 'At least one variant is required'),
+      // Product wizard fields
+      printAreas: z.array(z.string().uuid()).optional().default([]),
+      printAreaDefaults: z.record(z.string(), z.boolean()).optional(),
+      uploadConstraints: z.object({
+        maxFileSizeMB: z.number(),
+        minDPI: z.number().optional(),
+        minWidth: z.number(),
+        minHeight: z.number(),
+        allowedFormats: z.array(z.string()),
+      }).optional(),
+      customizationTemplateV1: customizationTemplateV1Schema.optional().nullable(),
     });
 
     const body = schema.parse(request.body);
@@ -176,6 +204,25 @@ export async function adminProductRoutes(app: FastifyInstance) {
 
     const productId = randomUUID();
     const normalizedVariants = await normalizeVariantMediaForCloudinary(body.variants, productId);
+    const linkedTemplateAreaIds = collectTemplatePrintAreaIds(body.customizationTemplateV1);
+    const uniquePrintAreas = Array.from(new Set([...(body.printAreas ?? []), ...linkedTemplateAreaIds]));
+    try {
+      await assertActivePrintAreas(uniquePrintAreas);
+    } catch (validationError) {
+      return reply.status(400).send({
+        message: validationError instanceof Error ? validationError.message : 'Invalid print areas',
+      });
+    }
+    const isCustomizable = uniquePrintAreas.length > 0 || Boolean(body.customizationTemplateV1);
+
+    // Build metadata including upload constraints
+    const metadata: Prisma.JsonObject = {};
+    if (body.uploadConstraints) {
+      metadata.uploadConstraints = body.uploadConstraints;
+    }
+    if (body.customizationTemplateV1) {
+      metadata.customizationTemplateV1 = body.customizationTemplateV1;
+    }
 
     const product = await prisma.product.create({
       data: {
@@ -188,6 +235,7 @@ export async function adminProductRoutes(app: FastifyInstance) {
         requiresUpload: body.requires_upload,
         requiresBuilder: body.requires_builder,
         uploadProfileId: body.upload_profile_id ?? null,
+        isCustomizable,
         subtitle: body.subtitle ?? null,
         description: body.description,
         basePrice: body.basePrice,
@@ -197,6 +245,7 @@ export async function adminProductRoutes(app: FastifyInstance) {
         features: body.features,
         benefits: body.benefits,
         productDetails: body.productDetails,
+        metadata: metadata,
         variants: {
           create: normalizedVariants.map((v, index) => ({
             name: v.name,
@@ -217,6 +266,17 @@ export async function adminProductRoutes(app: FastifyInstance) {
         category: true,
       },
     });
+
+    // Create print area links if provided
+    if (uniquePrintAreas.length > 0) {
+      await prisma.productPrintArea.createMany({
+        data: uniquePrintAreas.map((areaId) => ({
+          productId: product.id,
+          printAreaId: areaId,
+          isDefault: body.printAreaDefaults?.[areaId] ?? false,
+        })),
+      });
+    }
 
     productsCache.clear();
     return product;
@@ -316,6 +376,13 @@ export async function adminProductRoutes(app: FastifyInstance) {
       include: {
         category: true,
         variants: { orderBy: { sortOrder: 'asc' } },
+        printAreas: {
+          select: {
+            printAreaId: true,
+            isDefault: true,
+          },
+          orderBy: { printArea: { sortOrder: 'asc' } },
+        },
       },
     });
 
@@ -463,12 +530,57 @@ export async function adminProductRoutes(app: FastifyInstance) {
       features: z.array(z.string()).optional(),
       benefits: z.array(z.string()).optional(),
       productDetails: z.array(z.string()).optional(),
+      // Product wizard fields
+      printAreas: z.array(z.string().uuid()).optional(),
+      printAreaDefaults: z.record(z.string(), z.boolean()).optional(),
+      uploadConstraints: z.object({
+        maxFileSizeMB: z.number(),
+        minDPI: z.number().optional(),
+        minWidth: z.number(),
+        minHeight: z.number(),
+        allowedFormats: z.array(z.string()),
+      }).optional(),
+      customizationTemplateV1: customizationTemplateV1Schema.optional().nullable(),
       variants: z.array(variantSchema).optional(),
     });
 
     const { id } = paramsSchema.parse(request.params);
     const data = bodySchema.parse(request.body);
     let normalizedVariants: VariantInput[] | undefined;
+    const existingProduct = await prisma.product.findUnique({
+      where: { id },
+      select: {
+        metadata: true,
+        printAreas: { select: { printAreaId: true } },
+      },
+    });
+    if (!existingProduct) {
+      return reply.status(404).send({ message: 'Product not found' });
+    }
+
+    const existingMetadata = (existingProduct.metadata && typeof existingProduct.metadata === 'object'
+      ? (existingProduct.metadata as Prisma.JsonObject)
+      : {}) as Prisma.JsonObject;
+    const existingTemplateParse = customizationTemplateV1Schema.safeParse(existingMetadata.customizationTemplateV1);
+    const existingTemplate = existingTemplateParse.success ? existingTemplateParse.data : null;
+    const existingPrintAreaIds = existingProduct.printAreas.map((item) => item.printAreaId);
+
+    const nextTemplate = data.customizationTemplateV1 !== undefined
+      ? data.customizationTemplateV1
+      : existingTemplate;
+    const linkedTemplateAreaIds = collectTemplatePrintAreaIds(nextTemplate);
+    const nextPrintAreas = Array.from(
+      new Set([...(data.printAreas ?? existingPrintAreaIds), ...linkedTemplateAreaIds])
+    );
+    const shouldPersistPrintAreas = data.printAreas !== undefined || data.customizationTemplateV1 !== undefined;
+
+    try {
+      await assertActivePrintAreas(nextPrintAreas);
+    } catch (validationError) {
+      return reply.status(400).send({
+        message: validationError instanceof Error ? validationError.message : 'Invalid print areas',
+      });
+    }
 
     // slug uniqueness if changing
     if (data.slug) {
@@ -540,13 +652,47 @@ export async function adminProductRoutes(app: FastifyInstance) {
       };
     }
 
-    const updated = await prisma.product.update({
-      where: { id },
-      data: updateData,
-      include: {
-        category: true,
-        variants: { orderBy: { sortOrder: 'asc' } },
-      },
+    if (data.uploadConstraints !== undefined || data.customizationTemplateV1 !== undefined) {
+      const metadata = (existingProduct.metadata && typeof existingProduct.metadata === 'object'
+        ? { ...(existingProduct.metadata as Prisma.JsonObject) }
+        : {}) as Prisma.JsonObject;
+      if (data.uploadConstraints !== undefined) {
+        metadata.uploadConstraints = data.uploadConstraints as unknown as Prisma.JsonValue;
+      }
+      if (data.customizationTemplateV1 === null) {
+        delete metadata.customizationTemplateV1;
+      } else if (data.customizationTemplateV1 !== undefined) {
+        metadata.customizationTemplateV1 = data.customizationTemplateV1 as unknown as Prisma.JsonValue;
+      }
+      updateData.metadata = metadata;
+    }
+
+    updateData.isCustomizable = nextPrintAreas.length > 0 || Boolean(nextTemplate);
+
+    const updated = await prisma.$transaction(async (tx) => {
+      const saved = await tx.product.update({
+        where: { id },
+        data: updateData,
+        include: {
+          category: true,
+          variants: { orderBy: { sortOrder: 'asc' } },
+        },
+      });
+
+      if (shouldPersistPrintAreas) {
+        await tx.productPrintArea.deleteMany({ where: { productId: id } });
+        if (nextPrintAreas.length > 0) {
+          await tx.productPrintArea.createMany({
+            data: nextPrintAreas.map((areaId) => ({
+              productId: id,
+              printAreaId: areaId,
+              isDefault: data.printAreaDefaults?.[areaId] ?? false,
+            })),
+          });
+        }
+      }
+
+      return saved;
     });
 
     productsCache.clear();
@@ -604,5 +750,3 @@ export async function adminProductRoutes(app: FastifyInstance) {
     }
   });
 }
-
-

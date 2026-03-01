@@ -1,3 +1,4 @@
+﻿import { createHash } from 'crypto';
 import pino from 'pino';
 import type { FastifyBaseLogger } from 'fastify';
 
@@ -134,7 +135,7 @@ export function logQuery(query: string, duration: number, params?: any) {
         duration: `${duration}ms`,
         params: params ? JSON.stringify(params) : undefined
       },
-      '🐌 Slow database query detected'
+      'ðŸŒ Slow database query detected'
     );
   } else if (isDevelopment) {
     logger.debug(
@@ -165,7 +166,7 @@ export function logPayment(
       status,
       ...details
     },
-    `💳 Payment: ${operation}`
+    `ðŸ’³ Payment: ${operation}`
   );
 }
 
@@ -178,7 +179,7 @@ export function logQPay(
   success: boolean = true,
   error?: any
 ) {
-  const emoji = success ? '✅' : '❌';
+  const emoji = success ? 'âœ…' : 'âŒ';
   const level = success ? 'info' : 'error';
 
   logger[level](
@@ -200,7 +201,7 @@ export function logCircuitBreaker(
   state: 'OPEN' | 'CLOSED' | 'HALF_OPEN',
   details?: Record<string, any>
 ) {
-  const emoji = state === 'CLOSED' ? '✅' : state === 'OPEN' ? '⚠️' : '🔄';
+  const emoji = state === 'CLOSED' ? 'âœ…' : state === 'OPEN' ? 'âš ï¸' : 'ðŸ”„';
   const level = state === 'OPEN' ? 'error' : state === 'HALF_OPEN' ? 'warn' : 'info';
 
   logger[level](
@@ -209,7 +210,7 @@ export function logCircuitBreaker(
       state,
       ...details
     },
-    `${emoji} Circuit Breaker: ${operation} → ${state}`
+    `${emoji} Circuit Breaker: ${operation} â†’ ${state}`
   );
 }
 
@@ -221,7 +222,7 @@ export function logSecurity(
   severity: 'low' | 'medium' | 'high',
   details: Record<string, any>
 ) {
-  const emoji = severity === 'high' ? '🚨' : severity === 'medium' ? '⚠️' : 'ℹ️';
+  const emoji = severity === 'high' ? 'ðŸš¨' : severity === 'medium' ? 'âš ï¸' : 'â„¹ï¸';
   const level = severity === 'high' ? 'error' : severity === 'medium' ? 'warn' : 'info';
 
   logger[level](
@@ -244,8 +245,19 @@ export function logRateLimit(ip: string, route: string, retryAfter: number) {
       route,
       retryAfter: `${retryAfter}s`
     },
-    '🚫 Rate limit exceeded'
+    'ðŸš« Rate limit exceeded'
   );
 }
 
+
+/**
+ * One-way hash for identifiers in logs (avoid printing raw user IDs/emails).
+ *
+ * Note: This is for observability correlation only, not for security.
+ */
+export function hashIdentifier(value: string | null | undefined): string | null {
+  if (!value) return null;
+  return createHash('sha256').update(value).digest('hex').slice(0, 12);
+}
 export default logger;
+

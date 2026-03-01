@@ -1,11 +1,12 @@
-import type { FastifyInstance } from 'fastify';
-import { logger } from '../lib/logger';
+﻿import type { FastifyInstance } from 'fastify';
+import { logger, hashIdentifier } from '../lib/logger';
 import { prisma } from '../lib/prisma';
 import { userGuard } from '../middleware/userGuard';
 import { mockupPreviewSchema, priceQuoteSchema } from '../schemas/customization.schema';
 import { uploadCustomizationAsset } from '../services/asset.service';
 import { buildCustomizationMockupPreviewUrl } from '../services/mockup.service';
 import { calculatePriceQuote } from '../services/pricing.service';
+import { settingsService } from '../services/settings.service';
 import { AppError, BadRequestError } from '../utils/errors';
 import { validateData } from '../utils/validation';
 import { z } from 'zod';
@@ -15,6 +16,16 @@ const customizationOptionsQuerySchema = z.object({
 });
 
 export default async function customizationRoutes(app: FastifyInstance) {
+  app.get('/api/customization/ui-settings', async (_request, reply) => {
+    try {
+      const sizeFinderEnabled = await settingsService.getSizeFinderEnabled();
+      return reply.send({ sizeFinderEnabled });
+    } catch (error) {
+      logger.error({ error }, 'Failed to load customization UI settings');
+      return reply.code(500).send({ error: 'Failed to load customization UI settings' });
+    }
+  });
+
   app.get('/api/customization/options', async (request, reply) => {
     const validation = validateData(customizationOptionsQuerySchema, request.query, reply);
     if (!validation.success) {
@@ -32,6 +43,8 @@ export default async function customizationRoutes(app: FastifyInstance) {
             select: {
               id: true,
               isCustomizable: true,
+              productFamily: true,
+              metadata: true,
               printAreas: {
                 select: {
                   isDefault: true,
@@ -133,10 +146,20 @@ export default async function customizationRoutes(app: FastifyInstance) {
           isDefault: false,
         }));
 
+      const mockupPreviewEnabled = await settingsService.getMockupPreviewEnabled(
+        String(variant.product.productFamily)
+      );
+      const showPlacementCoordinates = await settingsService.getPlacementCoordinatesEnabled();
+
       return reply.send({
         variantId: variant.id,
         productId: variant.product.id,
         isCustomizable: variant.product.isCustomizable,
+        mockupPreviewEnabled,
+        showPlacementCoordinates,
+        layoutTemplate: (variant.product.metadata && typeof variant.product.metadata === 'object')
+          ? ((variant.product.metadata as Record<string, unknown>).customizationTemplateV1 ?? null)
+          : null,
         printAreas,
         printSizeTiers: printSizeTiers.map((tier) => ({
           id: tier.id,
@@ -203,7 +226,7 @@ export default async function customizationRoutes(app: FastifyInstance) {
         },
       });
     } catch (error) {
-      logger.error({ error, userId }, 'Failed to upload customization asset');
+      logger.error({ error, requestId: request.id, userIdHash: hashIdentifier(userId) ?? undefined }, 'Failed to upload customization asset');
 
       if (error instanceof AppError) {
         return reply.code(error.statusCode).send({ error: error.message });
@@ -230,6 +253,19 @@ export default async function customizationRoutes(app: FastifyInstance) {
         return;
       }
 
+
+      const userId = (request as any).user.id;
+      const userIdHash = hashIdentifier(userId) ?? undefined;
+      logger.info({
+        event: 'quote_requested',
+        requestId: request.id,
+        userIdHash,
+        variantId: validation.data.variantId,
+        quantity: validation.data.quantity,
+        customizationCount: validation.data.customizations.length,
+        addOnCount: (validation.data.addOnIds ?? []).length,
+        rushOrder: Boolean(validation.data.rushOrder),
+      }, '[Customization] quote_requested');
       const breakdown = await calculatePriceQuote(validation.data);
       return reply.send({ breakdown });
     } catch (error) {
@@ -265,6 +301,10 @@ export default async function customizationRoutes(app: FastifyInstance) {
         printAreaId,
         printSizeTierId,
         assetId,
+        baseImageUrl,
+        presetRectNorm,
+        baseImageNaturalWidth,
+        baseImageNaturalHeight,
         placementConfig,
       } = validation.data;
 
@@ -352,8 +392,12 @@ export default async function customizationRoutes(app: FastifyInstance) {
         throw new BadRequestError('Selected print area is not enabled for this product');
       }
 
-      const baseImageUrl = variant.product.mockupImagePath || variant.imagePath;
-      if (!baseImageUrl) {
+      const fallbackBaseImageUrl = variant.product.mockupImagePath || variant.imagePath;
+      const preferredBaseImageUrl = baseImageUrl?.includes('res.cloudinary.com')
+        ? baseImageUrl
+        : fallbackBaseImageUrl;
+
+      if (!preferredBaseImageUrl) {
         throw new BadRequestError('Product variant does not have a base mockup image');
       }
 
@@ -363,7 +407,7 @@ export default async function customizationRoutes(app: FastifyInstance) {
       }
 
       const generated = buildCustomizationMockupPreviewUrl({
-        baseImageUrl,
+        baseImageUrl: preferredBaseImageUrl,
         overlayPublicId,
         printArea: {
           maxWidthCm: Number(printArea.maxWidthCm),
@@ -375,12 +419,15 @@ export default async function customizationRoutes(app: FastifyInstance) {
             heightCm: Number(printSizeTier.heightCm),
           }
           : undefined,
+        presetRectNorm,
+        baseImageNaturalWidth,
+        baseImageNaturalHeight,
         placementConfig,
       });
 
       return reply.send({
         previewUrl: generated.previewUrl,
-        baseImageUrl,
+        baseImageUrl: preferredBaseImageUrl,
         overlay: {
           widthPx: generated.overlayWidthPx,
           heightPx: generated.overlayHeightPx,
@@ -389,7 +436,7 @@ export default async function customizationRoutes(app: FastifyInstance) {
         },
       });
     } catch (error) {
-      logger.error({ error, userId }, 'Failed to build customization mockup preview');
+      logger.error({ error, requestId: request.id, userIdHash: hashIdentifier(userId) ?? undefined }, 'Failed to build customization mockup preview');
 
       if (error instanceof AppError) {
         return reply.code(error.statusCode).send({ error: error.message });
@@ -399,3 +446,4 @@ export default async function customizationRoutes(app: FastifyInstance) {
     }
   });
 }
+

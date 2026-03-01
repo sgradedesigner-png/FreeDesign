@@ -354,6 +354,21 @@ export default function OrderDetailPage() {
                     <p className="text-sm text-muted-foreground">
                       {language === 'mn' ? 'Тоо ширхэг' : 'Quantity'}: {item.quantity}
                     </p>
+
+                    {/* Phase 2: Display upload info if present */}
+                    {(item.optionPayload?.uploadAssetId || item.selectedOptions?.uploadAssetId) && (
+                      <div className="mt-2 flex items-center gap-2 text-sm">
+                        <Icon name="FileImage" size={16} className="text-primary" />
+                        <span className="text-primary font-medium">
+                          {item.optionPayload?.uploadFileName || item.selectedOptions?.uploadFileName || language === 'mn' ? 'Upload хийсэн' : 'File uploaded'}
+                        </span>
+                        {item.optionPayload?.gangSheetLength && (
+                          <Badge variant="secondary" className="text-xs">
+                            {item.optionPayload.gangSheetLength}cm
+                          </Badge>
+                        )}
+                      </div>
+                    )}
                   </div>
                   <div className="text-right">
                     <p className="font-semibold">

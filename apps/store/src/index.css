@@ -16,8 +16,12 @@
     --color-card: #FFFFFF;
     --color-card-foreground: #1F2937;
 
-    --color-primary: #059669;
+    --color-primary: #A86BB9;
     --color-primary-foreground: #FFFFFF;
+    --color-primary-start: #FF6692;
+    --color-primary-end: #A86BB9;
+    --color-primary-start-hover: #f75f8c;
+    --color-primary-end-hover: #9f63b1;
 
     --color-secondary: #374151;
     --color-secondary-foreground: #FFFFFF;
@@ -27,7 +31,7 @@
 
     --color-border: rgba(0, 0, 0, 0.08);
     --color-input: rgba(0, 0, 0, 0.06);
-    --color-ring: #059669;
+    --color-ring: #A86BB9;
 
     /* ✅ Tailwind class-ууд ажиллах mapping (bg-background гэх мэт) */
     --background: 0 0% 100%;
@@ -36,8 +40,8 @@
     --card: 0 0% 100%;
     --card-foreground: 0 0% 3.9%;
 
-    --primary: 160 84% 39%;
-    /* emerald-ish */
+    --primary: 286 34% 57%;
+    /* pink-purple brand */
     --primary-foreground: 0 0% 98%;
     /* white text */
 
@@ -71,8 +75,12 @@
     --color-card: #1A1A1A;
     --color-card-foreground: #EBEBEB;
 
-    --color-primary: #10B981;
+    --color-primary: #A86BB9;
     --color-primary-foreground: #FFFFFF;
+    --color-primary-start: #FF6692;
+    --color-primary-end: #A86BB9;
+    --color-primary-start-hover: #f75f8c;
+    --color-primary-end-hover: #9f63b1;
 
     --color-secondary: #4B5563;
     --color-secondary-foreground: #FFFFFF;
@@ -82,7 +90,7 @@
 
     --color-border: rgba(255, 255, 255, 0.08);
     --color-input: rgba(255, 255, 255, 0.12);
-    --color-ring: #10B981;
+    --color-ring: #A86BB9;
 
     /* mapping */
     --background: 0 0% 3.9%;
@@ -91,7 +99,7 @@
     --card: 0 0% 3.9%;
     --card-foreground: 0 0% 98%;
 
-    --primary: 160 84% 39%;
+    --primary: 286 34% 57%;
     --primary-foreground: 0 0% 98%;
 
 
@@ -217,6 +225,29 @@
     position: relative;
     color: #fff;
     animation: greenBurn 1s ease-in-out infinite alternate;
+  }
+
+  /* Global brand color overrides */
+  .bg-primary {
+    background-color: transparent !important;
+    background-image: linear-gradient(90deg, var(--color-primary-start), var(--color-primary-end)) !important;
+  }
+
+  .hover\:bg-primary\/90:hover {
+    background-color: transparent !important;
+    background-image: linear-gradient(90deg, var(--color-primary-start-hover), var(--color-primary-end-hover)) !important;
+  }
+
+  .text-primary {
+    color: var(--color-primary-end) !important;
+  }
+
+  .hover\:text-primary:hover {
+    color: var(--color-primary-end-hover) !important;
+  }
+
+  .border-primary {
+    border-color: var(--color-primary-end) !important;
   }
 }
 

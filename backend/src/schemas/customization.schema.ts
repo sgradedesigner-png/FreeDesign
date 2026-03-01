@@ -7,11 +7,22 @@ export const placementConfigSchema = z.object({
   scale: z.number().positive().finite().optional(),
 });
 
+export const normalizedRectSchema = z.object({
+  x: z.number().min(0).max(1),
+  y: z.number().min(0).max(1),
+  width: z.number().positive().max(1),
+  height: z.number().positive().max(1),
+});
+
 export const mockupPreviewSchema = z.object({
   variantId: z.string().uuid('Invalid variantId'),
   printAreaId: z.string().uuid('Invalid printAreaId'),
   printSizeTierId: z.string().uuid('Invalid printSizeTierId').optional(),
   assetId: z.string().uuid('Invalid assetId'),
+  baseImageUrl: z.string().trim().min(1).optional(),
+  presetRectNorm: normalizedRectSchema.optional(),
+  baseImageNaturalWidth: z.number().int().positive().optional(),
+  baseImageNaturalHeight: z.number().int().positive().optional(),
   placementConfig: placementConfigSchema.optional(),
 });
 

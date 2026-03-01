@@ -26,7 +26,7 @@ import {
   Tooltip,
   Legend,
 } from 'recharts';
-import { format, subDays } from 'date-fns';
+import { format } from 'date-fns';
 
 type Category = {
   id: string;
@@ -54,25 +54,11 @@ type Product = {
   createdAt: string;
 };
 
-type ProductsResponse = {
-  items: Product[];
-  total: number;
-};
-
-// Mock revenue data for the chart (in a real app, this would come from orders)
-const generateRevenueData = () => {
-  return Array.from({ length: 7 }, (_, i) => ({
-    date: format(subDays(new Date(), 6 - i), 'MMM dd'),
-    revenue: Math.floor(Math.random() * 5000) + 2000,
-  }));
-};
-
 const COLORS = ['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#6366f1'];
 
 export default function DashboardPage() {
   const nav = useNavigate();
   const { user } = useAuth();
-  const [revenueData] = useState(generateRevenueData());
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -91,6 +77,7 @@ export default function DashboardPage() {
         productsCount: number;
         categoriesCount: number;
         totalRevenue: number;
+        revenueTrend: Array<{ date: string; revenue: number }>;
         recentProducts: Product[];
         categoryDistribution: Array<{ name: string; value: number }>;
       }>('/admin/stats');
@@ -99,6 +86,7 @@ export default function DashboardPage() {
     staleTime: 30000, // 30 seconds
     gcTime: 300000, // 5 minutes
   });
+  const revenueData = stats?.revenueTrend ?? [];
 
   const StatCard = ({
     title,
@@ -177,6 +165,11 @@ export default function DashboardPage() {
             <h3 className="text-lg font-semibold">Revenue Overview</h3>
             <p className="text-sm text-muted-foreground">Last 7 days revenue trend</p>
           </div>
+          {statsLoading ? (
+            <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+              Loading...
+            </div>
+          ) : (
           <ResponsiveContainer width="100%" height={isMobile ? 220 : 300}>
             <AreaChart data={revenueData}>
               <defs>
@@ -204,6 +197,7 @@ export default function DashboardPage() {
               />
             </AreaChart>
           </ResponsiveContainer>
+          )}
         </div>
 
         {/* Category Distribution */}
@@ -236,7 +230,7 @@ export default function DashboardPage() {
                   fill="#8884d8"
                   dataKey="value"
                 >
-                  {stats.categoryDistribution.map((entry, index) => (
+                  {stats.categoryDistribution.map((_, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
@@ -275,7 +269,7 @@ export default function DashboardPage() {
                 <div
                   key={product.id}
                   className="group flex flex-col gap-4 rounded-lg p-4 transition-colors hover:bg-muted/50 cursor-pointer sm:flex-row sm:items-center"
-                  onClick={() => nav(`/products/${product.id}`)}
+                  onClick={() => nav(`/product-wizard/${product.id}`)}
                 >
                   {firstVariant?.imagePath ? (
                     <img

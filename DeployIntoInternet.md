@@ -141,6 +141,12 @@ VITE_API_URL=https://api.korean-goods.com
 VITE_SUPABASE_URL=https://miqlyriefwqmutlsxytk.supabase.co
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 VITE_R2_PUBLIC_BASE_URL=https://pub-ae3ca9ca99644328a7c71402917f9dae.r2.dev
+
+# Phase 0 Feature Flags (Store - staged rollout)
+VITE_FF_DTF_NAV_V1=false
+VITE_FF_CART_DB_V1=false
+VITE_FF_UPLOAD_ASYNC_VALIDATION_V1=false
+VITE_FF_BUILDER_MVP_V1=false
 ```
 
 **⚠️ АНХААРАХ:**
@@ -210,6 +216,9 @@ VITE_API_URL=https://api.korean-goods.com
 VITE_SUPABASE_URL=https://miqlyriefwqmutlsxytk.supabase.co
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 VITE_R2_PUBLIC_BASE_URL=https://pub-ae3ca9ca99644328a7c71402917f9dae.r2.dev
+
+# Phase 0 Feature Flags (Admin - staged rollout)
+VITE_FF_DTF_ADMIN_V1=false
 ```
 
 #### 4. Deploy хийх
@@ -301,6 +310,20 @@ R2_ACCESS_KEY_ID=your_access_key
 R2_SECRET_ACCESS_KEY=your_secret_key
 R2_BUCKET_NAME=ecommerce-images
 R2_PUBLIC_BASE_URL=https://pub-ae3ca9ca99644328a7c71402917f9dae.r2.dev
+
+# Cloudinary Storage (Phase 0 Upload Security)
+CLOUDINARY_CLOUD_NAME=your-cloud-name
+CLOUDINARY_API_KEY=your-api-key
+CLOUDINARY_API_SECRET=your-api-secret
+CLOUDINARY_SIGNATURE_TTL_SEC=300  # 5 minutes (30-3600 range)
+UPLOAD_MAX_MB=25  # Max upload size (1-512 range)
+UPLOAD_ALLOWED_MIME=image/jpeg,image/jpg,image/png,image/webp,application/pdf
+
+# Phase 0 Feature Flags (Backend)
+FF_DTF_NAV_V1=false  # DTF navigation structure
+FF_CART_DB_V1=false  # Database-backed cart
+FF_UPLOAD_ASYNC_VALIDATION_V1=false  # Async upload validation
+FF_BUILDER_MVP_V1=false  # Gang builder MVP
 
 # CORS (korean-goods.com Frontend URLs)
 CORS_ORIGIN=https://korean-goods.com,https://admin.korean-goods.com
@@ -1224,33 +1247,3 @@ jobs:
 
 **Амжилт хүсье!** 🎉
 
----
-
-## Phase 0 DTF Env Contract Additions
-
-Use these variables for staged rollout on Cloudflare Pages + Railway.
-
-### Store (Cloudflare Pages)
-
-- VITE_FF_DTF_NAV_V1=false
-- VITE_FF_CART_DB_V1=false
-- VITE_FF_UPLOAD_ASYNC_VALIDATION_V1=false
-- VITE_FF_BUILDER_MVP_V1=false
-
-### Admin (Cloudflare Pages)
-
-- VITE_FF_DTF_ADMIN_V1=false
-
-### Backend (Railway)
-
-- CLOUDINARY_SIGNATURE_TTL_SEC=300
-- UPLOAD_MAX_MB=25
-- UPLOAD_ALLOWED_MIME=image/jpeg,image/jpg,image/png,image/webp,application/pdf
-- FF_DTF_NAV_V1=false
-- FF_CART_DB_V1=false
-- FF_UPLOAD_ASYNC_VALIDATION_V1=false
-- FF_BUILDER_MVP_V1=false
-
-Security boundary:
-- Never expose CLOUDINARY_API_SECRET, DATABASE_URL, or other backend secrets with a VITE_ prefix.
-- Only non-secret feature flags should be in Cloudflare Pages VITE_ variables.

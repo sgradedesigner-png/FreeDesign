@@ -4,9 +4,10 @@ import ProductCard from '../components/product/ProductCard';
 import HomeCategoryShowcase from '../components/home/HomeCategoryShowcase';
 import HomeMobileProductRail from '../components/home/HomeMobileProductRail';
 import { useTheme } from '../context/ThemeContext';
-import { ArrowRight, Package, Shield, Truck, CreditCard } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { mapProductFromBackend, type Product } from '../data/products';
 import type { BackendProduct } from '../data/types';
+import { TrustBadges, ShippingPromiseBar } from '../components/conversion';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
 
@@ -132,28 +133,28 @@ export default function HomePage() {
         <div className="relative z-10 max-w-7xl mx-auto px-6 text-center">
           <div className="inline-block mb-6">
             <span className="px-4 py-2 rounded-full bg-emerald-500/10 text-emerald-400 text-sm font-semibold border border-emerald-500/20">
-              {language === 'mn' ? '🎉 Шинэ цуглуулга ирлээ' : '🎉 New Collection Arrived'}
+              {language === 'mn' ? '🎨 DTF хэвлэлтийн үйлчилгээ' : '🎨 DTF Printing Service'}
             </span>
           </div>
 
           <h1 className="text-5xl md:text-7xl font-heading font-extrabold text-foreground mb-6 leading-tight">
             {language === 'mn' ? (
               <>
-                Солонгос <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-400">Барааны</span>
-                <br />Дэлхий
+                Мэргэжлийн <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-400">DTF Хэвлэл</span>
+                <br />Нэг Дор
               </>
             ) : (
               <>
-                Premium <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-400">Korean</span>
-                <br />Products
+                Professional <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-400">DTF Printing</span>
+                <br />In One Place
               </>
             )}
           </h1>
 
           <p className="text-xl text-muted-foreground mb-10 max-w-2xl mx-auto leading-relaxed">
             {language === 'mn'
-              ? 'Чанар, загвар, итгэлцлээ. Солонгосын шилдэг брэндүүдийг нэг дороос.'
-              : 'Quality, Style, Trust. Discover the best Korean brands all in one place.'}
+              ? 'Файл оруулснаас бэлэн бүтээгдэхүүн хүртэл: өндөр чанартай DTF хэвлэлт, хурдан үйлдвэрлэл, найдвартай хүргэлт.'
+              : 'From upload to ready product: premium DTF print quality, fast production, and reliable delivery.'}
           </p>
 
           <div className="flex flex-wrap items-center justify-center gap-4">
@@ -161,45 +162,55 @@ export default function HomePage() {
               to="/products"
               className="group px-8 py-4 bg-gradient-to-r from-emerald-500 to-cyan-500 text-white rounded-full font-bold text-lg shadow-xl shadow-emerald-500/30 hover:shadow-2xl hover:shadow-emerald-500/40 hover:scale-105 transition-all duration-300 flex items-center gap-2"
             >
-              {language === 'mn' ? 'Худалдан авах' : 'Shop Now'}
+              {language === 'mn' ? 'Захиалга эхлүүлэх' : 'Start Order'}
               <ArrowRight className="group-hover:translate-x-1 transition-transform" size={20} />
             </Link>
 
             <Link
-              to="/products?filter=new"
+              to="/products?category=blanks"
               className="px-8 py-4 border-2 border-border hover:border-primary text-foreground hover:bg-primary/5 rounded-full font-bold text-lg transition-all duration-300"
             >
-              {language === 'mn' ? 'Шинэ бараа' : 'New Arrivals'}
+              {language === 'mn' ? 'DTF Blank Сонгох' : 'Choose DTF Blanks'}
             </Link>
           </div>
 
           {/* Stats */}
           <div className="grid grid-cols-3 gap-8 mt-16 max-w-3xl mx-auto">
             <div>
-              <p className="text-4xl font-bold text-emerald-400">500+</p>
-              <p className="text-sm text-muted-foreground mt-1">{language === 'mn' ? 'Бүтээгдэхүүн' : 'Products'}</p>
+              <p className="text-4xl font-bold text-emerald-400">1000+</p>
+              <p className="text-sm text-muted-foreground mt-1">{language === 'mn' ? 'Хэвлэсэн загвар' : 'Printed Designs'}</p>
             </div>
             <div>
-              <p className="text-4xl font-bold text-cyan-400">10K+</p>
-              <p className="text-sm text-muted-foreground mt-1">{language === 'mn' ? 'Үйлчлүүлэгч' : 'Customers'}</p>
+              <p className="text-4xl font-bold text-cyan-400">24h</p>
+              <p className="text-sm text-muted-foreground mt-1">{language === 'mn' ? 'Хурдан үйлдвэрлэл' : 'Fast Production'}</p>
             </div>
             <div>
-              <p className="text-4xl font-bold text-purple-400">99%</p>
-              <p className="text-sm text-muted-foreground mt-1">{language === 'mn' ? 'Сэтгэл ханамж' : 'Satisfaction'}</p>
+              <p className="text-4xl font-bold text-purple-400">300 DPI</p>
+              <p className="text-sm text-muted-foreground mt-1">{language === 'mn' ? 'Өндөр нягтаршил' : 'High Resolution'}</p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* 2. Category Showcase */}
+      {/* 2. DTF How It Works Banner */}
+      <section className="w-full pt-10 md:pt-14">
+        <img
+          src="/images/DTF_How_Works.svg"
+          alt={language === 'mn' ? 'DTF хэрхэн ажилладаг вэ' : 'How DTF works'}
+          loading="lazy"
+          className="block w-full h-auto"
+        />
+      </section>
+
+      {/* 3. Category Showcase */}
       <HomeCategoryShowcase categories={categoriesWithPreview} language={language} />
 
-      {/* 3. Mobile Product Discovery */}
+      {/* 4. Mobile Product Discovery */}
       <section className="md:hidden max-w-7xl mx-auto px-6 py-16" data-testid="home-mobile-feed">
         <HomeMobileProductRail trending={trending} newArrivals={newArrivals} language={language} />
       </section>
 
-      {/* 4. Trending Products (Desktop/Tablet) */}
+      {/* 5. Trending Products (Desktop/Tablet) */}
       <section className="hidden md:block max-w-7xl mx-auto px-6 py-20 bg-muted/20" data-testid="home-trending-desktop">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-heading font-bold text-foreground mb-4">
@@ -233,7 +244,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 5. New Arrivals (Desktop/Tablet) */}
+      {/* 6. New Arrivals (Desktop/Tablet) */}
       <section className="hidden md:block max-w-7xl mx-auto px-6 py-20" data-testid="home-new-arrivals-desktop">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-heading font-bold text-foreground mb-4">
@@ -267,60 +278,18 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 6. Trust Badges */}
-      <section className="max-w-7xl mx-auto px-6 py-20 bg-muted/20">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          <div className="text-center p-8 rounded-2xl bg-card border border-border">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-emerald-500/10 flex items-center justify-center">
-              <Truck className="text-emerald-400" size={32} />
-            </div>
-            <h3 className="font-bold text-foreground mb-2">
-              {language === 'mn' ? 'Үнэгүй хүргэлт' : 'Free Shipping'}
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              {language === 'mn' ? '50,000₮-с дээш худалдан авалтад' : 'On orders over $50'}
-            </p>
-          </div>
-
-          <div className="text-center p-8 rounded-2xl bg-card border border-border">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-cyan-500/10 flex items-center justify-center">
-              <Shield className="text-cyan-400" size={32} />
-            </div>
-            <h3 className="font-bold text-foreground mb-2">
-              {language === 'mn' ? 'Баталгаатай' : 'Secure Payment'}
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              {language === 'mn' ? '100% аюулгүй төлбөр' : '100% secure transactions'}
-            </p>
-          </div>
-
-          <div className="text-center p-8 rounded-2xl bg-card border border-border">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-purple-500/10 flex items-center justify-center">
-              <CreditCard className="text-purple-400" size={32} />
-            </div>
-            <h3 className="font-bold text-foreground mb-2">
-              {language === 'mn' ? 'Олон төрлийн төлбөр' : 'Easy Returns'}
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              {language === 'mn' ? '30 хоногийн буцаалтын баталгаа' : '30-day return guarantee'}
-            </p>
-          </div>
-
-          <div className="text-center p-8 rounded-2xl bg-card border border-border">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-pink-500/10 flex items-center justify-center">
-              <Package className="text-pink-400" size={32} />
-            </div>
-            <h3 className="font-bold text-foreground mb-2">
-              {language === 'mn' ? 'Жинхэнэ бараа' : 'Authentic Products'}
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              {language === 'mn' ? '100% жинхэнэ солонгос бараа' : '100% authentic Korean goods'}
-            </p>
-          </div>
+      {/* 7. Conversion Modules - Trust & Shipping */}
+      <section className="max-w-7xl mx-auto px-6 py-20 bg-muted/20 space-y-8">
+        {/* Shipping Promise Bar */}
+        <div className="max-w-3xl mx-auto">
+          <ShippingPromiseBar cutoffHour={15} showCountdown />
         </div>
+
+        {/* Trust Badges */}
+        <TrustBadges variant="default" />
       </section>
 
-      {/* 7. Final CTA Banner */}
+      {/* 8. Final CTA Banner */}
       <section className="relative max-w-7xl mx-auto px-6 py-20 overflow-hidden">
         <div className="relative z-10 rounded-3xl bg-gradient-to-br from-emerald-500 via-cyan-500 to-purple-500 p-12 md:p-16 text-center">
           <h2 className="text-3xl md:text-5xl font-heading font-extrabold text-white mb-6">
@@ -344,4 +313,3 @@ export default function HomePage() {
     </div>
   );
 }
-

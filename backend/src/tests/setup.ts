@@ -1,4 +1,4 @@
-import { beforeAll, afterAll, beforeEach } from 'vitest';
+﻿import { beforeAll, afterAll, beforeEach } from 'vitest';
 import { prisma } from '../lib/prisma';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -49,6 +49,9 @@ beforeEach(async () => {
   await safeDelete(() => prisma.orderItemCustomization.deleteMany(), 'order_item_customizations');
   await safeDelete(() => prisma.productionStatusEvent.deleteMany(), 'production_status_events');
   await safeDelete(() => prisma.customizationAsset.deleteMany(), 'customization_assets');
+  await safeDelete(() => prisma.uploadIntent.deleteMany(), 'upload_intents');
+  await safeDelete(() => prisma.cartItem.deleteMany(), 'cart_items');
+  await safeDelete(() => prisma.cart.deleteMany(), 'carts');
   await safeDelete(() => prisma.pricingRule.deleteMany(), 'pricing_rules');
   await safeDelete(() => prisma.productPrintArea.deleteMany(), 'product_print_areas');
   await safeDelete(() => prisma.printSizeTier.deleteMany(), 'print_size_tiers');

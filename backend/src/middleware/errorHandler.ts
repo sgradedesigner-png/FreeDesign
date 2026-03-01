@@ -1,7 +1,8 @@
-import { FastifyError, FastifyReply, FastifyRequest } from 'fastify';
+﻿import { FastifyError, FastifyReply, FastifyRequest } from 'fastify';
 import { Prisma } from '@prisma/client';
 import { ZodError } from 'zod';
 import { AppError, ValidationError } from '../utils/errors';
+import { hashIdentifier } from '../lib/logger';
 
 /**
  * Comprehensive Error Handler Middleware
@@ -19,9 +20,11 @@ export async function errorHandler(
     err: error,
     method: request.method,
     url: request.url,
-    userId: (request as any).user?.id,
-    body: request.body,
-    query: request.query,
+    route: request.routeOptions?.url,
+    requestId: request.id,
+    userIdHash: hashIdentifier(((request as any).user?.id as string | undefined)) ?? undefined,
+    body: summarizeBody(request.body),
+    queryKeys: summarizeKeys(request.query),
     params: request.params
   }, 'Request error occurred');
 
@@ -246,3 +249,17 @@ export async function notFoundHandler(
     statusCode: 404
   });
 }
+function summarizeKeys(value: unknown): string[] | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  return Object.keys(value as Record<string, unknown>).slice(0, 40);
+}
+
+function summarizeBody(body: unknown): Record<string, unknown> | null {
+  if (body == null) return null;
+  if (typeof body === 'string') return { type: 'string', length: body.length };
+  if (Array.isArray(body)) return { type: 'array', length: body.length };
+  if (typeof body === 'object') return { type: 'object', keys: summarizeKeys(body) };
+  return { type: typeof body };
+}
+
+

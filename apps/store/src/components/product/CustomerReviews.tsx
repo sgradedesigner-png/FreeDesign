@@ -1,4 +1,5 @@
 import { Star, ThumbsUp, CheckCircle } from 'lucide-react';
+import { ReviewSummary } from '../conversion';
 
 type Review = {
   id: number;
@@ -15,6 +16,10 @@ type CustomerReviewsProps = {
   reviews: Review[];
   averageRating?: number;
   totalReviews?: number;
+  /**
+   * Rating breakdown [5-star, 4-star, 3-star, 2-star, 1-star]
+   */
+  breakdown?: [number, number, number, number, number];
 };
 
 function StarRow({ rating, size = 14 }: { rating: number; size?: number }) {
@@ -34,8 +39,9 @@ function StarRow({ rating, size = 14 }: { rating: number; size?: number }) {
 
 export default function CustomerReviews({
   reviews,
-  averageRating,
-  totalReviews,
+  averageRating = 4.5,
+  totalReviews = 127,
+  breakdown = [98, 24, 3, 1, 1],
 }: CustomerReviewsProps) {
   const dummyReviews =
     reviews.length > 0
@@ -71,44 +77,14 @@ export default function CustomerReviews({
         Хэрэглэгчийн үнэлгээ
       </h2>
 
-      {/* Summary Box */}
-      <div className="rounded-2xl border border-border bg-card/50 backdrop-blur p-4 sm:p-8 mb-8 sm:mb-10 flex flex-col md:flex-row items-center gap-5 sm:gap-8 md:gap-16">
-        <div className="text-center">
-          <div className="text-4xl sm:text-6xl font-bold text-foreground mb-2">
-            {(averageRating ?? 4.5).toFixed(1)}
-          </div>
-
-          <div className="flex justify-center mb-2">
-            <StarRow rating={Math.round(averageRating ?? 4.5)} size={24} />
-          </div>
-
-          <p className="text-sm text-muted-foreground">
-            Нийт {totalReviews ?? 127} үнэлгээ
-          </p>
-        </div>
-
-        {/* Progress Bars */}
-        <div className="flex-1 w-full space-y-2">
-          {[5, 4, 3, 2, 1].map((star, idx) => (
-            <div key={star} className="flex items-center gap-3">
-              <span className="text-xs font-bold w-3 text-foreground">{star}</span>
-              <Star size={12} className="text-muted-foreground" />
-
-              <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-yellow-400 rounded-full"
-                  style={{
-                    width: idx === 0 ? '70%' : idx === 1 ? '20%' : '5%',
-                  }}
-                />
-              </div>
-
-              <span className="text-xs text-muted-foreground w-8 text-right">
-                {idx === 0 ? 98 : idx === 1 ? 24 : 5}
-              </span>
-            </div>
-          ))}
-        </div>
+      {/* Summary Box - Using ReviewSummary component */}
+      <div className="rounded-2xl border border-border bg-card/50 backdrop-blur p-4 sm:p-8 mb-8 sm:mb-10">
+        <ReviewSummary
+          rating={averageRating}
+          reviewCount={totalReviews}
+          showBreakdown
+          breakdown={breakdown}
+        />
       </div>
 
       {/* Reviews List */}

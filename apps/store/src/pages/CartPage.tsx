@@ -31,11 +31,11 @@ export default function CartPage() {
         <div className="flex items-center gap-2 text-sm text-muted-foreground mb-8">
           <Link to="/" className="hover:text-primary flex items-center gap-1">
             <ArrowLeft size={14} />
-            {language === 'mn' ? 'ÐÒ¯Ò¯Ñ€' : 'Home'}
+            {language === 'mn' ? 'Нүүр' : 'Home'}
           </Link>
           <span>/</span>
           <span className="text-foreground font-medium">
-            {language === 'mn' ? 'Ð¡Ð°Ð³Ñ' : 'Shopping Cart'}
+            {language === 'mn' ? 'Сагс' : 'Shopping Cart'}
           </span>
         </div>
 
@@ -45,16 +45,16 @@ export default function CartPage() {
             <ShoppingBag size={64} className="text-muted-foreground" />
           </div>
           <h2 className="text-2xl font-bold mb-2">
-            {language === 'mn' ? 'Ð¢Ð°Ð½Ñ‹ ÑÐ°Ð³Ñ Ñ…Ð¾Ð¾ÑÐ¾Ð½ Ð±Ð°Ð¹Ð½Ð°' : 'Your cart is empty'}
+            {language === 'mn' ? 'Таны сагс хоосон байна' : 'Your cart is empty'}
           </h2>
           <p className="text-muted-foreground mb-6">
-            {language === 'mn' ? 'Ð”ÑÐ»Ð³Ò¯Ò¯Ñ€ÑÑÑ Ð±Ð°Ñ€Ð°Ð° ÑÐ¾Ð½Ð³Ð¾Ð¶ Ð°Ð²Ð½Ð° ÑƒÑƒ' : 'Start shopping to add items to your cart'}
+            {language === 'mn' ? 'Дэлгүүрээс бараа сонгож авна уу' : 'Start shopping to add items to your cart'}
           </p>
           <Link
             to="/"
             className="px-8 py-3 bg-primary text-primary-foreground rounded-xl font-bold hover:bg-primary/90 transition-colors"
           >
-            {language === 'mn' ? 'Ð”ÑÐ»Ð³Ò¯Ò¯Ñ€ Ñ…ÑÑÑÑ…' : 'Continue Shopping'}
+            {language === 'mn' ? 'Дэлгүүр хэсэх' : 'Continue Shopping'}
           </Link>
         </div>
       </div>
@@ -67,11 +67,11 @@ export default function CartPage() {
       <div className="flex items-center gap-2 text-sm text-muted-foreground mb-8">
         <Link to="/" className="hover:text-primary flex items-center gap-1">
           <ArrowLeft size={14} />
-          {language === 'mn' ? 'ÐÒ¯Ò¯Ñ€' : 'Home'}
+          {language === 'mn' ? 'Нүүр' : 'Home'}
         </Link>
         <span>/</span>
         <span className="text-foreground font-medium">
-          {language === 'mn' ? 'Ð¡Ð°Ð³Ñ' : 'Shopping Cart'}
+          {language === 'mn' ? 'Сагс' : 'Shopping Cart'}
         </span>
       </div>
 
@@ -81,9 +81,9 @@ export default function CartPage() {
         <div className="space-y-4">
           {/* Table Header */}
           <div className="hidden md:grid grid-cols-[2fr,1fr,1fr,auto] gap-4 px-6 py-4 bg-muted/50 rounded-xl font-bold text-sm">
-            <div>{language === 'mn' ? 'Ð‘Ò¯Ñ‚ÑÑÐ³Ð´ÑÑ…Ò¯Ò¯Ð½' : 'Product'}</div>
-            <div className="text-center">{language === 'mn' ? 'Ð¢Ð¾Ð¾ ÑˆÐ¸Ñ€Ñ…ÑÐ³' : 'Quantity'}</div>
-            <div className="text-right">{language === 'mn' ? 'ÐÐ¸Ð¹Ñ‚ Ò¯Ð½Ñ' : 'Total Price'}</div>
+            <div>{language === 'mn' ? 'Бүтээгдэхүүн' : 'Product'}</div>
+            <div className="text-center">{language === 'mn' ? 'Тоо ширхэг' : 'Quantity'}</div>
+            <div className="text-right">{language === 'mn' ? 'Нийт үнэ' : 'Total Price'}</div>
             <div className="w-10"></div>
           </div>
 
@@ -115,7 +115,7 @@ export default function CartPage() {
                         {item.variantName}
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        ${item.variantPrice.toFixed(2)}
+                        ₮{Number(item.variantPrice).toLocaleString()}
                       </p>
                       {item.size && (
                         <div className="flex gap-2 mt-1 text-xs text-muted-foreground">
@@ -151,7 +151,7 @@ export default function CartPage() {
                   {/* Total Price */}
                   <div className="text-right">
                     <p className="text-xl font-bold text-primary">
-                      ${itemTotal.toFixed(2)}
+                      ₮{Number(itemTotal).toLocaleString()}
                     </p>
                   </div>
 
@@ -175,40 +175,40 @@ export default function CartPage() {
         <div className="lg:sticky lg:top-24 h-fit">
           <div className="bg-card border border-border rounded-2xl p-6 space-y-6">
             <h2 className="text-2xl font-bold">
-              {language === 'mn' ? 'Ð—Ð°Ñ…Ð¸Ð°Ð»Ð³Ñ‹Ð½ Ð´Ò¯Ð½' : 'Order Summary'}
+              {language === 'mn' ? 'Захиалгын дүн' : 'Order Summary'}
             </h2>
 
             {/* Summary Details */}
             <div className="space-y-3">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">
-                  {language === 'mn' ? 'ÐÐ¸Ð¹Ñ‚ Ð´Ò¯Ð½' : 'Subtotal'}
+                  {language === 'mn' ? 'Нийт дүн' : 'Subtotal'}
                 </span>
-                <span className="font-semibold">${cartTotal.toFixed(2)}</span>
+                <span className="font-semibold">₮{Number(cartTotal).toLocaleString()}</span>
               </div>
 
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">
-                  {language === 'mn' ? 'Ð¥Ò¯Ñ€Ð³ÑÐ»Ñ‚' : 'Delivery'}
+                  {language === 'mn' ? 'Хүргэлт' : 'Delivery'}
                 </span>
                 <span className="font-semibold text-primary">
-                  {language === 'mn' ? 'Ò®Ð½ÑÐ³Ò¯Ð¹' : 'Free'}
+                  {language === 'mn' ? 'Үнэгүй' : 'Free'}
                 </span>
               </div>
 
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">
-                  {language === 'mn' ? 'Ð¢Ð°Ñ‚Ð²Ð°Ñ€' : 'Tax'}
+                  {language === 'mn' ? 'Татвар' : 'Tax'}
                 </span>
                 <span className="font-semibold text-primary">
-                  {language === 'mn' ? 'Ò®Ð½ÑÐ³Ò¯Ð¹' : 'Free'}
+                  {language === 'mn' ? 'Үнэгүй' : 'Free'}
                 </span>
               </div>
 
               <div className="border-t border-border pt-3">
                 <div className="flex justify-between text-lg font-bold">
-                  <span>{language === 'mn' ? 'ÐÐ˜Ð™Ð¢' : 'TOTAL'}</span>
-                  <span className="text-primary">${total.toFixed(2)}</span>
+                  <span>{language === 'mn' ? 'НИЙТ' : 'TOTAL'}</span>
+                  <span className="text-primary">₮{Number(total).toLocaleString()}</span>
                 </div>
               </div>
             </div>
@@ -217,11 +217,11 @@ export default function CartPage() {
             <div className="space-y-2">
               <input
                 type="text"
-                placeholder={language === 'mn' ? 'ÐšÑƒÐ¿Ð¾Ð½ ÐºÐ¾Ð´ Ð¾Ñ€ÑƒÑƒÐ»Ð°Ñ…' : 'Enter coupon'}
+                placeholder={language === 'mn' ? 'Купон код оруулах' : 'Enter coupon'}
                 className="w-full px-4 py-3 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary bg-background"
               />
               <button className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-bold hover:bg-primary/90 transition-colors">
-                {language === 'mn' ? 'Ð¥Ð­Ð Ð­Ð“Ð›Ð­Ð¥' : 'APPLY'}
+                {language === 'mn' ? 'ХЭРЭГЛЭХ' : 'APPLY'}
               </button>
             </div>
 
@@ -230,7 +230,7 @@ export default function CartPage() {
               onClick={handleCheckout}
               className="w-full py-4 bg-primary text-primary-foreground rounded-xl font-bold text-lg hover:bg-primary/90 transition-colors shadow-lg shadow-primary/25"
             >
-              {language === 'mn' ? 'Ð¥Ð£Ð”ÐÐ›Ð”ÐÐ ÐÐ’ÐÐ¥' : 'PROCEED TO CHECKOUT'}
+              {language === 'mn' ? 'ХУДАЛДАН АВАХ' : 'PROCEED TO CHECKOUT'}
             </button>
           </div>
         </div>

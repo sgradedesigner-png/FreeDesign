@@ -6,6 +6,7 @@
     "@types/react": "^19.2.10",
     "@types/react-dom": "^19.2.3",
     "prisma": "^5.19.1",
+    "sharp": "^0.34.5",
     "tsx": "^4.21.0"
   },
   "dependencies": {

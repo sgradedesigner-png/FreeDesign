@@ -41,6 +41,8 @@ const envSchema = z.object({
   QPAY_PASSWORD: z.string().min(1, 'QPAY_PASSWORD is required'),
   QPAY_INVOICE_CODE: z.string().min(1, 'QPAY_INVOICE_CODE is required'),
   QPAY_CALLBACK_URL: z.string().url('QPAY_CALLBACK_URL must be a valid URL'),
+  QPAY_CALLBACK_ALLOWED_IPS: z.string().optional(),
+  QPAY_CALLBACK_SECRET: z.string().optional(),
 
   // Email (Resend)
   RESEND_API_KEY: z.string().startsWith('re_', 'RESEND_API_KEY must start with "re_"'),
@@ -89,6 +91,18 @@ const envSchema = z.object({
   CRON_EXPIRATION_WARNING_ENABLED: z.string().optional().default('true'),
   CRON_EXPIRED_CHECK_ENABLED: z.string().optional().default('true'),
 
+  // Optional: Upload Validation Worker
+  WORKER_UPLOAD_VALIDATION_ENABLED: booleanFlagSchema,
+  WORKER_UPLOAD_VALIDATION_POLL_INTERVAL_MS: z.coerce.number().int().min(1000).optional().default(5000),
+  WORKER_UPLOAD_VALIDATION_BATCH_SIZE: z.coerce.number().int().min(1).max(100).optional().default(10),
+  WORKER_UPLOAD_VALIDATION_MAX_CONCURRENCY: z.coerce.number().int().min(1).max(20).optional().default(5),
+
+  // Optional: Builder Preview Worker (P3-02)
+  WORKER_BUILDER_PREVIEW_ENABLED: booleanFlagSchema,
+  WORKER_BUILDER_PREVIEW_POLL_INTERVAL_MS: z.coerce.number().int().min(1000).optional().default(10000),
+  WORKER_BUILDER_PREVIEW_BATCH_SIZE: z.coerce.number().int().min(1).max(50).optional().default(5),
+  WORKER_BUILDER_PREVIEW_MAX_CONCURRENCY: z.coerce.number().int().min(1).max(10).optional().default(2),
+
   // Optional: Performance
   ENABLE_RESPONSE_CACHE: z.string().optional().default('true'),
   CACHE_TTL: z.string().optional().default('60000'),
@@ -131,4 +145,3 @@ export function validateEnv(): Env {
 }
 
 export const env = validateEnv();
-

@@ -20,6 +20,8 @@ export default defineConfig({
     }),
   ].filter(Boolean),
   resolve: {
+    // Prioritise .ts/.tsx so stale compiled .js files are never picked up
+    extensions: ['.mts', '.ts', '.tsx', '.mjs', '.js', '.jsx', '.json'],
     alias: {
       '@': path.resolve(__dirname, './src'),
     },
@@ -28,6 +30,12 @@ export default defineConfig({
     port: 5184,
     strictPort: true, // Fail if port is already in use
     host: true, // Listen on all addresses (0.0.0.0)
+    proxy: {
+      '/api': {
+        target: 'http://localhost:4000',
+        changeOrigin: true,
+      },
+    },
   },
   build: {
     sourcemap: true, // Generate source maps for Sentry

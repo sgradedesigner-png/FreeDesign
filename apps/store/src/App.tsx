@@ -9,8 +9,11 @@ import CartSidebar from './components/layout/CartSidebar';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
 import HomePage from './pages/HomePage';
+import StartOrderPage from './pages/StartOrderPage';
+import CollectionPage from './pages/CollectionPage';
+import InfoPage from './pages/InfoPage';
 import Catalog from './pages/Catalog';
-import ProductDetails from './pages/ProductDetails';
+import ProductPage from './pages/ProductPage';
 import CustomizePage from './pages/CustomizePage';
 import CartPage from './pages/CartPage';
 import WishlistPage from './pages/WishlistPage';
@@ -23,13 +26,17 @@ import OrdersPage from './pages/OrdersPage';
 import OrderDetailPage from './pages/OrderDetailPage';
 import ProfilePage from './pages/ProfilePage';
 import ScrollToTop from './components/layout/ScrollToTop';
+import { flags } from './lib/featureFlags';
+import GangSheetBuilderPage from './pages/GangSheetBuilderPage';
 
 // Layout компонент: Хуудас бүрийн байршлыг зохицуулна
 function Layout() {
   const location = useLocation();
 
-  // Хэрэв бид '/customize' хуудас дээр байгаа бол тусгай горим (Full Screen)
-  const isConfigurator = location.pathname.startsWith('/customize');
+  // Хэрэв бид '/customize' эсвэл '/builder' хуудас дээр байгаа бол тусгай горим (Full Screen)
+  const isConfigurator =
+    location.pathname.startsWith('/customize') ||
+    location.pathname.startsWith('/builder');
 
   return (
     <div className={`min-h-screen bg-background text-foreground font-sans transition-colors duration-300 ${isConfigurator ? 'overflow-hidden' : ''}`}>
@@ -59,8 +66,20 @@ function Layout() {
       <main>
         <Routes>
           <Route path="/" element={<HomePage />} />
+          {flags.DTF_NAV_V1 ? (
+            <>
+              <Route path="/start-order" element={<StartOrderPage />} />
+              <Route path="/collections/:slug" element={<CollectionPage />} />
+              <Route path="/pages/:slug" element={<InfoPage />} />
+            </>
+          ) : null}
+
+          {flags.BUILDER_MVP_V1 ? (
+            <Route path="/builder/:productSlug" element={<GangSheetBuilderPage />} />
+          ) : null}
+
           <Route path="/products" element={<Catalog />} />
-          <Route path="/product/:id" element={<ProductDetails />} />
+          <Route path="/product/:id" element={<ProductPage />} />
           <Route path="/customize/:productSlug" element={<CustomizePage />} />
           <Route path="/cart" element={<CartPage />} />
           <Route path="/wishlist" element={<WishlistPage />} />

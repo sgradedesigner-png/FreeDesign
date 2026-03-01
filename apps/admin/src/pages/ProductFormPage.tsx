@@ -19,7 +19,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, Loader2, Upload, X, Plus, Trash2, AlertCircle, CheckCircle2, Image as ImageIcon, Video } from 'lucide-react';
+import { ArrowLeft, Loader2, Upload, X, Plus, Trash2, AlertCircle, CheckCircle2, Image as ImageIcon } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { logger } from '@/lib/logger';
 
@@ -81,6 +81,17 @@ type ProductFormData = z.infer<typeof productSchema>;
 export default function ProductFormPage() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
+
+  // Redirect to wizard page if accessing wizard routes
+  if (id === 'new-wizard' || id === 'product-wizard') {
+    navigate('/product-wizard', { replace: true });
+    return null;
+  }
+  if (window.location.pathname.includes('edit-wizard')) {
+    navigate(`/product-wizard/${id}`, { replace: true });
+    return null;
+  }
+
   const isEditMode = !!id;
   const [searchParams] = useSearchParams();
   const prefill = searchParams.get('prefill');
@@ -140,8 +151,15 @@ export default function ProductFormPage() {
   const watchedValues = watch();
 
   useEffect(() => {
+    // Skip if this is a wizard route
+    if (id === 'new-wizard' || window.location.pathname.includes('edit-wizard')) {
+      return;
+    }
+
     fetchCategories();
-    if (isEditMode && id) {
+    // Only fetch if id is a valid UUID (not a route segment like "new-wizard")
+    const isUUID = id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    if (isEditMode && isUUID) {
       fetchProduct(id);
     }
   }, [id]);
@@ -358,12 +376,23 @@ export default function ProductFormPage() {
         productId,
       });
 
-      const { uploadUrl, publicUrl } = presignedRes.data;
+      const { uploadUrl, publicUrl, timestamp, signature, apiKey, folder, publicId } = presignedRes.data;
+
+      // Build FormData with file and Cloudinary signed params
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('timestamp', timestamp.toString());
+      formData.append('signature', signature);
+      formData.append('api_key', apiKey);
+      formData.append('folder', folder);
+      if (publicId) {
+        formData.append('public_id', publicId);
+      }
 
       await fetch(uploadUrl, {
-        method: 'PUT',
-        body: file,
-        headers: { 'Content-Type': file.type },
+        method: 'POST',
+        body: formData,
+        // Don't set Content-Type - browser sets it with boundary for FormData
       });
 
       return publicUrl;
@@ -1303,4 +1332,3 @@ export default function ProductFormPage() {
     </form>
   );
 }
-

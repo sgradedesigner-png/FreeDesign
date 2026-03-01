@@ -1,0 +1,28 @@
+0.96	DTE
+0.98	TRANSFERS
+1.00	T-SHIRT
+0.99	PLACEMENTGUIDE
+0.85	DTF
+0.99	JUNKIE
+0.99	Centered Design Area
+0.93	·Adult 11"x 11"
+0.99	CUSTOMDTFPRINTING.GANGSHEETS.T-SHIRTS
+0.95	· Youth (med/lg) 10.5" x 10.5" ·
+0.98	Youth(small) 8.5"x8.5"
+0.96	·Toddler 5.5"x 5.5"
+0.99	Centered Design Placement
+0.96	· 3-3.5" from the collar, for any size shirt
+0.99	Left Chest/Pocket Design Size
+0.91	· Adult 3.5" x 3.5"
+0.94	· Youth (med/lg) 3.5" x 3.5" ·
+0.96	Youth (small) 3.5" x 3.5"
+0.96	·Toddler 2.5"x 2.5"
+0.99	Left Chest/Pocket Design Placement
+0.96	·5.5-8" down from the shoulder's left seam·
+0.97	and 4-6"overfrom thecenter
+0.99	Other Placement Options
+0.95	·Sleeves
+0.97	·Vertical down the front
+0.92	· Hip area
+0.87	· Yoke
+0.98	· Upper back

@@ -460,4 +460,117 @@ export default async function adminProductionRoutes(app: FastifyInstance) {
       return reply.code(500).send({ error: 'Failed to generate print pack' });
     }
   });
+
+  // ── P3-05: Hold / Release ──────────────────────────────────────────────────
+
+  const holdBodySchema = z.object({
+    reason: z.string().min(1).max(2000),
+    notes:  z.string().max(2000).optional(),
+  });
+
+  app.post('/admin/orders/:id/hold', { preHandler: [adminGuard] }, async (request, reply) => {
+    const paramValidation = validateData(orderIdParamSchema, request.params, reply);
+    if (!paramValidation.success) return;
+    const { id: orderId } = paramValidation.data;
+
+    const bodyValidation = validateData(holdBodySchema, request.body, reply);
+    if (!bodyValidation.success) return;
+    const { reason, notes } = bodyValidation.data;
+    const adminUserId = (request as any).user?.sub ?? 'admin';
+
+    try {
+      const order = await prisma.order.findUnique({ where: { id: orderId }, select: { id: true, isOnHold: true } });
+      if (!order) return reply.status(404).send({ error: 'Order not found' });
+      if (order.isOnHold) return reply.status(409).send({ error: 'Order is already on hold' });
+
+      await prisma.$transaction(async (tx) => {
+        await tx.order.update({ where: { id: orderId }, data: { isOnHold: true } });
+        await tx.orderHold.create({ data: { orderId, reason, notes: notes ?? null, heldBy: adminUserId } });
+      });
+
+      logger.info({ orderId, adminUserId }, '[Production] Order put on hold');
+      return reply.send({ message: 'Order placed on hold' });
+    } catch (err) {
+      logger.error({ error: err, orderId }, '[Production] Failed to hold order');
+      return reply.status(500).send({ error: 'Failed to place order on hold' });
+    }
+  });
+
+  app.delete('/admin/orders/:id/hold', { preHandler: [adminGuard] }, async (request, reply) => {
+    const paramValidation = validateData(orderIdParamSchema, request.params, reply);
+    if (!paramValidation.success) return;
+    const { id: orderId } = paramValidation.data;
+    const adminUserId = (request as any).user?.sub ?? 'admin';
+
+    const releaseBodySchema = z.object({ notes: z.string().max(2000).optional() });
+    const bodyValidation = validateData(releaseBodySchema, (request.body as object) ?? {}, reply);
+    if (!bodyValidation.success) return;
+    const { notes } = bodyValidation.data;
+
+    try {
+      const order = await prisma.order.findUnique({ where: { id: orderId }, select: { id: true, isOnHold: true } });
+      if (!order) return reply.status(404).send({ error: 'Order not found' });
+      if (!order.isOnHold) return reply.status(409).send({ error: 'Order is not on hold' });
+
+      const now = new Date();
+      const activeHold = await prisma.orderHold.findFirst({
+        where: { orderId, releasedAt: null },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      await prisma.$transaction(async (tx) => {
+        await tx.order.update({ where: { id: orderId }, data: { isOnHold: false } });
+        if (activeHold) {
+          await tx.orderHold.update({
+            where: { id: activeHold.id },
+            data: { releasedBy: adminUserId, releasedAt: now, ...(notes ? { notes } : {}) },
+          });
+        }
+      });
+
+      logger.info({ orderId, adminUserId }, '[Production] Order hold released');
+      return reply.send({ message: 'Order hold released' });
+    } catch (err) {
+      logger.error({ error: err, orderId }, '[Production] Failed to release hold');
+      return reply.status(500).send({ error: 'Failed to release order hold' });
+    }
+  });
+
+  // ── P3-05: SLA assignment ──────────────────────────────────────────────────
+
+  const slaBodySchema = z.object({
+    slaDueAt: z.string().datetime({ offset: true }),
+    slaTier:  z.enum(['STANDARD', 'RUSH', 'CRITICAL'] as const).default('STANDARD'),
+    notes:    z.string().max(2000).optional(),
+  });
+
+  app.put('/admin/orders/:id/sla', { preHandler: [adminGuard] }, async (request, reply) => {
+    const paramValidation = validateData(orderIdParamSchema, request.params, reply);
+    if (!paramValidation.success) return;
+    const { id: orderId } = paramValidation.data;
+
+    const bodyValidation = validateData(slaBodySchema, request.body, reply);
+    if (!bodyValidation.success) return;
+    const { slaDueAt, slaTier, notes } = bodyValidation.data;
+    const adminUserId = (request as any).user?.sub ?? 'admin';
+
+    try {
+      const order = await prisma.order.findUnique({ where: { id: orderId }, select: { id: true } });
+      if (!order) return reply.status(404).send({ error: 'Order not found' });
+
+      const dueAt = new Date(slaDueAt);
+      await prisma.$transaction(async (tx) => {
+        await tx.order.update({ where: { id: orderId }, data: { slaDueAt: dueAt } });
+        await tx.orderSlaEvent.create({
+          data: { orderId, slaDueAt: dueAt, slaTier, notes: notes ?? null, setBy: adminUserId },
+        });
+      });
+
+      logger.info({ orderId, slaDueAt, slaTier }, '[Production] SLA set');
+      return reply.send({ message: 'SLA updated', slaDueAt: dueAt, slaTier });
+    } catch (err) {
+      logger.error({ error: err, orderId }, '[Production] Failed to set SLA');
+      return reply.status(500).send({ error: 'Failed to set SLA' });
+    }
+  });
 }

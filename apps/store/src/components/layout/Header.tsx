@@ -16,6 +16,8 @@ import {
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
 import AuthModal from '../auth/AuthModal';
+import { flags } from '@/lib/featureFlags';
+import MegaMenu from './MegaMenu';
 
 export default function Header() {
   const { cartCount, setIsCartOpen } = useCart();
@@ -32,6 +34,7 @@ export default function Header() {
     new: { mn: 'Шинэ бараа', en: 'New Arrivals' },
     collections: { mn: 'Цуглуулга', en: 'Collections' },
     about: { mn: 'Бидний тухай', en: 'About Us' },
+    startOrder: { mn: 'Захиалга эхлүүлэх', en: 'Start Order' },
     search: { mn: 'Бүтээгдэхүүн хайх...', en: 'Search products...' }
   };
 
@@ -39,12 +42,15 @@ export default function Header() {
   type NavItem = { label: Label; href: string; icon: IconName };
 
   const navItems: NavItem[] = [
+    ...(flags.DTF_NAV_V1
+      ? [{ label: menuLabels.startOrder, href: '/start-order', icon: 'SparklesIcon' }]
+      : []),
     { label: menuLabels.products, href: '/products', icon: 'ShoppingBagIcon' },
     { label: menuLabels.new, href: '/products?filter=new', icon: 'SparklesIcon' },
     { label: menuLabels.collections, href: '/products?filter=collections', icon: 'RectangleStackIcon' },
     { label: menuLabels.about, href: '/about', icon: 'InformationCircleIcon' },
   ];
-  const brandLogoSrc = theme === 'dark' ? '/kg-goods-dark.svg' : '/kg-goods-light-.svg';
+  const brandLogoSrc = theme === 'dark' ? '/kg-goods-dark.svg' : '/kg-goods-light.svg';
 
   const handleSearch = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -69,7 +75,7 @@ export default function Header() {
           <img
             src={brandLogoSrc}
             alt="KG Goods"
-            className="h-12 md:h-14 w-auto object-contain"
+            className="h-16 md:h-[72px] w-auto object-contain"
             loading="eager"
           />
         </Link>
@@ -77,6 +83,7 @@ export default function Header() {
 
         {/* Desktop Nav */}
         <nav className="hidden lg:flex items-center gap-1">
+          {flags.DTF_NAV_V1 && <MegaMenu />}
           {navItems.map((item, idx) => (
             <Link
               key={idx}

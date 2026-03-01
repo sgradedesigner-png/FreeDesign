@@ -1,0 +1,28 @@
+1.00	TON
+0.96	ATELIER
+1.00	T-Shirt Printing Placement and Sizing
+0.98	Based on a Medium T-Shirt
+0.99	FRONTL.CHESTPRINT
+0.99	FRONTCHESTPRINT
+1.00	FRONTFULLPRINT
+0.90	Print width:3”- 4"
+0.91	Print width:8”-10"
+0.94	Printwidth:10"-12"
+0.97	Placement:3"fromcollar
+0.97	Placement:3"fromcollar
+0.98	Placement:2"fromcollar
+0.95	Exampleprint:4"wx3"h
+0.95	Exampleprint:10"wx2"h
+0.96	Exampleprint:12"wx12"h
+0.99	SLEEVEPRINT
+0.94	NECK TAG
+0.99	BACK PRINT
+0.94	Print width: 3"
+0.95	Print width: 2"
+0.96	Print width:12"
+0.97	Placement:4"fromcollar
+0.97	Placement:4"fromcollar
+0.97	Placement:1"fromcollar
+0.95	Example print:12"w x14"h
+0.94	Exampleprint:3"wx3"h
+0.94	Exampleprint:2"wx2"h
