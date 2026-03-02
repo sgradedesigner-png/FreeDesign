@@ -11,6 +11,23 @@ import type { FastifyBaseLogger } from 'fastify';
 
 const isDevelopment = process.env.NODE_ENV === 'development';
 const isProduction = process.env.NODE_ENV === 'production';
+const isPrettyRequested = process.env.LOG_PRETTY === 'true';
+const usePrettyLogging = isDevelopment || (isProduction && isPrettyRequested);
+const colorizePretty = process.env.LOG_COLORIZE !== 'false';
+
+const LOG_TAGS = {
+  request: '[REQ]',
+  response: '[RES]',
+  database: '[DB]',
+  payment: '[PAY]',
+  qpay: '[QPAY]',
+  circuit: '[CB]',
+  security: '[SEC]',
+  rateLimit: '[RATE]',
+  ok: '[OK]',
+  warn: '[WARN]',
+  error: '[ERR]'
+} as const;
 
 // Base logger options
 const baseOptions: pino.LoggerOptions = {
@@ -63,22 +80,22 @@ const baseOptions: pino.LoggerOptions = {
 const devTransport: pino.TransportSingleOptions = {
   target: 'pino-pretty',
   options: {
-    colorize: true,
+    colorize: colorizePretty,
     translateTime: 'SYS:HH:MM:ss.l',
     ignore: 'pid,hostname,node_version',
     singleLine: false,
-    messageFormat: '{levelLabel} - {msg}',
+    messageFormat: '{msg}',
     errorLikeObjectKeys: ['err', 'error']
   }
 };
 
 // Export logger configuration for Fastify
-export const loggerConfig = isDevelopment
+export const loggerConfig = usePrettyLogging
   ? { ...baseOptions, transport: devTransport }
   : baseOptions;
 
 // Create logger instance
-export const logger = isDevelopment
+export const logger = usePrettyLogging
   ? pino({
       ...baseOptions,
       transport: devTransport
@@ -96,7 +113,7 @@ export function createLogger(context: Record<string, any>) {
  * Log request start
  */
 export function logRequest(method: string, url: string, requestId: string) {
-  logger.info({ method, url, requestId }, 'Incoming request');
+  logger.info({ method, url, requestId }, `${LOG_TAGS.request} Incoming request`);
 }
 
 /**
@@ -118,7 +135,7 @@ export function logResponse(
       responseTime: `${responseTime}ms`,
       requestId
     },
-    'Request completed'
+    `${LOG_TAGS.response} Request completed`
   );
 }
 
@@ -135,7 +152,7 @@ export function logQuery(query: string, duration: number, params?: any) {
         duration: `${duration}ms`,
         params: params ? JSON.stringify(params) : undefined
       },
-      'ðŸŒ Slow database query detected'
+      `${LOG_TAGS.database} ${LOG_TAGS.warn} Slow database query detected`
     );
   } else if (isDevelopment) {
     logger.debug(
@@ -143,7 +160,7 @@ export function logQuery(query: string, duration: number, params?: any) {
         query,
         duration: `${duration}ms`
       },
-      'Database query executed'
+      `${LOG_TAGS.database} Query executed`
     );
   }
 }
@@ -166,7 +183,7 @@ export function logPayment(
       status,
       ...details
     },
-    `ðŸ’³ Payment: ${operation}`
+    `${LOG_TAGS.payment} ${operation}`
   );
 }
 
@@ -179,7 +196,7 @@ export function logQPay(
   success: boolean = true,
   error?: any
 ) {
-  const emoji = success ? 'âœ…' : 'âŒ';
+  const statusTag = success ? LOG_TAGS.ok : LOG_TAGS.error;
   const level = success ? 'info' : 'error';
 
   logger[level](
@@ -189,7 +206,7 @@ export function logQPay(
       success,
       error: error ? error.message : undefined
     },
-    `${emoji} QPay ${operation} ${success ? 'succeeded' : 'failed'}`
+    `${LOG_TAGS.qpay} ${statusTag} ${operation} ${success ? 'succeeded' : 'failed'}`
   );
 }
 
@@ -201,7 +218,7 @@ export function logCircuitBreaker(
   state: 'OPEN' | 'CLOSED' | 'HALF_OPEN',
   details?: Record<string, any>
 ) {
-  const emoji = state === 'CLOSED' ? 'âœ…' : state === 'OPEN' ? 'âš ï¸' : 'ðŸ”„';
+  const stateTag = state === 'CLOSED' ? LOG_TAGS.ok : state === 'OPEN' ? LOG_TAGS.error : LOG_TAGS.warn;
   const level = state === 'OPEN' ? 'error' : state === 'HALF_OPEN' ? 'warn' : 'info';
 
   logger[level](
@@ -210,7 +227,7 @@ export function logCircuitBreaker(
       state,
       ...details
     },
-    `${emoji} Circuit Breaker: ${operation} â†’ ${state}`
+    `${LOG_TAGS.circuit} ${stateTag} ${operation} -> ${state}`
   );
 }
 
@@ -222,7 +239,7 @@ export function logSecurity(
   severity: 'low' | 'medium' | 'high',
   details: Record<string, any>
 ) {
-  const emoji = severity === 'high' ? 'ðŸš¨' : severity === 'medium' ? 'âš ï¸' : 'â„¹ï¸';
+  const severityTag = severity === 'high' ? LOG_TAGS.error : severity === 'medium' ? LOG_TAGS.warn : LOG_TAGS.ok;
   const level = severity === 'high' ? 'error' : severity === 'medium' ? 'warn' : 'info';
 
   logger[level](
@@ -231,7 +248,7 @@ export function logSecurity(
       severity,
       ...details
     },
-    `${emoji} Security: ${event}`
+    `${LOG_TAGS.security} ${severityTag} ${event}`
   );
 }
 
@@ -245,7 +262,7 @@ export function logRateLimit(ip: string, route: string, retryAfter: number) {
       route,
       retryAfter: `${retryAfter}s`
     },
-    'ðŸš« Rate limit exceeded'
+    `${LOG_TAGS.rateLimit} ${LOG_TAGS.warn} Rate limit exceeded`
   );
 }
 

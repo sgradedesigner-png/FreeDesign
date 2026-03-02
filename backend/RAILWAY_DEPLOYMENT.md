@@ -155,6 +155,8 @@ CACHE_MAX_ENTRIES=100
 
 ```bash
 LOG_LEVEL=info  # Options: debug, info, warn, error
+LOG_PRETTY=true  # Human-readable logs in Railway console
+LOG_COLORIZE=true  # Colorize pretty logs (set false if noisy)
 ```
 
 ### 13. CORS (Optional)
@@ -523,6 +525,9 @@ FF_DTF_NAV_V1=false
 FF_CART_DB_V1=false
 FF_UPLOAD_ASYNC_VALIDATION_V1=false
 FF_BUILDER_MVP_V1=false
+LOG_LEVEL=info
+LOG_PRETTY=true
+LOG_COLORIZE=true
 SENTRY_DSN=https://d459cc9dc45c15ec8154a3dcca8d4b17@o4510859559305216.ingest.de.sentry.io/4510859937972304
 
 # Health Check URLs
