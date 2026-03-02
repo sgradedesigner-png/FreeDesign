@@ -14,6 +14,7 @@ const isProduction = process.env.NODE_ENV === 'production';
 const isPrettyRequested = process.env.LOG_PRETTY === 'true';
 const usePrettyLogging = isDevelopment || (isProduction && isPrettyRequested);
 const colorizePretty = process.env.LOG_COLORIZE !== 'false';
+const useIcons = process.env.LOG_ICONS === 'true';
 
 const LOG_TAGS = {
   request: '[REQ]',
@@ -28,6 +29,25 @@ const LOG_TAGS = {
   warn: '[WARN]',
   error: '[ERR]'
 } as const;
+
+const LOG_ICONS = {
+  request: '🛰️',
+  response: '📨',
+  database: '🗄️',
+  payment: '💳',
+  qpay: '🧾',
+  circuit: '🚦',
+  security: '🔐',
+  rateLimit: '🚫',
+  ok: '✅',
+  warn: '⚠️',
+  error: '❌'
+} as const;
+
+function withTag(tag: keyof typeof LOG_TAGS, text: string): string {
+  const iconPart = useIcons ? `${LOG_ICONS[tag]} ` : '';
+  return `${iconPart}${LOG_TAGS[tag]} ${text}`;
+}
 
 // Base logger options
 const baseOptions: pino.LoggerOptions = {
@@ -113,7 +133,7 @@ export function createLogger(context: Record<string, any>) {
  * Log request start
  */
 export function logRequest(method: string, url: string, requestId: string) {
-  logger.info({ method, url, requestId }, `${LOG_TAGS.request} Incoming request`);
+  logger.info({ method, url, requestId }, withTag('request', 'Incoming request'));
 }
 
 /**
@@ -135,7 +155,7 @@ export function logResponse(
       responseTime: `${responseTime}ms`,
       requestId
     },
-    `${LOG_TAGS.response} Request completed`
+    withTag('response', 'Request completed')
   );
 }
 
@@ -152,7 +172,7 @@ export function logQuery(query: string, duration: number, params?: any) {
         duration: `${duration}ms`,
         params: params ? JSON.stringify(params) : undefined
       },
-      `${LOG_TAGS.database} ${LOG_TAGS.warn} Slow database query detected`
+      `${withTag('database', `${LOG_TAGS.warn} Slow database query detected`)}`
     );
   } else if (isDevelopment) {
     logger.debug(
@@ -160,7 +180,7 @@ export function logQuery(query: string, duration: number, params?: any) {
         query,
         duration: `${duration}ms`
       },
-      `${LOG_TAGS.database} Query executed`
+      withTag('database', 'Query executed')
     );
   }
 }
@@ -183,7 +203,7 @@ export function logPayment(
       status,
       ...details
     },
-    `${LOG_TAGS.payment} ${operation}`
+    withTag('payment', operation)
   );
 }
 
@@ -196,7 +216,7 @@ export function logQPay(
   success: boolean = true,
   error?: any
 ) {
-  const statusTag = success ? LOG_TAGS.ok : LOG_TAGS.error;
+  const statusTag = success ? (useIcons ? LOG_ICONS.ok : LOG_TAGS.ok) : (useIcons ? LOG_ICONS.error : LOG_TAGS.error);
   const level = success ? 'info' : 'error';
 
   logger[level](
@@ -206,7 +226,7 @@ export function logQPay(
       success,
       error: error ? error.message : undefined
     },
-    `${LOG_TAGS.qpay} ${statusTag} ${operation} ${success ? 'succeeded' : 'failed'}`
+    withTag('qpay', `${statusTag} ${operation} ${success ? 'succeeded' : 'failed'}`)
   );
 }
 
@@ -218,7 +238,11 @@ export function logCircuitBreaker(
   state: 'OPEN' | 'CLOSED' | 'HALF_OPEN',
   details?: Record<string, any>
 ) {
-  const stateTag = state === 'CLOSED' ? LOG_TAGS.ok : state === 'OPEN' ? LOG_TAGS.error : LOG_TAGS.warn;
+  const stateTag = state === 'CLOSED'
+    ? (useIcons ? LOG_ICONS.ok : LOG_TAGS.ok)
+    : state === 'OPEN'
+      ? (useIcons ? LOG_ICONS.error : LOG_TAGS.error)
+      : (useIcons ? LOG_ICONS.warn : LOG_TAGS.warn);
   const level = state === 'OPEN' ? 'error' : state === 'HALF_OPEN' ? 'warn' : 'info';
 
   logger[level](
@@ -227,7 +251,7 @@ export function logCircuitBreaker(
       state,
       ...details
     },
-    `${LOG_TAGS.circuit} ${stateTag} ${operation} -> ${state}`
+    withTag('circuit', `${stateTag} ${operation} -> ${state}`)
   );
 }
 
@@ -239,7 +263,11 @@ export function logSecurity(
   severity: 'low' | 'medium' | 'high',
   details: Record<string, any>
 ) {
-  const severityTag = severity === 'high' ? LOG_TAGS.error : severity === 'medium' ? LOG_TAGS.warn : LOG_TAGS.ok;
+  const severityTag = severity === 'high'
+    ? (useIcons ? LOG_ICONS.error : LOG_TAGS.error)
+    : severity === 'medium'
+      ? (useIcons ? LOG_ICONS.warn : LOG_TAGS.warn)
+      : (useIcons ? LOG_ICONS.ok : LOG_TAGS.ok);
   const level = severity === 'high' ? 'error' : severity === 'medium' ? 'warn' : 'info';
 
   logger[level](
@@ -248,7 +276,7 @@ export function logSecurity(
       severity,
       ...details
     },
-    `${LOG_TAGS.security} ${severityTag} ${event}`
+    withTag('security', `${severityTag} ${event}`)
   );
 }
 
@@ -262,7 +290,7 @@ export function logRateLimit(ip: string, route: string, retryAfter: number) {
       route,
       retryAfter: `${retryAfter}s`
     },
-    `${LOG_TAGS.rateLimit} ${LOG_TAGS.warn} Rate limit exceeded`
+    withTag('rateLimit', `${useIcons ? LOG_ICONS.warn : LOG_TAGS.warn} Rate limit exceeded`)
   );
 }
 
