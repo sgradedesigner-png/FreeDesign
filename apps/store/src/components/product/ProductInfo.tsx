@@ -291,6 +291,7 @@ export default function ProductInfo({ product, onVariantChange }: ProductInfoPro
   const modalImage =
     selectedVariant?.imagePath || product.image_path || product.gallery_paths?.[0] || '';
   const modalPrice = selectedVariant?.price ?? product.price;
+  const showCustomizeButton = Boolean(product.slug) && product.productFamily === 'BLANKS';
 
   return (
     <div className="space-y-4 sm:space-y-6 pb-4">
@@ -533,7 +534,7 @@ export default function ProductInfo({ product, onVariantChange }: ProductInfoPro
           </button>
         </div>
 
-        {product.slug ? (
+        {showCustomizeButton ? (
           <Link
             to={`/customize/${product.slug}`}
             className="hidden sm:flex h-12 items-center justify-center rounded-xl border-2 border-primary text-primary font-bold hover:bg-primary/5 transition-colors"
@@ -545,7 +546,7 @@ export default function ProductInfo({ product, onVariantChange }: ProductInfoPro
 
       {/* Mobile Sticky Actions */}
       <div className="sm:hidden sticky bottom-[max(0.5rem,env(safe-area-inset-bottom))] z-30 border border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 p-2 rounded-2xl shadow-lg">
-        {product.slug ? (
+        {showCustomizeButton ? (
           <Link
             to={`/customize/${product.slug}`}
             className="mb-2 flex h-10 items-center justify-center rounded-xl border border-primary text-xs font-bold text-primary"
