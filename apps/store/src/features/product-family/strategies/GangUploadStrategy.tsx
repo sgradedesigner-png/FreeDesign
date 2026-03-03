@@ -43,6 +43,7 @@ function GangUploadProductInfo({ product, selectedVariant }: ProductStrategyProp
   const [uploadAsset, setUploadAsset] = useState<UploadAsset | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const apiBase = import.meta.env.VITE_API_URL || '';
 
   // Calculate price based on gang sheet length
   // Longer sheets are more cost-effective per cm
@@ -74,7 +75,7 @@ function GangUploadProductInfo({ product, selectedVariant }: ProductStrategyProp
       const { data: { session } } = await supabase.auth.getSession();
       const authHeader = session ? { Authorization: `Bearer ${session.access_token}` } : {};
 
-      const signResponse = await fetch('/api/uploads/sign-v2', {
+      const signResponse = await fetch(`${apiBase}/api/uploads/sign-v2`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -117,7 +118,7 @@ function GangUploadProductInfo({ product, selectedVariant }: ProductStrategyProp
       const cloudinaryData = await cloudinaryResponse.json();
 
       // Step 3: Complete upload and create validation job
-      const completeResponse = await fetch('/api/uploads/complete-v2', {
+      const completeResponse = await fetch(`${apiBase}/api/uploads/complete-v2`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -169,7 +170,7 @@ function GangUploadProductInfo({ product, selectedVariant }: ProductStrategyProp
         const pollAuthHeader = pollSession
           ? { Authorization: `Bearer ${pollSession.access_token}` }
           : {};
-        const response = await fetch(`/api/uploads/assets/${assetId}`, {
+        const response = await fetch(`${apiBase}/api/uploads/assets/${assetId}`, {
           headers: pollAuthHeader,
         });
 

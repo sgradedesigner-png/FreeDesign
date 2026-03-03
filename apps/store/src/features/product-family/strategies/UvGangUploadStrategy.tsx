@@ -14,6 +14,7 @@ import {
   type UploadStatus,
 } from '../../../components/customize/UploadStatusChip';
 import { UvUseDisclaimer } from '../../../components/customize/UvUseDisclaimer';
+import { supabase } from '@/lib/supabase';
 
 interface UploadAsset {
   id: string;
@@ -39,6 +40,7 @@ function UvGangUploadProductInfo({ product, selectedVariant }: ProductStrategyPr
   const [uploadAsset, setUploadAsset] = useState<UploadAsset | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const apiBase = import.meta.env.VITE_API_URL || '';
 
   // Calculate price based on gang sheet length
   const calculatePrice = (basePrice: number, length: GangSheetLength): number => {
@@ -66,17 +68,20 @@ function UvGangUploadProductInfo({ product, selectedVariant }: ProductStrategyPr
 
     try {
       // Step 1: Request signed upload params
-      const signResponse = await fetch('/api/uploads/sign-v2', {
+      const { data: { session } } = await supabase.auth.getSession();
+      const authHeader = session ? { Authorization: `Bearer ${session.access_token}` } : {};
+
+      const signResponse = await fetch(`${apiBase}/api/uploads/sign-v2`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('supabase.auth.token')}`,
+          ...authHeader,
         },
         body: JSON.stringify({
           filename: file.name,
           contentType: file.type,
           fileSizeBytes: file.size,
-          uploadFamily: 'UV_GANG_UPLOAD', // UV-specific family
+          uploadFamily: 'uv_gang_upload',
         }),
       });
 
@@ -85,25 +90,22 @@ function UvGangUploadProductInfo({ product, selectedVariant }: ProductStrategyPr
         throw new Error(error.message || 'Failed to get upload signature');
       }
 
-      const { signature, timestamp, apiKey, cloudName, folder, publicId } =
-        await signResponse.json();
+      const signData = await signResponse.json();
+      const { intentId, uploadUrl, fields } = signData;
 
       // Step 2: Upload to Cloudinary
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('signature', signature);
-      formData.append('timestamp', timestamp.toString());
-      formData.append('api_key', apiKey);
-      formData.append('folder', folder);
-      formData.append('public_id', publicId);
+      formData.append('signature', fields.signature);
+      formData.append('timestamp', fields.timestamp.toString());
+      formData.append('api_key', fields.apiKey);
+      formData.append('folder', fields.folder);
+      formData.append('public_id', fields.publicId);
 
-      const cloudinaryResponse = await fetch(
-        `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
-        {
-          method: 'POST',
-          body: formData,
-        }
-      );
+      const cloudinaryResponse = await fetch(uploadUrl, {
+        method: 'POST',
+        body: formData,
+      });
 
       if (!cloudinaryResponse.ok) {
         throw new Error('Failed to upload to Cloudinary');
@@ -112,15 +114,16 @@ function UvGangUploadProductInfo({ product, selectedVariant }: ProductStrategyPr
       const cloudinaryData = await cloudinaryResponse.json();
 
       // Step 3: Complete upload
-      const completeResponse = await fetch('/api/uploads/complete-v2', {
+      const completeResponse = await fetch(`${apiBase}/api/uploads/complete-v2`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('supabase.auth.token')}`,
+          ...authHeader,
         },
         body: JSON.stringify({
-          intentId: publicId,
+          intentId,
           cloudinaryPublicId: cloudinaryData.public_id,
+          uploadFamily: 'uv_gang_upload',
         }),
       });
 
@@ -159,10 +162,12 @@ function UvGangUploadProductInfo({ product, selectedVariant }: ProductStrategyPr
       attempts++;
 
       try {
-        const response = await fetch(`/api/uploads/assets/${assetId}`, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('supabase.auth.token')}`,
-          },
+        const { data: { session: pollSession } } = await supabase.auth.getSession();
+        const pollAuthHeader = pollSession
+          ? { Authorization: `Bearer ${pollSession.access_token}` }
+          : {};
+        const response = await fetch(`${apiBase}/api/uploads/assets/${assetId}`, {
+          headers: pollAuthHeader,
         });
 
         if (!response.ok) {
